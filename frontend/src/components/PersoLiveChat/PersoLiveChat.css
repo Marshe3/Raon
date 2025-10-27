@@ -1,0 +1,173 @@
+/* PersoLiveChat.css */
+
+.message-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-container.user {
+  margin-left: auto;
+  align-items: flex-end;
+}
+
+.message-container.other {
+  margin-right: auto;
+  align-items: flex-start;
+}
+
+.message {
+  padding: 18px 20px;
+  border-radius: 20px;
+  max-width: 315px;
+  box-sizing: border-box;
+  margin: 0px 0px 10px 0px;
+}
+
+.user-message {
+  margin-left: auto;
+  background-color: white;
+  color: black;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  line-height: 150%;
+  overflow-wrap: break-word;
+}
+
+.other-message {
+  background-color: #343434;
+  color: white;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  line-height: 150%;
+  overflow-wrap: break-word;
+}
+
+.timestamp {
+  display: block;
+  margin: 8px 12px;
+  font-size: 12px;
+  color: black;
+  text-align: right;
+}
+
+p.title {
+  font-size: 36px;
+  font-weight: 800;
+  margin-top: 38px;
+  margin-bottom: 0px;
+  line-height: 49px;
+}
+
+p.config-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 45px;
+  margin-bottom: 0px;
+  line-height: 28px;
+  padding-left: 15px;
+}
+
+p.configuration {
+  margin: 0px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 23px;
+}
+
+video {
+  border: 1px;
+  border-color: black;
+  border-style: solid;
+}
+
+video.portrait {
+  display: flex;
+  width: 304px;
+  height: 540px;
+}
+
+video.landscape {
+  width: 960px;
+  height: 540px;
+}
+
+ul.chat-log {
+  display: flex;
+  flex-direction: column-reverse;
+  overflow-y: auto;
+  flex-grow: 1;
+  padding-inline: 10px;
+  width: 400px;
+  height: 540px;
+  max-width: 400px;
+  border: 1px;
+  border-color: black;
+  border-style: solid;
+  margin: 0px;
+  background-color: #999999;
+  list-style: none;
+}
+
+label.intro {
+  width: 400px;
+  max-width: 400px;
+  border: 1px;
+  padding: 10px;
+  background-color: #dcdcdc;
+  display: block;
+}
+
+div.config {
+  display: block;
+  border: 1px;
+  border-color: black;
+  border-width: 1px;
+  border-style: solid;
+  max-width: 1377px;
+  width: 100%;
+  margin-top: 13px;
+  padding-inline-start: 37px;
+}
+
+button.session {
+  width: 380px;
+  height: 56px;
+  background-color: #644AFF;
+  font-weight: 700;
+  font-size: 16px;
+  color: white;
+  border-style: none;
+  border-radius: 4px;
+  margin-top: 24px;
+}
+
+button.session:disabled {
+  background-color: #acabb2;
+}
+
+.input-method-container {
+  display: flex;
+  align-items: center;
+  border: 1px;
+  border-color: #979797;
+  border-width: 1px;
+  border-style: solid;
+  margin-top: 18px;
+  width: 1034px;
+  height: 95px;
+}
+
+input.range {
+  width: 500px;
+}
+
+canvas.chatbot-position {
+  border: 1px;
+  border-color: #979797;
+  border-width: 1px;
+  border-style: solid;
+}
+
+.transparent {
+  background-color: transparent;
+}
