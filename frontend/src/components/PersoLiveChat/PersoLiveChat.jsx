@@ -5,8 +5,8 @@ import './PersoLiveChat.css';
 
 const PersoLiveChat = () => {
   // State 관리
-  const [apiServer, setApiServer] = useState('');
-  const [apiKey, setApiKey] = useState('');
+  const [apiServer, setApiServer] = useState(''); // 백엔드에서 받아온 API Server 주소
+  const [apiKey, setApiKey] = useState(''); // 백엔드에서 받아온 API Key
   const [config, setConfig] = useState(null);
   const [session, setSession] = useState(null);
   const [recording, setRecording] = useState(false);
@@ -102,67 +102,50 @@ const PersoLiveChat = () => {
   // API 인증 및 설정 가져오기
   const getConfig = async () => {
     try {
-      // URL 유효성 검사
-      if (!apiServer.trim()) {
-        alert('❌ API Server 주소를 입력해주세요.');
-        return;
-      }
-      
-      if (!apiKey.trim()) {
-        alert('❌ API Key를 입력해주세요.');
-        return;
+      console.log('백엔드에서 API 자격증명 로드 중...');
+
+      // 1. 백엔드에서 API 자격증명 가져오기
+      const credResponse = await fetch('/raon/api/persoai/credentials');
+
+      if (!credResponse.ok) {
+        throw new Error(`백엔드 에러! status: ${credResponse.status}`);
       }
 
-      // URL 형식 확인
-      try {
-        new URL(apiServer);
-      } catch (e) {
-        alert('❌ 올바른 URL 형식이 아닙니다.\n\n올바른 형식 예시:\nhttps://api.example.com\nhttp://localhost:8080');
-        return;
-      }
+      const credentials = await credResponse.json();
+      console.log('자격증명 수신:', { apiServer: credentials.apiServer });
 
-      console.log('API 호출 시작:', apiServer);
-      
-      const configData = await window.PersoLiveSDK.getAllSettings(apiServer, apiKey);
-      
-      console.log('API 응답 성공:', configData);
+      // 자격증명 저장
+      setApiServer(credentials.apiServer);
+      setApiKey(credentials.apiKey);
+
+      // 2. PersoLive SDK로 직접 설정 정보 가져오기
+      console.log('PersoLive SDK로 설정 로드 중...');
+      const configData = await window.PersoLiveSDK.getAllSettings(
+        credentials.apiServer,
+        credentials.apiKey
+      );
+
+      console.log('설정 로드 성공:', configData);
       setConfig(configData);
-      
+
       if (configData.prompts && configData.prompts.length > 0) {
         setIntroMessage(configData.prompts[0].intro_message);
       }
-      
-      alert('✅ 인증 성공!');
+
+      alert('✅ 설정 로드 성공!');
     } catch (e) {
-      console.error('API 에러 상세:', e);
-      
-      // 에러 타입별 메시지
-      let errorMessage = '❌ 인증 실패\n\n';
-      
-      if (e.message.includes('<!DOCTYPE') || e.message.includes('Unexpected token')) {
-        errorMessage += '서버가 JSON 대신 HTML을 반환했습니다.\n\n';
-        errorMessage += '가능한 원인:\n';
-        errorMessage += '1. API Server URL이 잘못되었습니다\n';
-        errorMessage += '2. API 엔드포인트가 존재하지 않습니다\n';
-        errorMessage += '3. API 서버가 실행되지 않았습니다\n\n';
-        errorMessage += '해결 방법:\n';
-        errorMessage += '- F12 키를 눌러 Network 탭에서 요청 URL을 확인하세요\n';
-        errorMessage += '- API Server URL 끝에 / 가 없는지 확인하세요\n';
-        errorMessage += '- http:// 또는 https:// 가 포함되어 있는지 확인하세요';
-      } else if (e.message.includes('CORS') || e.message.includes('cors')) {
-        errorMessage += 'CORS 에러가 발생했습니다.\n\n';
-        errorMessage += 'API 서버에서 CORS를 허용해야 합니다.\n';
-        errorMessage += '서버 담당자에게 문의하세요.';
-      } else if (e.message.includes('NetworkError') || e.message.includes('Failed to fetch')) {
-        errorMessage += '네트워크 연결 실패\n\n';
-        errorMessage += '1. API 서버가 실행 중인지 확인하세요\n';
-        errorMessage += '2. 인터넷 연결을 확인하세요\n';
-        errorMessage += '3. 방화벽 설정을 확인하세요';
+      console.error('설정 로드 에러:', e);
+
+      let errorMessage = '❌ 설정 로드 실패\n\n';
+      errorMessage += '에러 내용:\n' + e.message + '\n\n';
+
+      if (e.message.includes('백엔드')) {
+        errorMessage += '백엔드 서버가 실행 중인지 확인하세요.';
       } else {
-        errorMessage += '에러 내용:\n' + e.message + '\n\n';
+        errorMessage += 'PersoAI API 호출에 실패했습니다.\n';
         errorMessage += 'F12 → Network 탭에서 상세 내용을 확인하세요.';
       }
-      
+
       alert(errorMessage);
     }
   };
@@ -203,6 +186,7 @@ const PersoLiveChat = () => {
     try {
       setSessionState(1); // Starting
 
+      // PersoLive SDK로 세션 ID 생성 (자격증명 사용)
       const sessionId = await window.PersoLiveSDK.createSessionId(
         apiServer,
         apiKey,
@@ -217,6 +201,7 @@ const PersoLiveChat = () => {
         chatbotHeight / 100
       );
 
+      // PersoLive SDK로 세션 생성
       const newSession = await window.PersoLiveSDK.createSession(
         apiServer,
         sessionId,
@@ -445,38 +430,23 @@ const PersoLiveChat = () => {
         <div id="configContainer" style={{ display: 'block' }}>
           <p className="config-title">Live Chat configuration</p>
           <div className="config">
-            {/* 1. API Server */}
-            <p className="configuration" style={{ marginTop: '16px' }}>1. API Server</p>
-            <div style={{ display: 'flex', marginTop: '20px' }}>
-              <input
-                type="text"
-                value={apiServer}
-                onChange={(e) => setApiServer(e.target.value)}
-                style={{ marginLeft: '18px', width: '320px' }}
-              />
-            </div>
-
-            {/* 2. API Key */}
-            <p className="configuration" style={{ marginTop: '36px' }}>2. API Key</p>
-            <div style={{ display: 'flex', marginTop: '20px' }}>
-              <input
-                type="text"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                style={{ marginLeft: '18px', width: '320px' }}
-              />
-              <button
-                style={{ marginLeft: '10px' }}
-                onClick={getConfig}
-              >
-                Authorize
-              </button>
-            </div>
+            {/* 설정 로드 버튼 */}
+            {!config && (
+              <div style={{ marginTop: '16px' }}>
+                <p className="configuration">설정 로드하기</p>
+                <button
+                  style={{ marginTop: '20px', marginLeft: '18px' }}
+                  onClick={getConfig}
+                >
+                  설정 불러오기
+                </button>
+              </div>
+            )}
 
             {config && (
               <>
-                {/* 3. LLM */}
-                <p className="configuration" style={{ marginTop: '36px' }}>3. LLM</p>
+                {/* 1. LLM */}
+                <p className="configuration" style={{ marginTop: '36px' }}>1. LLM</p>
                 <select
                   value={selectedLlm}
                   onChange={(e) => setSelectedLlm(parseInt(e.target.value))}
@@ -487,8 +457,8 @@ const PersoLiveChat = () => {
                   ))}
                 </select>
 
-                {/* 4. TTS */}
-                <p className="configuration" style={{ marginTop: '36px' }}>4. TTS</p>
+                {/* 2. TTS */}
+                <p className="configuration" style={{ marginTop: '36px' }}>2. TTS</p>
                 <select
                   value={selectedTts}
                   onChange={(e) => setSelectedTts(parseInt(e.target.value))}
@@ -499,8 +469,8 @@ const PersoLiveChat = () => {
                   ))}
                 </select>
 
-                {/* 5. AI human style */}
-                <p className="configuration" style={{ marginTop: '36px' }}>5. AI human style</p>
+                {/* 3. AI human style */}
+                <p className="configuration" style={{ marginTop: '36px' }}>3. AI human style</p>
                 <select
                   value={selectedChatbotStyle}
                   onChange={(e) => setSelectedChatbotStyle(parseInt(e.target.value))}
@@ -511,8 +481,8 @@ const PersoLiveChat = () => {
                   ))}
                 </select>
 
-                {/* 6. Background */}
-                <p className="configuration" style={{ marginTop: '36px' }}>6. Background</p>
+                {/* 4. Background */}
+                <p className="configuration" style={{ marginTop: '36px' }}>4. Background</p>
                 <select
                   value={selectedBackground}
                   onChange={(e) => setSelectedBackground(e.target.value)}
@@ -524,8 +494,8 @@ const PersoLiveChat = () => {
                   ))}
                 </select>
 
-                {/* 7. Prompt */}
-                <p className="configuration" style={{ marginTop: '36px' }}>7. Prompt</p>
+                {/* 5. Prompt */}
+                <p className="configuration" style={{ marginTop: '36px' }}>5. Prompt</p>
                 <select
                   value={selectedPrompt}
                   onChange={(e) => handlePromptChange(parseInt(e.target.value))}
@@ -536,8 +506,8 @@ const PersoLiveChat = () => {
                   ))}
                 </select>
 
-                {/* 8. Intro message */}
-                <p className="configuration" style={{ marginTop: '36px' }}>8. Intro message</p>
+                {/* 6. Intro message */}
+                <p className="configuration" style={{ marginTop: '36px' }}>6. Intro message</p>
                 <label className="intro" style={{ marginTop: '20px', marginLeft: '18px' }}>
                   {introMessage}
                 </label>

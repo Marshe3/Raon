@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\".ai-workflow/scripts/gemini-daily-simple.bat\")",
+      "Bash(\".ai-workflow/scripts/gemini-review.bat\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
