@@ -35,6 +35,7 @@ const PersoLiveChat = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const recorderRef = useRef(null);
+  const chatLogRef = useRef(null);  // 채팅 로그 컨테이너 ref
   const backgroundImgRef = useRef(new Image());
   const persoImgRef = useRef(new Image());
   const removeOnCloseRef = useRef(null);
@@ -98,6 +99,13 @@ const PersoLiveChat = () => {
   useEffect(() => {
     redrawChatbotCanvas();
   }, [redrawChatbotCanvas]);
+
+  // 채팅 로그 자동 스크롤
+  useEffect(() => {
+    if (chatLogRef.current) {
+      chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+    }
+  }, [chatLog]);
 
   // API 인증 및 설정 가져오기
   const getConfig = async () => {
@@ -631,8 +639,8 @@ const PersoLiveChat = () => {
               autoPlay
               playsInline
             />
-            <ul className="chat-log">
-              {chatLog.slice().reverse().map((chat, index) => {
+            <ul className="chat-log" ref={chatLogRef}>
+              {chatLog.map((chat, index) => {
                 // timestamp를 안전하게 문자열로 변환
                 let timestampStr = '';
                 if (chat.timestamp) {
