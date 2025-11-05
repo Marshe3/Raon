@@ -1,0 +1,14 @@
+# Gemini CLI 분석 결과 (개인 분석 결과는 공유하지 않음)
+gemini-output/
+
+# 임시 파일
+*.tmp
+temp_*.txt
+*_temp.txt
+
+# 백업 파일
+*-old.bat
+*-simple.bat
+
+# 로그 파일
+*.log
