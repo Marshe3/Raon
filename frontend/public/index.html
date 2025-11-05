@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+	<script src="https://developers.kakao.com/sdk/js/kakao.min.js" defer></script>
+	<script>
+	  window.addEventListener('DOMContentLoaded', () => {
+	    if (window.Kakao && !window.Kakao.isInitialized()) {
+	      window.Kakao.init("카카오_자바스크립트_키"); // .env로 빼도 됨
+	    }
+	  });
+	</script>
 	<script src="https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js"></script>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
