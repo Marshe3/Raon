@@ -42,25 +42,3 @@ dependencies {
 }
 
 tasks.named('test') { useJUnitPlatform() }
-
-// React 빌드 task
-task buildReact(type: Exec) {
-    workingDir 'frontend'
-    if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
-        commandLine 'cmd', '/c', 'npm', 'run', 'build'
-    } else {
-        commandLine 'npm', 'run', 'build'
-    }
-}
-
-// React 빌드 결과물을 Spring Boot static 폴더로 복사
-task copyReactBuild(type: Copy) {
-    dependsOn buildReact
-    from 'frontend/build'
-    into 'src/main/resources/static'
-}
-
-// Spring Boot 빌드 전에 React 빌드 실행
-tasks.named('processResources') {
-    dependsOn copyReactBuild
-}

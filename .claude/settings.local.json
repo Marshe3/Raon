@@ -2,15 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(\".ai-workflow/scripts/gemini-daily-simple.bat\")",
-      "Bash(\".ai-workflow/scripts/gemini-review.bat\")",
-      "Bash(cmd /c \"npm run build\")",
-      "Bash(npm run build:*)",
-      "Bash(./gradlew copyReactBuild:*)",
-      "Bash(./gradlew build:*)",
-      "Bash(jar tf:*)",
-      "Bash(./gradlew bootRun)",
-      "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(\".ai-workflow/scripts/gemini-review.bat\")"
     ],
     "deny": [],
     "ask": []
