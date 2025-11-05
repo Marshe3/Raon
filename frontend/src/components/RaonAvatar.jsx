@@ -88,7 +88,7 @@ function RaonAvatar() {
     // navigate(`/chat/${newChatId}`);
     console.log("채팅 시작", { selectedModel, selectedTTS, backgroundPreview: !!backgroundPreview });
   };
-  const handleCancel = () => navigate("/chatrooms");
+  const handleCancel = () => navigate("/");
   const goHome = () => navigate("/");
 
   return (

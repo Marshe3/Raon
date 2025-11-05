@@ -6,6 +6,9 @@ export default function RaonHome({
   onNavigate = () => {},
   onOpenChat = () => {},
   onSeeMore = () => {},
+  isLoggedIn = false,  // 로그인 상태 (부모 컴포넌트에서 전달)
+  user = null,         // 사용자 정보 (부모 컴포넌트에서 전달)
+  onLogout = () => {}, // 로그아웃 처리 함수 (부모 컴포넌트에서 전달)
 }) {
   return (
     <div className="min-h-screen bg-[#EEF3FF]">
@@ -55,6 +58,32 @@ export default function RaonHome({
                 >
                   메뉴
                 </button>
+				{/* 로그인/로그아웃 버튼 - 로그인 상태에 따라 조건부 렌더링 */}
+	            {isLoggedIn ? (
+	              // 로그인된 경우: 사용자명과 로그아웃 버튼 표시
+	              <div className="flex items-center gap-2">
+	                {user && (
+	                  <span className="text-sm">
+	                    {/* 사용자 이름, 이메일 순으로 표시하고 없으면 기본값 */}
+	                    {user.name || user.email || '사용자'}님
+	                  </span>
+	                )}
+	                <button
+	                  onClick={onLogout} // 로그아웃 함수 호출
+	                  className="rounded px-2 py-1 bg-white/20 hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+	                >
+	                  로그아웃
+	                </button>
+	              </div>
+	            ) : (
+	              // 로그인되지 않은 경우: 로그인 버튼 표시
+	              <Link
+	                to="/login"
+	                className="rounded px-2 py-1 bg-white/20 hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+	              >
+	                로그인
+	              </Link>
+	            )}
               </nav>
             </div>
           </div>
