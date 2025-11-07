@@ -16,11 +16,29 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  gap: 15px;
 }
 
 .chat-header h2 {
   margin: 0;
   font-size: 24px;
+  flex: 1;
+  text-align: center;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.back-btn:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 .end-session-btn {
@@ -74,6 +92,21 @@
 .start-session h3 {
   margin-bottom: 20px;
   color: #333;
+}
+
+.chatbot-info {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: left;
+  max-width: 400px;
+}
+
+.chatbot-info p {
+  margin: 10px 0;
+  color: #555;
 }
 
 .create-session-btn {

@@ -4,6 +4,7 @@ import RaonHome from "./components/RaonHome.jsx";
 import RaonSocialLogin from "./components/RaonSocialLogin.jsx";
 import RaonChatList from "./components/RaonChatList.jsx";
 import RaonAvatar from "./components/RaonAvatar.jsx";
+import ChatComponent from "./components/ChatComponent.jsx";
 
 export default function App() {
   return (
@@ -116,6 +117,7 @@ function AppInner() {
       />
       <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
       <Route path="/chatrooms" element={<RaonChatList />} />
+      <Route path="/chat/:id" element={<ChatComponent />} />
       <Route path="/avatar" element={<RaonAvatar />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import './ChatComponent.css';
 
 const ChatComponent = () => {
+  const { id: chatbotId } = useParams();
+  const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [error, setError] = useState(null);
+  const [chatbotInfo, setChatbotInfo] = useState(null);
   const messagesEndRef = useRef(null);
 
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api/chat';
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/raon/api/chat';
 
   // 자동 스크롤
   const scrollToBottom = () => {
@@ -21,21 +25,44 @@ const ChatComponent = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 세션 생성
+  // 챗봇 정보 로드
+  useEffect(() => {
+    const loadChatbotInfo = async () => {
+      if (!chatbotId) return;
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbots/${chatbotId}`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setChatbotInfo(data);
+        }
+      } catch (err) {
+        console.error('챗봇 정보 로드 실패:', err);
+      }
+    };
+
+    loadChatbotInfo();
+  }, [chatbotId, API_BASE_URL]);
+
+  // 세션 생성 (챗봇 ID 사용)
   const createSession = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/session`, {
+      // userId는 로그인된 사용자 정보에서 가져와야 함 (임시로 1 사용)
+      const userId = 1;
+
+      const response = await fetch(`${API_BASE_URL}/session?userId=${userId}&chatbotId=${chatbotId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
-          llmType: 'gpt-35',
-          ttsType: 'yuri',
-          modelStyle: 'yoori-front-khaki_overalls-nodded_loop',
           capability: ['LLM', 'TTS', 'STT']
         }),
       });
@@ -49,7 +76,7 @@ const ChatComponent = () => {
       setIsSessionActive(true);
       setMessages([{
         role: 'system',
-        content: '채팅 세션이 시작되었습니다. 안녕하세요!',
+        content: `${chatbotInfo?.chatbotName || 'AI 챗봇'}과의 대화를 시작합니다. 안녕하세요!`,
         timestamp: new Date()
       }]);
     } catch (err) {
@@ -77,13 +104,13 @@ const ChatComponent = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/message`, {
+      const response = await fetch(`${API_BASE_URL}/message?sessionId=${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
-          sessionId: sessionId,
           message: userMessage
         }),
       });
@@ -159,13 +186,13 @@ const ChatComponent = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/message/simple`, {
+      const response = await fetch(`${API_BASE_URL}/message?sessionId=${sessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
-          sessionId: sessionId,
           message: userMessage
         }),
       });
@@ -200,12 +227,14 @@ const ChatComponent = () => {
     try {
       await fetch(`${API_BASE_URL}/session/${sessionId}`, {
         method: 'DELETE',
+        credentials: 'include'
       });
 
       setSessionId(null);
       setIsSessionActive(false);
       setMessages([]);
       setError(null);
+      navigate('/chatrooms'); // 채팅방 목록으로 이동
     } catch (err) {
       console.error('Session end error:', err);
     }
@@ -222,7 +251,8 @@ const ChatComponent = () => {
   return (
     <div className="chat-container">
       <div className="chat-header">
-        <h2>🤖 AI Avatar Chat</h2>
+        <button onClick={() => navigate(-1)} className="back-btn">← 뒤로</button>
+        <h2>🤖 {chatbotInfo?.chatbotName || 'AI 챗봇'}</h2>
         {isSessionActive && (
           <button onClick={endSession} className="end-session-btn">
             세션 종료
@@ -240,12 +270,18 @@ const ChatComponent = () => {
       {!isSessionActive ? (
         <div className="start-session">
           <h3>채팅을 시작하려면 세션을 생성하세요</h3>
-          <button 
-            onClick={createSession} 
-            disabled={isLoading}
+          {chatbotInfo && (
+            <div className="chatbot-info">
+              <p><strong>설명:</strong> {chatbotInfo.description}</p>
+              <p><strong>모델:</strong> {chatbotInfo.llmType}</p>
+            </div>
+          )}
+          <button
+            onClick={createSession}
+            disabled={isLoading || !chatbotId}
             className="create-session-btn"
           >
-            {isLoading ? '생성 중...' : '세션 생성'}
+            {isLoading ? '생성 중...' : '채팅 시작'}
           </button>
         </div>
       ) : (
