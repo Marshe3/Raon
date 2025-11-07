@@ -1,4 +1,3 @@
-// src/App.js
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import RaonHome from "./components/RaonHome.jsx";
@@ -44,13 +43,27 @@ function AppInner() {
   useEffect(() => {
     checkLoginStatus();
 
+    let focusTimeout = null;
     const handleFocus = () => {
-      console.log("페이지 포커스 감지 - 로그인 상태 재확인");
-      setTimeout(() => checkLoginStatus(), 100);
+      // Debounce: 이전 타이머가 있으면 취소
+      if (focusTimeout) {
+        clearTimeout(focusTimeout);
+      }
+
+      // 5초 후에만 로그인 상태 확인 (과도한 API 호출 방지)
+      focusTimeout = setTimeout(() => {
+        console.log("페이지 포커스 감지 - 로그인 상태 재확인");
+        checkLoginStatus();
+      }, 5000);
     };
 
     window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      if (focusTimeout) {
+        clearTimeout(focusTimeout);
+      }
+    };
   }, []);
 
   const handleLogout = async () => {

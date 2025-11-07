@@ -1,6 +1,8 @@
 package com.example.raon.config;
 
-import com.example.raon.service.CustomOAuth2UserService;
+import java.util.Arrays;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,42 +12,33 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    private final CustomOAuth2UserService customOAuth2UserService;
-
-    public SecurityConfig(CustomOAuth2UserService customOAuth2UserService) {
-        this.customOAuth2UserService = customOAuth2UserService;
-    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable())  // 개발 중에는 CSRF 비활성화
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/login/**", "/oauth2/**", "/api/user/me", "/loginSuccess", "/loginFailure").permitAll()
+                // 채팅 API는 인증 없이 접근 가능
+                .requestMatchers("/api/chat/**").permitAll()
+                .requestMatchers("/raon/api/chat/**").permitAll()
+                
+                // OAuth2 로그인 관련
+                .requestMatchers("/login/**").permitAll()
+                .requestMatchers("/oauth2/**").permitAll()
+                .requestMatchers("/login/oauth2/code/**").permitAll()
+                
+                // H2 콘솔 (개발용)
+                .requestMatchers("/h2-console/**").permitAll()
+                
+                // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
-                )
-                // 로그인 성공 시 React 앱으로 리다이렉트
-                .defaultSuccessUrl("http://localhost:3000/", true)
-                .failureUrl("http://localhost:3000/login?error=true")
-            )
-            // 로그아웃 설정 추가
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("http://localhost:3000/")
-                .deleteCookies("JSESSIONID")
-                .invalidateHttpSession(true)
-                .clearAuthentication(true)
+                .defaultSuccessUrl("/", true)
             );
 
         return http.build();
