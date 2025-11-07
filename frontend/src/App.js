@@ -117,7 +117,7 @@ function AppInner() {
       />
       <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
       <Route path="/chatrooms" element={<RaonChatList />} />
-      <Route path="/chat/:id" element={<ChatComponent />} />
+      <Route path="/chat/:id" element={<ChatComponent user={user} isLoggedIn={isLoggedIn} />} />
       <Route path="/avatar" element={<RaonAvatar />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

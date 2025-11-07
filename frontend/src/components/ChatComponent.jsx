@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './ChatComponent.css';
 
-const ChatComponent = () => {
+const ChatComponent = ({ user, isLoggedIn }) => {
   const { id: chatbotId } = useParams();
   const navigate = useNavigate();
   const [sessionId, setSessionId] = useState(null);
@@ -15,6 +15,13 @@ const ChatComponent = () => {
   const messagesEndRef = useRef(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/raon/api/chat';
+
+  // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/login', { state: { from: `/chat/${chatbotId}` } });
+    }
+  }, [isLoggedIn, navigate, chatbotId]);
 
   // 자동 스크롤
   const scrollToBottom = () => {
@@ -49,12 +56,17 @@ const ChatComponent = () => {
 
   // 세션 생성 (챗봇 ID 사용)
   const createSession = async () => {
+    if (!user || !user.userId) {
+      setError('로그인이 필요합니다.');
+      navigate('/login');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // userId는 로그인된 사용자 정보에서 가져와야 함 (임시로 1 사용)
-      const userId = 1;
+      const userId = user.userId;
 
       const response = await fetch(`${API_BASE_URL}/session?userId=${userId}&chatbotId=${chatbotId}`, {
         method: 'POST',
@@ -244,7 +256,7 @@ const ChatComponent = () => {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessageSimple(); // 또는 sendMessage() 사용
+      sendMessage(); // 스트리밍 방식 사용
     }
   };
 
@@ -327,8 +339,8 @@ const ChatComponent = () => {
               disabled={isLoading}
               rows="3"
             />
-            <button 
-              onClick={sendMessageSimple}
+            <button
+              onClick={sendMessage}
               disabled={isLoading || !inputMessage.trim()}
               className="send-btn"
             >
