@@ -2,7 +2,6 @@ package com.example.raon.config;
 
 import java.util.Arrays;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -38,7 +37,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
-                .defaultSuccessUrl("/", true)
+                .defaultSuccessUrl("http://localhost:3000/", true)
             );
 
         return http.build();
