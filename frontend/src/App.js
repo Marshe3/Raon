@@ -88,14 +88,17 @@ function AppInner() {
     window.location.href = "/oauth2/authorization/google";
   };
 
-  const handleOpenChat = (id) => navigate(`/chat/${id}`);
+  const handleOpenChat = (id) => {
+    console.log('Opening chat with chatbot ID:', id);
+    navigate(`/chat/${id}`);
+  };
 
   const chats = [
     {
-      id: "c1",
-      title: "친구 아바타와의 대화",
-      lastMessage: "마지막: 오늘 기분이 어때?",
-      updatedAt: "마지막 기록: 2시간 전",
+      id: 1, // 실제 chatbot_id (data.sql 참조)
+      title: "기본 챗봇",
+      lastMessage: "PersoAI 기본 챗봇과 대화하기",
+      updatedAt: "지금 시작하기",
     },
   ];
 
