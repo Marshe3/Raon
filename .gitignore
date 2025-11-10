@@ -58,3 +58,7 @@ python-chatbot/*.pyc
 python-chatbot/*.pyo
 python-chatbot/*.pyd
 python-chatbot/.Python
+
+### Windows Reserved Names ###
+nul
+NUL

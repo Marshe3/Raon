@@ -89,6 +89,11 @@ const ChatComponent = ({ user, isLoggedIn }) => {
       return;
     }
 
+    if (!videoRef.current) {
+      setError('비디오 요소가 준비되지 않았습니다');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -100,7 +105,8 @@ const ChatComponent = ({ user, isLoggedIn }) => {
       const promptId = chatbotInfo?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb';
       const documentId = chatbotInfo?.documentId || null;
 
-      console.log('Creating PersoAI session...', {
+      console.log('=== Creating PersoAI Session ===');
+      console.log('Configuration:', {
         llmType,
         ttsType,
         modelStyle,
@@ -108,7 +114,8 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         documentId
       });
 
-      // SDK를 통해 세션 생성
+      // SDK를 통해 세션 ID 생성
+      console.log('Step 1: Creating session ID...');
       const createdSessionId = await window.PersoLiveSDK.createSessionId(
         PERSOAI_API_SERVER,
         PERSOAI_API_KEY,
@@ -122,10 +129,10 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         0,    // chatbotTop
         1     // chatbotHeight
       );
-
-      console.log('Session ID created:', createdSessionId);
+      console.log('✓ Session ID created:', createdSessionId);
 
       // WebRTC 세션 생성
+      console.log('Step 2: Creating WebRTC session...');
       const session = await window.PersoLiveSDK.createSession(
         PERSOAI_API_SERVER,
         createdSessionId,
@@ -133,16 +140,28 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         1080, // height
         false // enableVoiceChat
       );
-
-      console.log('PersoAI session created:', session);
+      console.log('✓ WebRTC session created');
 
       // 비디오 엘리먼트에 연결
-      if (videoRef.current) {
-        session.setSrc(videoRef.current);
-      }
+      console.log('Step 3: Connecting to video element...');
+      console.log('Video element ready state:', videoRef.current.readyState);
+      console.log('Video element dimensions:', {
+        width: videoRef.current.clientWidth,
+        height: videoRef.current.clientHeight
+      });
+
+      session.setSrc(videoRef.current);
+      console.log('✓ Video source set');
+
+      // 채팅 상태 구독
+      session.subscribeChatStatus((status) => {
+        const statusText = ['Available', 'Recording', 'Analyzing', 'AI Speaking'][status] || 'Unknown';
+        console.log('Chat status changed:', status, `(${statusText})`);
+      });
 
       // 채팅 로그 구독
       session.subscribeChatLog((chatLog) => {
+        console.log('Chat log updated. Messages:', chatLog.length);
         const newMessages = chatLog.map(chat => ({
           role: chat.isUser ? 'user' : 'assistant',
           content: chat.text,
@@ -151,9 +170,27 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         setMessages(newMessages);
       });
 
+      // 세션 종료 이벤트 구독
+      session.onClose((manualClosed) => {
+        console.log('Session closed. Manual close:', manualClosed);
+        if (!manualClosed) {
+          setError('세션이 예기치 않게 종료되었습니다.');
+          // 세션 정보 조회
+          window.PersoLiveSDK.getSessionInfo(PERSOAI_API_SERVER, createdSessionId)
+            .then((info) => {
+              console.error('Session termination reason:', info.termination_reason);
+            })
+            .catch(err => console.error('Failed to get session info:', err));
+        }
+        setIsSessionActive(false);
+        setPersoSession(null);
+      });
+
       setSessionId(createdSessionId);
       setPersoSession(session);
       setIsSessionActive(true);
+
+      console.log('=== Session Setup Complete ===');
 
       setMessages([{
         role: 'system',
@@ -163,7 +200,8 @@ const ChatComponent = ({ user, isLoggedIn }) => {
 
     } catch (err) {
       setError('세션 생성 중 오류가 발생했습니다: ' + err.message);
-      console.error('Session creation error:', err);
+      console.error('❌ Session creation error:', err);
+      console.error('Error stack:', err.stack);
     } finally {
       setIsLoading(false);
     }
@@ -366,87 +404,87 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         </div>
       )}
 
-      {!isSessionActive ? (
-        <div className="start-session">
-          <h3>채팅을 시작하려면 세션을 생성하세요</h3>
-          {chatbotInfo && (
-            <div className="chatbot-info">
-              <p><strong>설명:</strong> {chatbotInfo.description}</p>
-              <p><strong>모델:</strong> {chatbotInfo.llmType}</p>
+      <>
+        {/* 아바타 비디오 - 항상 렌더링 */}
+        <div className="avatar-container">
+          <video
+            ref={videoRef}
+            className="avatar-viewer"
+            autoPlay
+            playsInline
+          />
+          {!isSessionActive && (
+            <div className="start-session-overlay">
+              <div className="start-session-content">
+                <h3>채팅을 시작하려면 세션을 생성하세요</h3>
+                {chatbotInfo && (
+                  <div className="chatbot-info">
+                    <p><strong>설명:</strong> {chatbotInfo.description}</p>
+                    <p><strong>모델:</strong> {chatbotInfo.llmType}</p>
+                  </div>
+                )}
+                <button
+                  onClick={createSession}
+                  disabled={isLoading || !chatbotId}
+                  className="create-session-btn"
+                >
+                  {isLoading ? '생성 중...' : '채팅 시작'}
+                </button>
+              </div>
             </div>
           )}
+        </div>
+
+        <div className="messages-container">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`message ${msg.role}`}
+            >
+              <div className="message-header">
+                <span className="message-role">
+                  {msg.role === 'user' ? '👤 You' :
+                   msg.role === 'assistant' ? '🤖 AI' : 'ℹ️ System'}
+                </span>
+                <span className="message-time">
+                  {new Date(msg.timestamp).toLocaleTimeString('ko-KR')}
+                </span>
+              </div>
+              <div className="message-content">
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="message assistant loading">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <div className="input-container">
+          <textarea
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
+            disabled={isLoading || !isSessionActive}
+            rows="3"
+          />
           <button
-            onClick={createSession}
-            disabled={isLoading || !chatbotId}
-            className="create-session-btn"
+            onClick={sendMessage}
+            disabled={isLoading || !inputMessage.trim() || !isSessionActive}
+            className="send-btn"
           >
-            {isLoading ? '생성 중...' : '채팅 시작'}
+            전송
           </button>
         </div>
-      ) : (
-        <>
-          {/* 아바타 비디오 */}
-          <div className="avatar-container">
-            <video
-              ref={videoRef}
-              className="avatar-viewer"
-              autoPlay
-              playsInline
-              muted={false}
-            />
-          </div>
-
-          <div className="messages-container">
-            {messages.map((msg, index) => (
-              <div 
-                key={index} 
-                className={`message ${msg.role}`}
-              >
-                <div className="message-header">
-                  <span className="message-role">
-                    {msg.role === 'user' ? '👤 You' : 
-                     msg.role === 'assistant' ? '🤖 AI' : 'ℹ️ System'}
-                  </span>
-                  <span className="message-time">
-                    {new Date(msg.timestamp).toLocaleTimeString('ko-KR')}
-                  </span>
-                </div>
-                <div className="message-content">
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="message assistant loading">
-                <div className="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="input-container">
-            <textarea
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="메시지를 입력하세요... (Enter: 전송, Shift+Enter: 줄바꿈)"
-              disabled={isLoading}
-              rows="3"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={isLoading || !inputMessage.trim()}
-              className="send-btn"
-            >
-              전송
-            </button>
-          </div>
-        </>
-      )}
+      </>
     </div>
   );
 };

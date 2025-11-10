@@ -3,7 +3,24 @@
     "allow": [
       "Bash(\".ai-workflow/scripts/gemini-daily-simple.bat\")",
       "Bash(\".ai-workflow/scripts/gemini-review.bat\")",
-      "Bash(./gradlew bootRun)"
+      "Bash(./gradlew bootRun)",
+      "Bash(\".ai-workflow/scripts/gemini-daily.bat\")",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: OAuth2 로그인 후 404 에러 수정\n\n- defaultSuccessUrl을 프론트엔드 URL(http://localhost:3000/)로 변경\n- 로그인 성공 후 백엔드 루트 경로 대신 React 앱으로 리다이렉트\n- Unused import 제거\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(dir:*)",
+      "Bash(nul)",
+      "Bash(python -m venv:*)",
+      "Bash(venvScriptsactivate.bat:*)",
+      "Bash(pip install:*)",
+      "Bash(call start.bat)",
+      "Bash(python -m pip install:*)",
+      "Bash(python app.py:*)",
+      "Bash(taskkill:*)",
+      "Bash(python test_api.py:*)",
+      "Bash(git rm:*)",
+      "Bash(NUL)",
+      "Bash(del nul 2)"
     ],
     "deny": [],
     "ask": []
