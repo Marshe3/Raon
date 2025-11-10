@@ -16,12 +16,12 @@ const ChatComponent = ({ user, isLoggedIn }) => {
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/raon/api/chat';
 
-  // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate('/login', { state: { from: `/chat/${chatbotId}` } });
-    }
-  }, [isLoggedIn, navigate, chatbotId]);
+  // 로그인 체크 비활성화 (Python 서버는 로그인 불필요)
+  // useEffect(() => {
+  //   if (!isLoggedIn) {
+  //     navigate('/login', { state: { from: `/chat/${chatbotId}` } });
+  //   }
+  // }, [isLoggedIn, navigate, chatbotId]);
 
   // 자동 스크롤
   const scrollToBottom = () => {
@@ -56,17 +56,12 @@ const ChatComponent = ({ user, isLoggedIn }) => {
 
   // 세션 생성 (챗봇 ID 사용)
   const createSession = async () => {
-    if (!user || !user.userId) {
-      setError('로그인이 필요합니다.');
-      navigate('/login');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
     try {
-      const userId = user.userId;
+      // 로그인된 경우 userId 사용, 아니면 게스트(0)
+      const userId = user?.userId || 0;
 
       const response = await fetch(`${API_BASE_URL}/session?userId=${userId}&chatbotId=${chatbotId}`, {
         method: 'POST',
