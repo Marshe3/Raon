@@ -12,9 +12,11 @@ const ChatComponent = ({ user, isLoggedIn }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [error, setError] = useState(null);
   const [chatbotInfo, setChatbotInfo] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const messagesEndRef = useRef(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/raon/api/chat';
+  const PERSOAI_VIEWER_URL = 'https://live-viewer.perso.ai';
 
   // 로그인 체크 비활성화 (Python 서버는 로그인 불필요)
   // useEffect(() => {
@@ -81,6 +83,13 @@ const ChatComponent = ({ user, isLoggedIn }) => {
       const data = await response.json();
       setSessionId(data.sessionId);
       setIsSessionActive(true);
+
+      // 아바타 뷰어 URL 설정
+      if (data.sessionId && data.modelStyle) {
+        const viewerUrl = `${PERSOAI_VIEWER_URL}/?session_id=${data.sessionId}`;
+        setAvatarUrl(viewerUrl);
+      }
+
       setMessages([{
         role: 'system',
         content: `${chatbotInfo?.chatbotName || 'AI 챗봇'}과의 대화를 시작합니다. 안녕하세요!`,
@@ -293,6 +302,18 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         </div>
       ) : (
         <>
+          {avatarUrl && (
+            <div className="avatar-container">
+              <iframe
+                src={avatarUrl}
+                title="PersoAI Avatar"
+                className="avatar-viewer"
+                allow="microphone; camera; autoplay"
+                allowFullScreen
+              />
+            </div>
+          )}
+
           <div className="messages-container">
             {messages.map((msg, index) => (
               <div 
