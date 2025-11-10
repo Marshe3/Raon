@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './ChatComponent.css';
 
+// PersoAI SDK 로드
+const PERSO_SDK_URL = 'https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js';
+
 const ChatComponent = ({ user, isLoggedIn }) => {
   const { id: chatbotId } = useParams();
   const navigate = useNavigate();
@@ -12,11 +15,34 @@ const ChatComponent = ({ user, isLoggedIn }) => {
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [error, setError] = useState(null);
   const [chatbotInfo, setChatbotInfo] = useState(null);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [persoSession, setPersoSession] = useState(null);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
   const messagesEndRef = useRef(null);
-  const audioRef = useRef(null);
+  const videoRef = useRef(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/raon/api/chat';
+  const PERSOAI_API_SERVER = 'https://live-api.perso.ai';
+  const PERSOAI_API_KEY = process.env.REACT_APP_PERSOAI_API_KEY || 'plak-ed3f1817238abf96b6c37b3edc605f1e';
+
+  // PersoAI SDK 로드
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = PERSO_SDK_URL;
+    script.async = true;
+    script.onload = () => {
+      console.log('PersoAI SDK loaded');
+      setSdkLoaded(true);
+    };
+    script.onerror = () => {
+      console.error('Failed to load PersoAI SDK');
+      setError('아바타 SDK 로드 실패');
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   // 로그인 체크 비활성화 (Python 서버는 로그인 불필요)
   // useEffect(() => {
@@ -56,39 +82,85 @@ const ChatComponent = ({ user, isLoggedIn }) => {
     loadChatbotInfo();
   }, [chatbotId, API_BASE_URL]);
 
-  // 세션 생성 (챗봇 ID 사용)
+  // 세션 생성 (PersoAI SDK 사용)
   const createSession = async () => {
+    if (!sdkLoaded || !window.PersoLiveSDK) {
+      setError('아바타 SDK가 로드되지 않았습니다');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // 로그인된 경우 userId 사용, 아니면 게스트(0)
-      const userId = user?.userId || 0;
+      // PersoAI 세션 생성
+      const llmType = chatbotInfo?.llmType || 'azure-gpt-4o';
+      const ttsType = chatbotInfo?.ttsType || 'yuri';
+      const modelStyle = chatbotInfo?.modelStyle || 'chaehee_livechat-front-white_suit-natural_loop';
+      const promptId = chatbotInfo?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb';
+      const documentId = chatbotInfo?.documentId || null;
 
-      const response = await fetch(`${API_BASE_URL}/session?userId=${userId}&chatbotId=${chatbotId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          capability: ['LLM', 'TTS', 'STT']
-        }),
+      console.log('Creating PersoAI session...', {
+        llmType,
+        ttsType,
+        modelStyle,
+        promptId,
+        documentId
       });
 
-      if (!response.ok) {
-        throw new Error('세션 생성 실패');
+      // SDK를 통해 세션 생성
+      const createdSessionId = await window.PersoLiveSDK.createSessionId(
+        PERSOAI_API_SERVER,
+        PERSOAI_API_KEY,
+        llmType,
+        ttsType,
+        modelStyle,
+        promptId,
+        documentId,
+        null, // backgroundImageKey
+        0,    // chatbotLeft
+        0,    // chatbotTop
+        1     // chatbotHeight
+      );
+
+      console.log('Session ID created:', createdSessionId);
+
+      // WebRTC 세션 생성
+      const session = await window.PersoLiveSDK.createSession(
+        PERSOAI_API_SERVER,
+        createdSessionId,
+        1920, // width
+        1080, // height
+        false // enableVoiceChat
+      );
+
+      console.log('PersoAI session created:', session);
+
+      // 비디오 엘리먼트에 연결
+      if (videoRef.current) {
+        session.setSrc(videoRef.current);
       }
 
-      const data = await response.json();
-      setSessionId(data.sessionId);
+      // 채팅 로그 구독
+      session.subscribeChatLog((chatLog) => {
+        const newMessages = chatLog.map(chat => ({
+          role: chat.isUser ? 'user' : 'assistant',
+          content: chat.text,
+          timestamp: new Date(chat.timestamp)
+        }));
+        setMessages(newMessages);
+      });
+
+      setSessionId(createdSessionId);
+      setPersoSession(session);
       setIsSessionActive(true);
 
       setMessages([{
         role: 'system',
-        content: `${chatbotInfo?.chatbotName || 'AI 챗봇'}과의 대화를 시작합니다. 안녕하세요!`,
+        content: `${chatbotInfo?.chatbotName || 'AI 챗봇'}과의 대화를 시작합니다!`,
         timestamp: new Date()
       }]);
+
     } catch (err) {
       setError('세션 생성 중 오류가 발생했습니다: ' + err.message);
       console.error('Session creation error:', err);
@@ -97,13 +169,33 @@ const ChatComponent = ({ user, isLoggedIn }) => {
     }
   };
 
-  // 메시지 전송 (스트리밍)
+  // 메시지 전송 (PersoAI SDK 사용)
   const sendMessage = async () => {
+    if (!inputMessage.trim() || !persoSession) return;
+
+    const userMessage = inputMessage;
+    setInputMessage('');
+
+    setIsLoading(true);
+
+    try {
+      // PersoAI SDK를 통해 메시지 전송
+      persoSession.processChat(userMessage);
+    } catch (err) {
+      setError('메시지 전송 중 오류가 발생했습니다: ' + err.message);
+      console.error('Message send error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 이전 메시지 전송 함수 (백업용)
+  const sendMessageOld = async () => {
     if (!inputMessage.trim() || !sessionId) return;
 
     const userMessage = inputMessage;
     setInputMessage('');
-    
+
     // 사용자 메시지 추가
     setMessages(prev => [...prev, {
       role: 'user',
@@ -232,19 +324,16 @@ const ChatComponent = ({ user, isLoggedIn }) => {
 
   // 세션 종료
   const endSession = async () => {
-    if (!sessionId) return;
-
     try {
-      await fetch(`${API_BASE_URL}/session/${sessionId}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      });
+      if (persoSession) {
+        persoSession.stopSession();
+        setPersoSession(null);
+      }
 
       setSessionId(null);
       setIsSessionActive(false);
       setMessages([]);
       setError(null);
-      navigate('/chatrooms'); // 채팅방 목록으로 이동
     } catch (err) {
       console.error('Session end error:', err);
     }
@@ -296,6 +385,17 @@ const ChatComponent = ({ user, isLoggedIn }) => {
         </div>
       ) : (
         <>
+          {/* 아바타 비디오 */}
+          <div className="avatar-container">
+            <video
+              ref={videoRef}
+              className="avatar-viewer"
+              autoPlay
+              playsInline
+              muted={false}
+            />
+          </div>
+
           <div className="messages-container">
             {messages.map((msg, index) => (
               <div 
