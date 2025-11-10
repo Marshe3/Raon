@@ -34,9 +34,20 @@ def health_check():
 def create_session():
     """세션 생성"""
     try:
-        data = request.json
+        data = request.json or {}
         user_id = request.args.get('userId')
         chatbot_id = request.args.get('chatbotId')
+
+        print(f"Creating session for user {user_id}, chatbot {chatbot_id}")
+        print(f"   Request data: {data}")
+
+        # API 키 확인
+        if not PERSOAI_API_KEY or PERSOAI_API_KEY == 'your-persoai-api-key-here':
+            print("ERROR: PERSOAI_API_KEY is not configured!")
+            return jsonify({
+                "error": "API key not configured",
+                "message": "Please set PERSOAI_API_KEY in .env file"
+            }), 500
 
         # PersoAI 세션 생성 요청
         session_data = {
@@ -51,18 +62,32 @@ def create_session():
         if data.get('document'):
             session_data['document'] = data['document']
 
+        print(f"   Sending to PersoAI API: {session_data}")
+
         response = requests.post(
             f"{PERSOAI_API_SERVER}/api/v1/session/",
             headers={
                 "PersoLive-APIKey": PERSOAI_API_KEY,
                 "Content-Type": "application/json"
             },
-            json=session_data
+            json=session_data,
+            timeout=30
         )
+
+        print(f"   PersoAI API response: {response.status_code}")
 
         if response.status_code == 201:
             result = response.json()
             session_id = result['session_id']
+
+            # 세션 시작 이벤트 전송 (세션을 활성화하기 위해 필요)
+            print(f"   Sending SESSION_START event...")
+            start_response = requests.post(
+                f"{PERSOAI_API_SERVER}/api/v1/session/{session_id}/event/create/",
+                headers={"Content-Type": "application/json"},
+                json={"event": "SESSION_START", "detail": "Session started"}
+            )
+            print(f"   SESSION_START response: {start_response.status_code}")
 
             # 세션 정보 저장
             sessions[session_id] = {
@@ -70,13 +95,6 @@ def create_session():
                 'chatbotId': chatbot_id,
                 'history': []
             }
-
-            # 세션 시작 이벤트 전송
-            requests.post(
-                f"{PERSOAI_API_SERVER}/api/v1/session/{session_id}/event/create/",
-                headers={"Content-Type": "application/json"},
-                json={"event": "SESSION_START", "detail": "Session started"}
-            )
 
             return jsonify({
                 "sessionId": session_id,
@@ -110,6 +128,9 @@ def send_message():
         # PersoAI v2 API 호출 (스트리밍)
         def generate():
             try:
+                print(f"Sending message to PersoAI: {message}")
+                print(f"   Session history: {session_data['history']}")
+
                 response = requests.post(
                     f"{PERSOAI_API_SERVER}/api/v1/session/{session_id}/llm/v2/",
                     headers={"Content-Type": "application/json"},
@@ -117,29 +138,41 @@ def send_message():
                     stream=True
                 )
 
+                print(f"   PersoAI LLM API response status: {response.status_code}")
+
                 ai_response = ""
 
                 for line in response.iter_lines():
                     if line:
                         line_str = line.decode('utf-8')
+                        print(f"   Received line: {line_str}")
+
                         if line_str.startswith('data: '):
                             try:
                                 json_data = json.loads(line_str[6:])
+                                print(f"   Parsed JSON: {json_data}")
+
                                 if json_data.get('status') == 'success':
-                                    sentence = json_data.get('sentence', '')
-                                    if sentence:
-                                        ai_response += sentence
-                                        yield f"data: {sentence}\n\n"
-                            except json.JSONDecodeError:
+                                    # PersoAI API는 'content' 필드에 텍스트를 반환
+                                    content = json_data.get('content', '')
+                                    if content:
+                                        ai_response += content
+                                        yield f"data: {content}\n\n"
+                            except json.JSONDecodeError as e:
+                                print(f"   JSON decode error: {e}")
                                 continue
 
                 # 히스토리에 AI 응답 추가
                 if ai_response:
                     session_data['history'].append({"role": "assistant", "content": ai_response})
+                    print(f"   Total AI response: {ai_response}")
+                else:
+                    print("   WARNING: No AI response received!")
 
                 yield "data: [DONE]\n\n"
 
             except Exception as e:
+                print(f"   ERROR in generate: {str(e)}")
                 yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
 
         return Response(generate(), mimetype='text/event-stream')
@@ -198,10 +231,10 @@ def get_chatbot(chatbot_id):
 
 if __name__ == '__main__':
     if not PERSOAI_API_KEY:
-        print("⚠️  PERSOAI_API_KEY environment variable is not set!")
+        print("WARNING: PERSOAI_API_KEY environment variable is not set!")
         print("   Please set it in .env file")
         exit(1)
 
-    print("🚀 Starting Python Chatbot Server...")
+    print("Starting Python Chatbot Server...")
     print(f"   API Server: {PERSOAI_API_SERVER}")
     app.run(host='0.0.0.0', port=5000, debug=True)
