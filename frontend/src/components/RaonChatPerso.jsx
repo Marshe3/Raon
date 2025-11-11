@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import './RaonChat.css';
+import './RaonChatPerso.css';
 
 const PERSOAI_API_SERVER = 'https://live-api.perso.ai';
 const PERSOAI_API_KEY = process.env.REACT_APP_PERSOAI_API_KEY || 'plak-ed3f1817238abf96b6c37b3edc605f1e';

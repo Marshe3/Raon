@@ -14,9 +14,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     
     List<Message> findByChatRoomOrderByCreatedAtAsc(ChatRoom chatRoom);
     
-    List<Message> findByChatRoom_ChatIdOrderByCreatedAtAsc(Long chatId);
-    
-    @Query("SELECT m FROM Message m WHERE m.chatRoom.chatId = :chatId ORDER BY m.createdAt DESC")
+    List<Message> findByChatRoom_IdOrderByCreatedAtAsc(Long chatId);
+
+    @Query("SELECT m FROM Message m WHERE m.chatRoom.id = :chatId ORDER BY m.createdAt DESC")
     List<Message> findRecentMessagesByChatId(Long chatId);
     
     // 특정 역할의 메시지만 조회
@@ -32,6 +32,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     void deleteByCreatedAtBefore(LocalDateTime dateTime);
     
     // 마지막 메시지 조회
-    @Query("SELECT m FROM Message m WHERE m.chatRoom.chatId = :chatId ORDER BY m.createdAt DESC LIMIT 1")
+    @Query("SELECT m FROM Message m WHERE m.chatRoom.id = :chatId ORDER BY m.createdAt DESC LIMIT 1")
     Message findLastMessageByChatId(Long chatId);
 }
