@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import './RaonChatPerso.css';
+import './RaonChat.css';
 
 const PERSOAI_API_SERVER = 'https://live-api.perso.ai';
 const PERSOAI_API_KEY = process.env.REACT_APP_PERSOAI_API_KEY || 'plak-ed3f1817238abf96b6c37b3edc605f1e';
@@ -35,17 +35,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   // TTS 켜짐/꺼짐
   const [isTTSOn, setIsTTSOn] = useState(true);
-
-  const messagesEndRef = useRef(null);
-
-  // 메시지 스크롤
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   // PersoAI SDK 로드
   useEffect(() => {
@@ -116,10 +105,8 @@ function RaonChatPerso({ user, isLoggedIn }) {
       const documentId = chatbotInfo?.documentId || null;
 
       console.log('=== Creating PersoAI Session ===');
-      console.log('Configuration:', { llmType, ttsType, modelStyle, promptId, documentId });
 
       // SDK를 통해 세션 ID 생성
-      console.log('Step 1: Creating session ID...');
       const createdSessionId = await window.PersoLiveSDK.createSessionId(
         PERSOAI_API_SERVER,
         PERSOAI_API_KEY,
@@ -128,28 +115,20 @@ function RaonChatPerso({ user, isLoggedIn }) {
         modelStyle,
         promptId,
         documentId,
-        null, // backgroundImageKey
-        0,    // chatbotLeft
-        0,    // chatbotTop
-        1     // chatbotHeight
+        null, 0, 0, 1
       );
       console.log('✓ Session ID created:', createdSessionId);
 
       // WebRTC 세션 생성
-      console.log('Step 2: Creating WebRTC session...');
       const session = await window.PersoLiveSDK.createSession(
         PERSOAI_API_SERVER,
         createdSessionId,
-        1920, // width
-        1080, // height
-        false // enableVoiceChat
+        1920, 1080, false
       );
       console.log('✓ WebRTC session created');
 
       // 비디오 엘리먼트에 연결
-      console.log('Step 3: Connecting to video element...');
       session.setSrc(videoRef.current);
-      console.log('✓ Video source set');
 
       // 비디오 요소 음성 활성화
       if (videoRef.current) {
@@ -161,34 +140,28 @@ function RaonChatPerso({ user, isLoggedIn }) {
           track.enabled = true;
         });
 
-        videoRef.current.play().then(() => {
-          console.log('✓ Video playback started');
-        }).catch(err => {
+        videoRef.current.play().catch(err => {
           console.warn('Video play warning:', err.message);
         });
       }
 
-      // 채팅 상태 구독
-      session.subscribeChatStatus((status) => {
-        const statusText = ['Available', 'Recording', 'Analyzing', 'AI Speaking'][status] || 'Unknown';
-        console.log('Chat status changed:', status, `(${statusText})`);
-      });
-
       // 채팅 로그 구독
       session.subscribeChatLog((chatLog) => {
-        console.log('Chat log updated. Messages:', chatLog.length);
         const newMessages = chatLog.map(chat => ({
           id: Date.now() + Math.random(),
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
-          time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+          time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
         }));
         setMessages(newMessages);
       });
 
       // 세션 종료 이벤트 구독
       session.onClose((manualClosed) => {
-        console.log('Session closed. Manual close:', manualClosed);
         if (!manualClosed) {
           setError('세션이 예기치 않게 종료되었습니다.');
         }
@@ -205,8 +178,12 @@ function RaonChatPerso({ user, isLoggedIn }) {
       setMessages([{
         id: 1,
         type: 'ai',
-        text: `안녕하세요! ${chatbotInfo?.chatbotName || 'AI 챗봇'}입니다. 무엇을 도와드릴까요?`,
-        time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        text: '안녕! 오늘 기분은 어때? 😊',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
       }]);
 
     } catch (err) {
@@ -218,7 +195,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   };
 
   // 메시지 전송 (PersoAI SDK 사용)
-  const sendMessage = async () => {
+  const handleSendMessage = () => {
     if (!inputText.trim() || !persoSession) return;
 
     const userMessage = inputText;
@@ -244,131 +221,204 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   // Enter 키 처리
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    if (e.key === 'Enter') {
+      handleSendMessage();
     }
   };
 
   return (
-    <div className="raon-chat-container">
+    <div className="raon-wrapper">
       {/* 헤더 */}
-      <div className="raon-chat-header">
-        <button className="back-button" onClick={() => navigate('/')}>
-          <span>←</span>
-        </button>
-        <h2 className="chat-title">{chatbotInfo?.chatbotName || '챗봇'}</h2>
-        <button className="menu-button" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-          ⋮
-        </button>
+      <div className="raon-header">
+        <div className="raon-logo" onClick={() => navigate('/')}>RAON</div>
+        <div className="raon-nav">
+          <span onClick={() => navigate('/avatar')}>아바타</span>
+          <span onClick={() => navigate('/chatrooms')}>채팅방</span>
+          <span>요약</span>
+          <span>노트</span>
+          <span onClick={() => setIsMenuOpen(!isMenuOpen)}>메뉴</span>
+        </div>
       </div>
 
-      {/* 메뉴 (사이드바) */}
-      {isMenuOpen && (
-        <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}>
-          <div className="menu-sidebar" onClick={(e) => e.stopPropagation()}>
-            <div className="menu-header">
-              <h3>설정</h3>
-              <button className="close-menu" onClick={() => setIsMenuOpen(false)}>×</button>
-            </div>
-            <div className="menu-content">
-              <div className="menu-section">
-                <h4>TTS 음성</h4>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={isTTSOn}
-                    onChange={() => setIsTTSOn(!isTTSOn)}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
+      {/* 메인 컨텐츠 */}
+      <div className="main-content">
+        {/* 왼쪽: AI 아바타 */}
+        <div className="ai-model-container">
+          <div className="ai-display-box" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted={false}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: isSessionActive ? 'block' : 'none'
+              }}
+            />
+            {!isSessionActive && (
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '80px', marginBottom: '20px' }}>AI</div>
+                <button
+                  onClick={createSession}
+                  disabled={isLoading || !chatbotId || !sdkLoaded}
+                  style={{
+                    padding: '12px 30px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    border: 'none',
+                    borderRadius: '25px',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    cursor: isLoading || !chatbotId || !sdkLoaded ? 'not-allowed' : 'pointer',
+                    opacity: isLoading || !chatbotId || !sdkLoaded ? 0.6 : 1
+                  }}
+                >
+                  {isLoading ? '연결 중...' : '채팅 시작'}
+                </button>
               </div>
-              {isSessionActive && (
-                <div className="menu-section">
-                  <button className="menu-button-item danger" onClick={endSession}>
-                    세션 종료
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
           </div>
+          <div className="ai-status-bar">
+            <span className="status-label">상태:</span>
+            <span className="status-indicator"></span>
+            <span className="status-text">
+              {isSessionActive ? '연결됨 🟢' : '대기 중'} | 마이크 권한 허용됨
+            </span>
+          </div>
+        </div>
+
+        {/* 오른쪽: 채팅 */}
+        <div className="chat-container">
+          <div className="chat-messages">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`message-${message.type}`}
+              >
+                <div className={`message-bubble-${message.type}`}>
+                  {message.text}
+                </div>
+                <div className={`message-time-${message.type}`}>
+                  {message.time}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="chat-input-section">
+            <div className="input-box">
+              <input
+                type="text"
+                className="input-field"
+                placeholder="메시지를 입력하세요..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={!isSessionActive}
+              />
+              <span className="edit-icon">✏️</span>
+            </div>
+            <button
+              className="send-btn"
+              onClick={handleSendMessage}
+              disabled={!isSessionActive || !inputText.trim()}
+            >
+              ➤
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 메뉴 오버레이 */}
+      {isMenuOpen && <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}></div>}
+
+      {/* 사이드 메뉴 */}
+      {isMenuOpen && (
+        <div className="side-menu">
+          <div className="menu-header-side">
+            <h3>설정</h3>
+            <button className="close-btn" onClick={() => setIsMenuOpen(false)}>×</button>
+          </div>
+
+          <div className="menu-section-side">
+            <h4>TTS 음성</h4>
+            <label className="switch">
+              <input
+                type="checkbox"
+                checked={isTTSOn}
+                onChange={() => setIsTTSOn(!isTTSOn)}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          {isSessionActive && (
+            <div className="menu-section-side">
+              <button
+                onClick={endSession}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+              >
+                세션 종료
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* 에러 메시지 */}
       {error && (
-        <div className="error-banner">
-          <span>⚠️ {error}</span>
-          <button onClick={() => setError(null)}>×</button>
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: '#fee',
+          color: '#c33',
+          padding: '15px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 9999,
+          maxWidth: '400px'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>⚠️ {error}</span>
+            <button
+              onClick={() => setError(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#c33',
+                fontSize: '20px',
+                cursor: 'pointer',
+                marginLeft: '15px'
+              }}
+            >×</button>
+          </div>
         </div>
       )}
-
-      {/* 아바타 비디오 영역 */}
-      <div className="avatar-video-section">
-        <video
-          ref={videoRef}
-          className="avatar-video"
-          autoPlay
-          playsInline
-          muted={false}
-        />
-        {!isSessionActive && (
-          <div className="start-overlay">
-            <div className="start-content">
-              <h3>채팅을 시작하세요</h3>
-              <p>{chatbotInfo?.description || 'AI와 대화하기'}</p>
-              <button
-                onClick={createSession}
-                disabled={isLoading || !chatbotId || !sdkLoaded}
-                className="start-button"
-              >
-                {isLoading ? '연결 중...' : '채팅 시작'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 메시지 영역 */}
-      <div className="messages-section">
-        <div className="messages-list">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`message-bubble ${msg.type}`}>
-              <div className="message-text">{msg.text}</div>
-              <div className="message-time">{msg.time}</div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="message-bubble ai">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* 입력 영역 */}
-      <div className="input-section">
-        <textarea
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="메시지를 입력하세요..."
-          disabled={!isSessionActive || isLoading}
-          rows="1"
-        />
-        <button
-          onClick={sendMessage}
-          disabled={!isSessionActive || isLoading || !inputText.trim()}
-          className="send-button"
-        >
-          전송
-        </button>
-      </div>
     </div>
   );
 }
