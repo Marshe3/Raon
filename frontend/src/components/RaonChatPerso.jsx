@@ -36,6 +36,19 @@ function RaonChatPerso({ user, isLoggedIn }) {
   // TTS 켜짐/꺼짐
   const [isTTSOn, setIsTTSOn] = useState(true);
 
+  // 메시지 스크롤 ref
+  const messagesEndRef = useRef(null);
+
+  // 스크롤을 맨 아래로 이동
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // 메시지 변경 시 스크롤
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   // PersoAI SDK 로드
   useEffect(() => {
     const script = document.createElement('script');
@@ -317,6 +330,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="chat-input-section">
