@@ -23,7 +23,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client' // 로그인 의존성 추가
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    // 캐시 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
 
     // JPA (한 줄만)
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

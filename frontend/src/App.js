@@ -1,17 +1,17 @@
 // src/App.js
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import RaonHome from "./components/RaonHome.jsx";
 import RaonSocialLogin from "./components/RaonSocialLogin.jsx";
 import RaonChatList from "./components/RaonChatList.jsx";
 import RaonAvatar from "./components/RaonAvatar.jsx";
+import RaonBackoffice from "./components/RaonBackoffice.jsx";
+import DebugPage from "./components/DebugPage.jsx";
+import AccountEdit from "./components/AccountEdit.jsx";
+import TopBar from "./components/TopBar.jsx";
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <AppInner />
-    </BrowserRouter>
-  );
+  return <AppInner />;
 }
 
 function AppInner() {
@@ -22,35 +22,25 @@ function AppInner() {
   // 로그인 상태 확인
   const checkLoginStatus = async () => {
     try {
-      console.log("로그인 상태 확인 시작...");
-      const response = await fetch("/raon/api/user/me", { credentials: "include" });
-      console.log("API 응답 상태:", response.status);
-
-      if (response.ok) {
-        const userData = await response.json();
-        console.log("로그인된 사용자 정보:", userData);
-        setUser(userData);
+      const res = await fetch("/raon/api/users/me", { credentials: "include" });
+      if (res.ok) {
+        const me = await res.json();
+        setUser(me);
         setIsLoggedIn(true);
       } else {
-        console.log("로그인되지 않음 - 상태코드:", response.status);
+        setUser(null);
         setIsLoggedIn(false);
       }
-    } catch (error) {
-      console.error("로그인 상태 확인 오류:", error);
+    } catch (e) {
+      console.error("로그인 상태 확인 오류:", e);
     }
   };
 
-  // 마운트 및 포커스 시 로그인 상태 재확인
   useEffect(() => {
     checkLoginStatus();
-
-    const handleFocus = () => {
-      console.log("페이지 포커스 감지 - 로그인 상태 재확인");
-      setTimeout(() => checkLoginStatus(), 100);
-    };
-
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+    const onFocus = () => setTimeout(() => checkLoginStatus(), 100);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   const handleLogout = async () => {
@@ -59,12 +49,12 @@ function AppInner() {
       setIsLoggedIn(false);
       setUser(null);
       navigate("/");
-    } catch (error) {
-      console.error("Logout failed:", error);
+    } catch (e) {
+      console.error("Logout failed:", e);
     }
   };
 
-  // 소셜 로그인 핸들러
+  // 소셜 로그인
   const onKakao = () => {
     window.Kakao?.Auth?.authorize({
       redirectUri: `${window.location.origin}/login/oauth2/code/kakao`,
@@ -86,25 +76,49 @@ function AppInner() {
   ];
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <RaonHome
-            chats={chats}
-            onNavigate={(tab) => navigate(`/${tab}`)}
-            onOpenChat={handleOpenChat}
-            onSeeMore={() => navigate("/chatrooms")}
-            isLoggedIn={isLoggedIn}
-            user={user}
-            onLogout={handleLogout}
-          />
-        }
-      />
-      <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
-      <Route path="/chatrooms" element={<RaonChatList />} />
-      <Route path="/avatar" element={<RaonAvatar />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      {/* 전역 네비게이션 */}
+      <TopBar isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
+
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <RaonHome
+              chats={chats}
+              onNavigate={(tab) => navigate(`/${tab}`)}
+              onOpenChat={handleOpenChat}
+              onSeeMore={() => navigate("/chatrooms")}
+            />
+          }
+        />
+
+        <Route
+          path="/account"
+          element={
+            isLoggedIn ? (
+              <AccountEdit
+                onSaved={(newNickname) => {
+                  // 닉네임 저장 직후 TopBar에 즉시 반영
+                  setUser((prev) => ({ ...(prev || {}), nickname: newNickname }));
+                }}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+
+        <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
+        <Route path="/chatrooms" element={<RaonChatList />} />
+        <Route path="/chatlist" element={<RaonChatList />} />
+        <Route path="/avatar" element={<RaonAvatar />} />
+        <Route path="/backoffice" element={<RaonBackoffice />} />
+        <Route path="/debug" element={<DebugPage />} />
+
+        {/* 항상 마지막 */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   );
 }
