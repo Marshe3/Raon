@@ -83,7 +83,6 @@ function RaonBackoffice() {
         modelStyle: selectedModelStyle?.name || null,
         backgroundImageId: selectedBackground?.backgroundImageId || null,
         agent: navigator.userAgent,
-        capability: ["text", "audio"],
         extraData: {},
       };
       const response = await fetch("/raon/api/sessions/create", {

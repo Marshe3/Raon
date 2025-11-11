@@ -62,8 +62,10 @@ public class PersoAISessionService {
             requestBody.put("padding_left", request.getPaddingLeft());
             requestBody.put("padding_top", request.getPaddingTop());
             requestBody.put("padding_height", request.getPaddingHeight());
-            requestBody.put("capability", request.getCapability());
-            
+
+            // capability는 API가 자동으로 STF_WEBRTC로 설정하므로 제외
+            // requestBody.put("capability", request.getCapability());
+
             if (request.getExtraData() != null) {
                 requestBody.put("extra_data", request.getExtraData());
             }
