@@ -79,7 +79,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
           chatbotName: '기본 챗봇',
           description: 'PersoAI 기반 AI 챗봇',
           llmType: 'azure-gpt-4o',
-          ttsType: 'yuri',
+          ttsType: 'chaehee',
           modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
           promptId: 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
           documentId: 'pld-c2104dc3d8165c42f60bcf8217c19bc8'
@@ -160,8 +160,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 채팅 로그 구독
       session.subscribeChatLog((chatLog) => {
-        const newMessages = chatLog.map(chat => ({
-          id: Date.now() + Math.random(),
+        // timestamp 기준 오름차순 정렬 (오래된 메시지가 위, 최신 메시지가 아래)
+        const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
+
+        const newMessages = sortedChatLog.map((chat, index) => ({
+          id: chat.timestamp + index, // timestamp 기반 고유 ID
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
           time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', {

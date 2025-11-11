@@ -20,7 +20,10 @@
       "Bash(python test_api.py:*)",
       "Bash(git rm:*)",
       "Bash(NUL)",
-      "Bash(del nul 2)"
+      "Bash(del nul 2)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 28596 -Force\")"
     ],
     "deny": [],
     "ask": []
