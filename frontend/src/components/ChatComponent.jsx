@@ -153,6 +153,39 @@ const ChatComponent = ({ user, isLoggedIn }) => {
       session.setSrc(videoRef.current);
       console.log('✓ Video source set');
 
+      // 비디오 요소 음성 활성화
+      if (videoRef.current) {
+        videoRef.current.muted = false;
+        videoRef.current.volume = 1.0;
+
+        // 오디오 트랙 확인
+        const audioTracks = videoRef.current.srcObject?.getAudioTracks() || [];
+        console.log('Video audio enabled:', {
+          muted: videoRef.current.muted,
+          volume: videoRef.current.volume,
+          hasAudioTracks: audioTracks.length > 0,
+          audioTracks: audioTracks.map(track => ({
+            id: track.id,
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState
+          }))
+        });
+
+        // 오디오 트랙 명시적으로 활성화
+        audioTracks.forEach(track => {
+          track.enabled = true;
+          console.log(`Audio track ${track.id} enabled`);
+        });
+
+        // 사용자 인터랙션 후 재생 시도
+        videoRef.current.play().then(() => {
+          console.log('✓ Video playback started');
+        }).catch(err => {
+          console.warn('Video play failed (this is normal before user interaction):', err.message);
+        });
+      }
+
       // 채팅 상태 구독
       session.subscribeChatStatus((status) => {
         const statusText = ['Available', 'Recording', 'Analyzing', 'AI Speaking'][status] || 'Unknown';
@@ -412,6 +445,8 @@ const ChatComponent = ({ user, isLoggedIn }) => {
             className="avatar-viewer"
             autoPlay
             playsInline
+            muted={false}
+            controls
           />
           {!isSessionActive && (
             <div className="start-session-overlay">
