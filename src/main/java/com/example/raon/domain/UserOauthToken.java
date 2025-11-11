@@ -37,7 +37,7 @@ public class UserOauthToken {
 
     /**
      * 소셜 로그인 타입 (Enum)
-     * KAKAO, GOOGLE, NAVER 등으로 구분
+     * KAKAO, GOOGLE 등으로 구분
      */
     @Enumerated(EnumType.STRING) // Enum을 문자열로 DB에 저장
     @Column(name = "social_type", nullable = false)
@@ -54,7 +54,7 @@ public class UserOauthToken {
      * 토큰 만료 시간
      * Refresh Token의 유효 기간
      */
-    @Column(name = "token_expires_at", nullable = false)
+    @Column(name = "token_expires_at")
     private LocalDateTime tokenExpiresAt;
 
     /**

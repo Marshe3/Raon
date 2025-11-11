@@ -58,6 +58,58 @@ public class UserService {
     }
     
     /**
+     * ✅ 이메일 미동의 계정 대비: providerId("google:SUB" / "kakao:12345")로 조회/생성
+     * 컨트롤러의 /api/users/me 에서 이메일이 없을 때 호출
+     */
+    @Transactional
+    public UserEntity getOrCreateByProviderId(String providerId) {
+        ProviderKey key = parseProviderId(providerId); // GOOGLE/KAKAO만 허용
+        return userRepository.findBySocialTypeAndSocialId(key.socialType, key.socialId)
+            .orElseGet(() -> {
+                UserEntity u = new UserEntity();
+                u.setSocialType(key.socialType);
+                u.setSocialId(key.socialId);
+                // 이메일/닉네임/프로필은 모를 수 있음
+                u.setLastLogin(LocalDateTime.now());
+                UserEntity saved = userRepository.save(u);
+                log.info("providerId 신규 사용자 생성 - providerId: {}, userId: {}", providerId, saved.getUserId());
+                return saved;
+            });
+    }
+
+    /* ----------------- 내부 헬퍼 (구글·카카오만) ----------------- */
+
+    private static class ProviderKey {
+        final SocialType socialType;
+        final String socialId;
+        ProviderKey(SocialType t, String id) { this.socialType = t; this.socialId = id; }
+    }
+
+    /**
+     * "google:sub" 또는 "kakao:12345" 형태만 허용.
+     * 그 외는 IllegalArgumentException.
+     */
+    private ProviderKey parseProviderId(String providerId) {
+        if (providerId == null || providerId.isBlank()) {
+            throw new IllegalArgumentException("providerId가 비어 있습니다.");
+        }
+        String[] parts = providerId.split(":", 2);
+        if (parts.length != 2 || parts[1].isBlank()) {
+            throw new IllegalArgumentException("providerId 형식이 올바르지 않습니다. 예) google:SUB, kakao:12345");
+        }
+        String prefix = parts[0].toLowerCase();
+        String id = parts[1];
+
+        SocialType type;
+        switch (prefix) {
+            case "google" -> type = SocialType.GOOGLE;
+            case "kakao"  -> type = SocialType.KAKAO;
+            default       -> throw new IllegalArgumentException("지원하지 않는 provider: " + prefix + " (google/kakao만 허용)");
+        }
+        return new ProviderKey(type, id);
+    }
+    
+    /**
      * 사용자 ID로 조회
      */
     public UserEntity getUserById(Long userId) {

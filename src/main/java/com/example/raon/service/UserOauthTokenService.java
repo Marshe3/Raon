@@ -5,6 +5,7 @@ import com.example.raon.domain.UserOauthToken;
 import com.example.raon.repository.UserOauthTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.encrypt.TextEncryptor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.List;
 public class UserOauthTokenService {
     
     private final UserOauthTokenRepository tokenRepository;
+    private final TextEncryptor textEncryptor; // 암호화 객체 주입
     
     /**
      * 토큰 저장 또는 업데이트
@@ -28,23 +30,26 @@ public class UserOauthTokenService {
      * - 없으면 새로 생성
      */
     @Transactional
-    public UserOauthToken saveOrUpdateToken(Long userId,  // Integer → Long
+    public UserOauthToken saveOrUpdateToken(Long userId,
                                             SocialType socialType, 
-                                            String encryptedRefreshToken, 
+                                            String refreshToken, // 평문 리프레시 토큰을 받음
                                             LocalDateTime expiresAt) {
         
+        // 리프레시 토큰 암호화
+        String encryptedRefreshToken = textEncryptor.encrypt(refreshToken);
+
         return tokenRepository.findByUserIdAndSocialType(userId, socialType)
             .map(token -> {
-                // 기존 토큰 업데이트
+                // 기존 토큰 업데이트 (암호화된 토큰으로)
                 token.updateRefreshToken(encryptedRefreshToken, expiresAt);
                 token.incrementTokenVersion();
                 log.info("토큰 업데이트 - userId: {}, socialType: {}", userId, socialType);
                 return token;
             })
             .orElseGet(() -> {
-                // 새 토큰 생성
+                // 새 토큰 생성 (암호화된 토큰으로)
                 UserOauthToken newToken = UserOauthToken.builder()
-                    .userId(userId)  // 이제 Long 타입
+                    .userId(userId)
                     .socialType(socialType)
                     .encryptedRefreshToken(encryptedRefreshToken)
                     .tokenExpiresAt(expiresAt)
