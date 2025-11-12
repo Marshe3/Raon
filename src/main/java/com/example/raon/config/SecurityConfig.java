@@ -1,55 +1,53 @@
 // src/main/java/com/example/raon/config/SecurityConfig.java
 package com.example.raon.config;
 
-import java.util.Arrays;
 import java.util.List;
 
+import com.example.raon.handler.OAuth2LoginSuccessHandler;
+import com.example.raon.security.JwtAuthenticationFilter;
+import com.example.raon.service.CustomOAuth2UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.example.raon.service.CustomOAuth2UserService;
-
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
-
-    public SecurityConfig(CustomOAuth2UserService customOAuth2UserService) {
-        this.customOAuth2UserService = customOAuth2UserService;
-    }
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             // ✅ CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // ✅ CSRF: 프론트에서 쿠키/헤더 세팅이 번거로우면 API는 통째로 제외
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .ignoringRequestMatchers(
-                    "/api/**",          // 백엔드 REST API
-                    "/raon/api/**"      // 리버스 프록시로 앞에 /raon 붙는 경우
-                )
+            .csrf(csrf -> csrf.disable())
+            // 세션을 사용하지 않음 (JWT 기반 인증)
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
-                // 정적/로그인 엔드포인트
+                // 정적 리소스 및 로그인 엔드포인트
                 .requestMatchers(
                     "/", "/index.html", "/favicon.ico",
                     "/assets/**", "/static/**",
-                    "/login/**", "/oauth2/**",
+                    "/login/**", "/oauth2/**", "/api/auth/**",
                     "/loginSuccess", "/loginFailure"
                 ).permitAll()
 
-                // 백오피스/디버그/채팅 (개발 중 편의상 오픈)
+                // 백오피스/디버그/채팅 API (개발 중 편의상 오픈)
                 .requestMatchers(
                     "/api/backoffice/**",
                     "/api/persoai/**",
@@ -63,19 +61,25 @@ public class SecurityConfig {
                     "/raon/api/debug/**"
                 ).permitAll()
 
-                // 현재 로그인 사용자 조회는 인증 필요(원한다면 permitAll로 바꿔도 됨)
+                // 사용자 정보 조회/수정/삭제는 인증 필요
                 .requestMatchers(HttpMethod.GET, "/api/users/me", "/raon/api/users/me").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/users/me", "/raon/api/users/me").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/users/me", "/raon/api/users/me").authenticated()
 
-                // 나머지는 인증
+                // 나머지는 인증 필요
                 .anyRequest().authenticated()
             )
+            // JWT 인증 필터 추가 (UsernamePasswordAuthenticationFilter 이전에 실행)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // OAuth2 로그인 설정 (로그인 플로우에서만 사용)
             .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
-                .defaultSuccessUrl("http://localhost:3000/", true)
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)
+                )
+                .successHandler(oAuth2LoginSuccessHandler)
                 .failureUrl("http://localhost:3000/login?error=true")
             )
+            // 로그아웃 설정 (JWT 방식에서는 프론트엔드에서 토큰 삭제)
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("http://localhost:3000/")

@@ -20,14 +20,62 @@ function AppInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
+  // 토큰 자동 갱신
+  const refreshAccessToken = async () => {
+    try {
+      console.log("Access Token 갱신 시도...");
+      const response = await fetch("/raon/api/auth/refresh", {
+        method: "POST",
+        credentials: "include"
+      });
+
+      if (response.ok) {
+        console.log("Access Token 갱신 성공");
+        return true;
+      } else {
+        console.log("Access Token 갱신 실패 - 로그아웃 처리");
+        setIsLoggedIn(false);
+        setUser(null);
+        return false;
+      }
+    } catch (error) {
+      console.error("토큰 갱신 오류:", error);
+      return false;
+    }
+  };
+
   // 로그인 상태 확인
   const checkLoginStatus = async () => {
     try {
-      const res = await fetch("/raon/api/users/me", { credentials: "include" });
-      if (res.ok) {
-        const me = await res.json();
-        setUser(me);
+      console.log("로그인 상태 확인 시작...");
+      const response = await fetch("/raon/api/users/me", {
+        credentials: "include"
+      });
+      console.log("API 응답 상태:", response.status);
+
+      if (response.ok) {
+        const userData = await response.json();
+        console.log("로그인된 사용자 정보:", userData);
+        setUser(userData);
         setIsLoggedIn(true);
+      } else if (response.status === 401) {
+        // Access Token이 만료된 경우 자동 갱신 시도
+        console.log("Access Token 만료 - 갱신 시도");
+        const refreshed = await refreshAccessToken();
+
+        if (refreshed) {
+          // 갱신 성공 시 다시 사용자 정보 조회
+          const retryResponse = await fetch("/raon/api/users/me", {
+            credentials: "include"
+          });
+          if (retryResponse.ok) {
+            const userData = await retryResponse.json();
+            setUser(userData);
+            setIsLoggedIn(true);
+          }
+        } else {
+          setIsLoggedIn(false);
+        }
       } else {
         setUser(null);
         setIsLoggedIn(false);
@@ -65,7 +113,10 @@ function AppInner() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/raon/logout", { method: "POST", credentials: "include" });
+      await fetch("/raon/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
       setIsLoggedIn(false);
       setUser(null);
       navigate("/");
@@ -112,6 +163,9 @@ function AppInner() {
               onNavigate={(tab) => navigate(`/${tab}`)}
               onOpenChat={handleOpenChat}
               onSeeMore={() => navigate("/chatrooms")}
+              isLoggedIn={isLoggedIn}
+              user={user}
+              onLogout={handleLogout}
             />
           }
         />
