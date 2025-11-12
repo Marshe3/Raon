@@ -23,7 +23,16 @@
       "Bash(del nul 2)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(powershell -Command \"Stop-Process -Id 28596 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 28596 -Force\")",
+      "Bash(git merge:*)",
+      "Bash(git fetch:*)",
+      "Bash(/tmp/AccountEdit_base.jsx)",
+      "Bash(git checkout:*)",
+      "Bash(git diff:*)",
+      "Bash(npm start)",
+      "Bash(npm install:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 21104 -Force\")",
+      "Bash(./gradlew:*)"
     ],
     "deny": [],
     "ask": []
