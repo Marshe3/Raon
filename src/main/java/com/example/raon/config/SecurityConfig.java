@@ -1,7 +1,9 @@
 // src/main/java/com/example/raon/config/SecurityConfig.java
 package com.example.raon.config;
 
-import com.example.raon.service.CustomOAuth2UserService;
+import java.util.Arrays;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,8 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.List;
+import com.example.raon.service.CustomOAuth2UserService;
 
 @Configuration
 @EnableWebSecurity
@@ -45,18 +46,20 @@ public class SecurityConfig {
                     "/", "/index.html", "/favicon.ico",
                     "/assets/**", "/static/**",
                     "/login/**", "/oauth2/**",
-                    "/loginSuccess", "/loginFailure","/api/sessions/**"
+                    "/loginSuccess", "/loginFailure"
                 ).permitAll()
 
-                // 백오피스/디버그(개발 중 편의상 오픈)
+                // 백오피스/디버그/채팅 (개발 중 편의상 오픈)
                 .requestMatchers(
                     "/api/backoffice/**",
                     "/api/persoai/**",
                     "/api/sessions/**",
+                    "/api/chat/**",
                     "/api/debug/**",
                     "/raon/api/backoffice/**",
                     "/raon/api/persoai/**",
                     "/raon/api/sessions/**",
+                    "/raon/api/chat/**",
                     "/raon/api/debug/**"
                 ).permitAll()
 

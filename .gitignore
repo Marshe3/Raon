@@ -35,3 +35,30 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment Variables ###
+.env
+.env.local
+.env.*.local
+env/
+*.env
+frontend/.env
+frontend/.env.local
+frontend/env/
+
+### Sensitive Files ###
+application-secret.properties
+*-secret.properties
+
+### Python ###
+python-chatbot/.env
+python-chatbot/venv/
+python-chatbot/__pycache__/
+python-chatbot/*.pyc
+python-chatbot/*.pyo
+python-chatbot/*.pyd
+python-chatbot/.Python
+
+### Windows Reserved Names ###
+nul
+NUL

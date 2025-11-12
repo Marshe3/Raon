@@ -9,6 +9,7 @@ import RaonBackoffice from "./components/RaonBackoffice.jsx";
 import DebugPage from "./components/DebugPage.jsx";
 import AccountEdit from "./components/AccountEdit.jsx";
 import TopBar from "./components/TopBar.jsx";
+import RaonChatPerso from "./components/RaonChatPerso.jsx";
 
 export default function App() {
   return <AppInner />;
@@ -38,9 +39,28 @@ function AppInner() {
 
   useEffect(() => {
     checkLoginStatus();
-    const onFocus = () => setTimeout(() => checkLoginStatus(), 100);
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+
+    let focusTimeout = null;
+    const handleFocus = () => {
+      // Debounce: 이전 타이머가 있으면 취소
+      if (focusTimeout) {
+        clearTimeout(focusTimeout);
+      }
+
+      // 5초 후에만 로그인 상태 확인 (과도한 API 호출 방지)
+      focusTimeout = setTimeout(() => {
+        console.log("페이지 포커스 감지 - 로그인 상태 재확인");
+        checkLoginStatus();
+      }, 5000);
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      if (focusTimeout) {
+        clearTimeout(focusTimeout);
+      }
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -64,14 +84,17 @@ function AppInner() {
     window.location.href = "/oauth2/authorization/google";
   };
 
-  const handleOpenChat = (id) => navigate(`/chat/${id}`);
+  const handleOpenChat = (id) => {
+    console.log('Opening chat with chatbot ID:', id);
+    navigate(`/chat/${id}`);
+  };
 
   const chats = [
     {
-      id: "c1",
-      title: "친구 아바타와의 대화",
-      lastMessage: "마지막: 오늘 기분이 어때?",
-      updatedAt: "마지막 기록: 2시간 전",
+      id: 1, // 실제 chatbot_id (data.sql 참조)
+      title: "기본 챗봇",
+      lastMessage: "PersoAI 기본 챗봇과 대화하기",
+      updatedAt: "지금 시작하기",
     },
   ];
 
@@ -112,6 +135,7 @@ function AppInner() {
         <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
         <Route path="/chatrooms" element={<RaonChatList />} />
         <Route path="/chatlist" element={<RaonChatList />} />
+        <Route path="/chat/:id" element={<RaonChatPerso user={user} isLoggedIn={isLoggedIn} />} />
         <Route path="/avatar" element={<RaonAvatar />} />
         <Route path="/backoffice" element={<RaonBackoffice />} />
         <Route path="/debug" element={<DebugPage />} />
