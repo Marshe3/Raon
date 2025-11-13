@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './RaonChat.css';
 
@@ -10,36 +10,37 @@ function RaonChat() {
   const avatarInfo = location.state || {};
   const { selectedModel, selectedTTS, backgroundImage } = avatarInfo;
 
-  // 메시지 목록
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: 'ai',
-      text: '안녕! 오늘 기분은 어때? 😊',
-      time: '오후 3:25'
-    },
-    {
-      id: 2,
-      type: 'user',
-      text: '오늘은 기분이 좋아!!!!!',
-      time: '오후 3:25'
-    },
-    {
-      id: 3,
-      type: 'ai',
-      text: '그렇구나! 무슨 좋은 일 있었어?',
-      time: '오후 3:25'
-    },
-    {
-      id: 4,
-      type: 'user',
-      text: '좋은 꿈을 꿨어!!!!',
-      time: '오후 3:25'
-    }
-  ]);
+  // 메시지 목록 (날짜별로 관리)
+  const [messagesByDate, setMessagesByDate] = useState({
+    '2025-11-10': [
+      { id: 1, type: 'ai', text: '안녕! 오늘 기분이 어때? 😊', time: '오후 3:25', bookmarked: false },
+      { id: 2, type: 'user', text: '오늘은 기분이 좋아!!!!!', time: '오후 3:25', bookmarked: false },
+      { id: 3, type: 'ai', text: '그렇구나! 무슨 좋은 일 있었어?', time: '오후 3:25', bookmarked: false },
+      { id: 4, type: 'user', text: '좋은 꿈을 꿨어!!!!', time: '오후 3:25', bookmarked: false },
+      { id: 5, type: 'ai', text: '외로움은 나쁜 게 아니라, 필요한 것을 알려주는 신호예요. 당신이 사람들과의 연결을 원한다는 걸 인정하는 게 중요해요.', time: '오후 3:26', bookmarked: true }
+    ],
+    '2025-11-09': [
+      { id: 1, type: 'ai', text: '회사에서 힘든 일이 있었구나...', time: '오후 8:15', bookmarked: false },
+      { id: 2, type: 'user', text: '응... 좀 힘들었어', time: '오후 8:16', bookmarked: false },
+      { id: 3, type: 'ai', text: '작은 성공에도 스스로를 칭찬하세요. 완벽하지 않아도 괜찮아요.', time: '오후 8:17', bookmarked: true }
+    ],
+    '2025-11-08': [
+      { id: 1, type: 'ai', text: '오늘 하루는 어땠어?', time: '오후 10:30', bookmarked: false },
+      { id: 2, type: 'ai', text: '자신에게 친절하게 대하는 것도 중요한 능력이에요.', time: '오후 10:31', bookmarked: true }
+    ]
+  });
+
+  // 현재 표시할 메시지 (오늘 날짜)
+  const [currentDate] = useState('2025-11-10');
+  const [messages, setMessages] = useState(messagesByDate['2025-11-10'] || []);
+  const [filteredMessages, setFilteredMessages] = useState(messagesByDate['2025-11-10'] || []);
 
   // 입력창 텍스트
   const [inputText, setInputText] = useState('');
+  
+  // 검색 텍스트
+  const [searchText, setSearchText] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // 메뉴 열림/닫힘
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -47,79 +48,55 @@ function RaonChat() {
   // TTS 켜짐/꺼짐
   const [isTTSOn, setIsTTSOn] = useState(true);
 
-  // 나의 기록 목록
-  const [myRecords, setMyRecords] = useState([
-    { id: 1, title: '오늘 음식 추천', date: '2025.10.02', content: '오늘은 회사에서의 스트레스와 외로움에 대해 이야기했어요. 혼자 있는 시간을 의미있게 보내는 방법을 찾고 계시네요.' },
-    { id: 2, title: '거울 신발 추천', date: '2025.10.02', content: 'AI가 해준 말 중 위로가 되거나 도움이 된 내용을 적어보세요' },
-    { id: 3, title: '빨 추천', date: '2025.10.02', content: 'AI가 해준 말 중 위로가 되거나 도움이 된 내용을 적어보세요' }
-  ]);
-
-  // 요약 노트 목록 (통합)
-  const [summaryRecords, setSummaryRecords] = useState([
+  // 북마크 목록
+  const [bookmarks, setBookmarks] = useState([
     { 
-      id: 1,
-      datetime: '2025.11.10 오후 3:25',
-      mood: '기쁨',
-      moodEmoji: '😊',
-      tags: ['오늘 힘들었던 점', 'AI에게 위로받은 것'],
-      mainThought: '오늘은 기분이 좋았다. \'연결됨\'이란 대화하면서...',
-      aiSummary: '오늘은 회사에서의 스트레스와 외로움에 대해 이야기했어요. 혼자 있는 시간을 의미있게 보내는 방법을 찾고 계시네요. 외로움은 나쁜 감정이 아니라, 나에게 필요한 것을 알려주는 신호입니다.',
-      keywords: ['#직장스트레스', '#외로움', '#자기돌봄'],
-      aiAdvice: '"외로움은 나쁜 게 아니라, 나에게 필요한 것을 알려주는 신호일 수 있어요."라는 말이 와닿았다. 내가 사람들과의 연결을 원한다는 걸 인정하는 게 중요하구나.',
-      connectionType: '연결됨'
+      id: 1, 
+      date: '2025.11.10',
+      time: '오후 3:25',
+      messageText: '"안녕! 오늘 기분이 어때? 😊"',
+      tags: '대화 주제: 기타'
     },
     { 
-      id: 2,
-      datetime: '2025.11.10 오전 10:30',
-      mood: '평온',
-      moodEmoji: '😌',
-      tags: ['새롭게 깨달은 점'],
-      mainThought: '아침에 명상하도 대화했다. 마음이 차분해졌어...',
-      aiSummary: '아침 명상의 효과와 마음의 평온함에 대해 이야기 나눴어요.',
-      keywords: ['#명상', '#평온', '#자기성찰'],
-      aiAdvice: '규칙적인 명상이 큰 도움이 된다는 것을 배웠어요.',
-      connectionType: '마이크 권한 허용됨'
+      id: 2, 
+      date: '2025.11.10',
+      time: '오후 3:26',
+      messageText: '"외로움은 나쁜 게 아니라, 필요한 것을 알려주는 신호예요."',
+      tags: '대화 주제: 외로움, 감정 인정'
     },
     { 
-      id: 3,
-      datetime: '2025.11.09 오후 8:15',
-      mood: '우울',
-      moodEmoji: '😔',
-      tags: ['오늘 힘들었던 점'],
-      mainThought: '회사에서 힘든 일이 있었다...',
-      aiSummary: '업무 스트레스와 대인관계의 어려움에 대해 나눴어요.',
-      keywords: ['#업무스트레스', '#대인관계'],
-      aiAdvice: '힘든 감정을 인정하는 것이 첫 번째 단계라는 걸 알았어요.',
-      connectionType: '연결됨'
+      id: 3, 
+      date: '2025.11.09',
+      time: '오후 8:17',
+      messageText: '"작은 성공에도 스스로를 칭찬하세요. 완벽하지 않아도 괜찮아요."',
+      tags: '대화 주제: 직장 스트레스'
     }
   ]);
 
-  // 노트 옵션 메뉴
-  const [activeNoteMenu, setActiveNoteMenu] = useState(null);
+  // 북마크 더보기 모달
+  const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
+  const [bookmarkPage, setBookmarkPage] = useState(1);
+  const bookmarksPerPage = 5;
 
-  // 감정 일기 모달 (요약하기)
-  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [summaryForm, setSummaryForm] = useState({
-    mood: '기쁨',
-    tags: [],
-    mainThought: '',
-    aiAdvice: ''
-  });
+  // 원본 대화 모달
+  const [isOriginalChatModalOpen, setIsOriginalChatModalOpen] = useState(false);
+  const [selectedBookmarkForChat, setSelectedBookmarkForChat] = useState(null);
 
-  // 이름 바꾸기 모달
-  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  const [renamingRecordId, setRenamingRecordId] = useState(null);
-  const [newRecordName, setNewRecordName] = useState('');
+  // 북마크 삭제 확인 모달
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deletingBookmarkId, setDeletingBookmarkId] = useState(null);
 
-  // 요약 노트 상세보기 모달
-  const [selectedSummary, setSelectedSummary] = useState(null);
-  const [isSummaryDetailOpen, setIsSummaryDetailOpen] = useState(false);
+  // 요약하기 캘린더 모달
+  const [isSummaryCalendarOpen, setIsSummaryCalendarOpen] = useState(false);
+  const [selectedSummaryDate, setSelectedSummaryDate] = useState(null);
 
-  // 요약 노트 확장/축소 상태
-  const [expandedSummary, setExpandedSummary] = useState(null);
+  // 요약 결과 모달
+  const [isSummaryResultOpen, setIsSummaryResultOpen] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
 
-  // 요약 노트 필터
-  const [summaryFilter, setSummaryFilter] = useState('전체');
+  // 현재 년/월 (캘린더용)
+  const [currentYear, setCurrentYear] = useState(2025);
+  const [currentMonth, setCurrentMonth] = useState(11);
 
   // 메시지 전송
   const handleSendMessage = () => {
@@ -133,10 +110,22 @@ function RaonChat() {
         hour: '2-digit', 
         minute: '2-digit',
         hour12: true 
-      })
+      }),
+      bookmarked: false
     };
 
-    setMessages([...messages, newMessage]);
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
+    setFilteredMessages(updatedMessages);
+    
+    // 날짜별 메시지에도 추가
+    const updatedDateMessages = { ...messagesByDate };
+    if (!updatedDateMessages[currentDate]) {
+      updatedDateMessages[currentDate] = [];
+    }
+    updatedDateMessages[currentDate].push(newMessage);
+    setMessagesByDate(updatedDateMessages);
+    
     setInputText('');
   };
 
@@ -147,113 +136,174 @@ function RaonChat() {
     }
   };
 
-  // 노트 옵션 토글
-  const toggleNoteMenu = (recordId) => {
-    setActiveNoteMenu(activeNoteMenu === recordId ? null : recordId);
+  // 메시지 검색
+  const handleSearch = () => {
+    if (searchText.trim() === '') {
+      setFilteredMessages(messages);
+      setIsSearching(false);
+    } else {
+      const filtered = messages.filter(msg => 
+        msg.text.toLowerCase().includes(searchText.toLowerCase())
+      );
+      setFilteredMessages(filtered);
+      setIsSearching(true);
+    }
   };
 
-  // 기록 삭제
-  const deleteRecord = (recordId) => {
-    setMyRecords(myRecords.filter(record => record.id !== recordId));
-    setActiveNoteMenu(null);
+  // 검색 취소
+  const handleCancelSearch = () => {
+    setSearchText('');
+    setFilteredMessages(messages);
+    setIsSearching(false);
   };
 
-  // 이름 바꾸기 모달 열기
-  const openRenameModal = (recordId) => {
-    const record = myRecords.find(r => r.id === recordId);
-    setRenamingRecordId(recordId);
-    setNewRecordName(record.title);
-    setIsRenameModalOpen(true);
-    setActiveNoteMenu(null);
+  // 북마크 토글
+  const toggleBookmark = (messageId) => {
+    const updatedMessages = messages.map(msg => 
+      msg.id === messageId ? { ...msg, bookmarked: !msg.bookmarked } : msg
+    );
+    setMessages(updatedMessages);
+    setFilteredMessages(updatedMessages);
+
+    // 날짜별 메시지 업데이트
+    const updatedDateMessages = { ...messagesByDate };
+    updatedDateMessages[currentDate] = updatedMessages;
+    setMessagesByDate(updatedDateMessages);
+
+    // 북마크된 메시지라면 북마크 목록에 추가
+    const message = updatedMessages.find(m => m.id === messageId);
+    if (message.bookmarked && message.type === 'ai') {
+      const newBookmark = {
+        id: bookmarks.length + 1,
+        date: currentDate.split('-').join('.'),
+        time: message.time,
+        messageText: `"${message.text}"`,
+        tags: '대화 주제: 기타'
+      };
+      setBookmarks([newBookmark, ...bookmarks]);
+    } else if (!message.bookmarked) {
+      // 북마크 해제시 목록에서 제거
+      setBookmarks(bookmarks.filter(b => b.messageText !== `"${message.text}"`));
+    }
   };
 
-  // 이름 바꾸기 확인
-  const confirmRename = () => {
-    if (newRecordName.trim() === '') return;
-    
-    setMyRecords(myRecords.map(r => 
-      r.id === renamingRecordId ? { ...r, title: newRecordName } : r
-    ));
-    setIsRenameModalOpen(false);
-    setRenamingRecordId(null);
-    setNewRecordName('');
+  // 북마크 삭제 확인 열기
+  const openDeleteConfirm = (bookmarkId) => {
+    setDeletingBookmarkId(bookmarkId);
+    setIsDeleteConfirmOpen(true);
   };
 
-  // 태그 토글 함수
-  const toggleTag = (tag) => {
-    setSummaryForm(prev => {
-      const newTags = prev.tags.includes(tag)
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag];
-      
-      // 태그를 mainThought에 추가
-      let newThought = prev.mainThought;
-      if (!prev.tags.includes(tag)) {
-        newThought = newThought ? `${newThought}\n\n${tag}:\n` : `${tag}:\n`;
+  // 북마크 삭제 확인
+  const confirmDeleteBookmark = () => {
+    setBookmarks(bookmarks.filter(b => b.id !== deletingBookmarkId));
+    setIsDeleteConfirmOpen(false);
+    setDeletingBookmarkId(null);
+  };
+
+  // 북마크 삭제 취소
+  const cancelDeleteBookmark = () => {
+    setIsDeleteConfirmOpen(false);
+    setDeletingBookmarkId(null);
+  };
+
+  // 원본 대화로 이동
+  const goToOriginalChat = (bookmark) => {
+    setSelectedBookmarkForChat(bookmark);
+    setIsOriginalChatModalOpen(true);
+  };
+
+  // 북마크 페이지네이션
+  const totalBookmarkPages = Math.ceil(bookmarks.length / bookmarksPerPage);
+  const displayedBookmarks = bookmarks.slice(
+    (bookmarkPage - 1) * bookmarksPerPage,
+    bookmarkPage * bookmarksPerPage
+  );
+
+  // 캘린더 날짜 생성
+  const generateCalendar = () => {
+    const firstDay = new Date(currentYear, currentMonth - 1, 1);
+    const lastDay = new Date(currentYear, currentMonth, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
+
+    const calendar = [];
+    let day = 1;
+
+    for (let i = 0; i < 6; i++) {
+      const week = [];
+      for (let j = 0; j < 7; j++) {
+        if (i === 0 && j < startDayOfWeek) {
+          week.push(null);
+        } else if (day > daysInMonth) {
+          week.push(null);
+        } else {
+          week.push(day);
+          day++;
+        }
       }
-      
-      return { ...prev, tags: newTags, mainThought: newThought };
-    });
+      calendar.push(week);
+      if (day > daysInMonth) break;
+    }
+
+    return calendar;
   };
 
-  // 요약하기 저장
-  const saveSummary = () => {
-    if (summaryForm.mainThought.trim() === '') {
-      alert('대화하면서 든 생각을 입력해주세요.');
+  // 해당 날짜에 채팅이 있는지 확인
+  const hasChat = (day) => {
+    if (!day) return false;
+    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return messagesByDate[dateStr] && messagesByDate[dateStr].length > 0;
+  };
+
+  // 날짜 선택 (요약하기 준비)
+  const selectDateForSummary = (day) => {
+    if (!hasChat(day)) return;
+    
+    const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setSelectedSummaryDate(dateStr);
+  };
+
+  // 채팅 요약하기 실행
+  const executeSummary = () => {
+    if (!selectedSummaryDate) {
+      alert('요약할 날짜를 선택해주세요.');
       return;
     }
 
-    const moodEmojis = {
-      '기쁨': '😊',
-      '우울': '😔',
-      '불안': '😰',
-      '화남': '😠',
-      '평온': '😌'
-    };
-
-    // AI가 실제로 대화 내용을 분석하여 요약 (여기서는 예시)
-    const aiGeneratedSummary = `오늘은 회사에서의 스트레스와 외로움에 대해 이야기했어요. 혼자 있는 시간을 의미있게 보내는 방법을 찾고 계시네요. 외로움은 나쁜 감정이 아니라, 나에게 필요한 것을 알려주는 신호입니다.`;
-
-    const newSummary = {
-      id: summaryRecords.length + 1,
-      datetime: new Date().toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }).replace(/\. /g, '.').replace(/\.(?=\s)/g, '.'),
-      mood: summaryForm.mood,
-      moodEmoji: moodEmojis[summaryForm.mood],
-      tags: summaryForm.tags,
-      mainThought: summaryForm.mainThought.substring(0, 50) + (summaryForm.mainThought.length > 50 ? '...' : ''),
-      aiSummary: aiGeneratedSummary,
-      keywords: ['#직장스트레스', '#외로움', '#자기돌봄'], // AI가 자동 추출
-      aiAdvice: summaryForm.aiAdvice,
-      connectionType: '연결됨'
-    };
-
-    setSummaryRecords([newSummary, ...summaryRecords]);
-    setSummaryForm({ mood: '기쁨', tags: [], mainThought: '', aiAdvice: '' });
-    setIsSummaryModalOpen(false);
+    // AI 요약 생성 (실제로는 API 호출)
+    const dateMessages = messagesByDate[selectedSummaryDate] || [];
+    const aiSummary = `${selectedSummaryDate.split('-').join('.')} 대화 요약:\n\n` +
+      `오늘은 ${dateMessages.filter(m => m.type === 'user').length}개의 메시지를 나누었습니다.\n` +
+      `주요 대화 주제: 감정 표현, 일상 공유\n\n` +
+      `주요 내용:\n` +
+      dateMessages.filter(m => m.type === 'ai').slice(0, 3).map(m => `- ${m.text}`).join('\n');
+    
+    setSummaryText(aiSummary);
+    setIsSummaryCalendarOpen(false);
+    setIsSummaryResultOpen(true);
   };
 
-  // 요약 노트 상세보기
-  const openSummaryDetail = (summary) => {
-    setSelectedSummary(summary);
-    setIsSummaryDetailOpen(true);
+  // 이전/다음 달로 이동
+  const changeMonth = (direction) => {
+    if (direction === 'prev') {
+      if (currentMonth === 1) {
+        setCurrentMonth(12);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 12) {
+        setCurrentMonth(1);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
   };
 
-  // 요약 노트 토글
-  const toggleSummaryExpand = (summaryId) => {
-    setExpandedSummary(expandedSummary === summaryId ? null : summaryId);
-  };
-
-  // 필터링된 요약 노트
-  const filteredSummaries = summaryFilter === '전체' 
-    ? summaryRecords 
-    : summaryRecords.filter(s => s.mood === summaryFilter);
+  const calendar = generateCalendar();
+  const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
   return (
     <div className="raon-wrapper">
@@ -289,7 +339,6 @@ function RaonChat() {
             <span className="status-text">연결됨 🟢 | 마이크 권한 허용됨</span>
           </div>
           
-          {/* 선택된 모델/TTS 정보 표시 */}
           {selectedModel && (
             <div className="model-info-box">
               <div className="info-item">
@@ -307,13 +356,24 @@ function RaonChat() {
         {/* 오른쪽: 채팅 */}
         <div className="chat-container">
           <div className="chat-messages">
-            {messages.map((message) => (
+            {filteredMessages.map((message) => (
               <div 
                 key={message.id} 
                 className={`message-${message.type}`}
               >
-                <div className={`message-bubble-${message.type}`}>
-                  {message.text}
+                <div className="message-content-wrapper">
+                  <div className={`message-bubble-${message.type}`}>
+                    {message.text}
+                  </div>
+                  {message.type === 'ai' && (
+                    <button 
+                      className={`bookmark-btn ${message.bookmarked ? 'bookmarked' : ''}`}
+                      onClick={() => toggleBookmark(message.id)}
+                      title="북마크"
+                    >
+                      ⭐
+                    </button>
+                  )}
                 </div>
                 <div className={`message-time-${message.type}`}>
                   {message.time}
@@ -327,21 +387,31 @@ function RaonChat() {
               <input 
                 type="text" 
                 className="input-field" 
-                placeholder="메시지를 입력하세요..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={handleKeyPress}
+                placeholder={isSearching ? "검색 중..." : "메시지를 입력하세요..."}
+                value={isSearching ? searchText : inputText}
+                onChange={(e) => isSearching ? setSearchText(e.target.value) : setInputText(e.target.value)}
+                onKeyPress={isSearching ? (e) => e.key === 'Enter' && handleSearch() : handleKeyPress}
               />
-              <span className="edit-icon">✏️</span>
+              {isSearching ? (
+                <span className="search-icon" onClick={handleCancelSearch} title="검색 취소">✕</span>
+              ) : (
+                <span className="search-icon" onClick={() => setIsSearching(true)} title="검색">🔍</span>
+              )}
             </div>
-            <button className="send-btn" onClick={handleSendMessage}>
-              ➤
-            </button>
+            {isSearching ? (
+              <button className="send-btn search-mode" onClick={handleSearch}>
+                🔍
+              </button>
+            ) : (
+              <button className="send-btn" onClick={handleSendMessage}>
+                ➤
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* 메뉴 열릴 때 반투명 오버레이 */}
+      {/* 메뉴 오버레이 */}
       {isMenuOpen && <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}></div>}
 
       {/* 사이드 메뉴 */}
@@ -373,48 +443,39 @@ function RaonChat() {
             </div>
           </div>
 
+          {/* 나의 북마크 섹션 */}
           <div className="menu-section">
-            <div className="section-header">
-              <div className="section-title">나의 기록</div>
+            <div className="section-header-left">
+              <div className="section-title-icon">⭐ 나의 북마크</div>
               <button 
                 className="add-note-btn"
-                onClick={() => setIsSummaryModalOpen(true)}
+                onClick={() => setIsBookmarkModalOpen(true)}
               >
-                + 새로운 기록
+                + 더보기
               </button>
             </div>
 
-            <div className="notes-list">
-              {myRecords.map(record => (
-                <div key={record.id} className="note-item">
-                  <div className="note-info">
-                    <div className="note-title">{record.title}</div>
-                    <div className="note-date">{record.date}</div>
+            <div className="bookmarks-list">
+              {bookmarks.slice(0, 3).map(bookmark => (
+                <div key={bookmark.id} className="bookmark-item">
+                  <div className="bookmark-header">
+                    <div className="bookmark-datetime">{bookmark.date} {bookmark.time}</div>
                   </div>
-                  <div className="note-menu-wrapper">
+                  <div className="bookmark-message">{bookmark.messageText}</div>
+                  <div className="bookmark-tags">{bookmark.tags}</div>
+                  <div className="bookmark-actions">
                     <button 
-                      className="note-menu-btn"
-                      onClick={() => toggleNoteMenu(record.id)}
+                      className="bookmark-action-btn original-btn"
+                      onClick={() => goToOriginalChat(bookmark)}
                     >
-                      ⋯
+                      💬 원본 대화
                     </button>
-                    
-                    {activeNoteMenu === record.id && (
-                      <div className="note-dropdown">
-                        <div 
-                          className="dropdown-item"
-                          onClick={() => openRenameModal(record.id)}
-                        >
-                          ✏️ 이름 바꾸기
-                        </div>
-                        <div 
-                          className="dropdown-item delete"
-                          onClick={() => deleteRecord(record.id)}
-                        >
-                          🗑️ 삭제
-                        </div>
-                      </div>
-                    )}
+                    <button 
+                      className="bookmark-action-btn delete-btn"
+                      onClick={() => openDeleteConfirm(bookmark.id)}
+                    >
+                      🗑️ 삭제
+                    </button>
                   </div>
                 </div>
               ))}
@@ -423,225 +484,209 @@ function RaonChat() {
 
           {/* 요약 노트 섹션 */}
           <div className="menu-section">
-            <div className="section-header">
-              <div className="section-title">📊 요약 노트</div>
+            <div className="section-header-left">
+              <div className="section-title-icon">📊 요약 노트</div>
               <button 
-                className="add-note-btn"
-                onClick={() => setIsSummaryModalOpen(true)}
+                className="add-note-btn summary-btn"
+                onClick={() => setIsSummaryCalendarOpen(true)}
               >
                 + 요약하기
               </button>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* 필터 버튼 */}
-            <div className="summary-filter-tabs">
-              <button 
-                className={`filter-tab ${summaryFilter === '전체' ? 'active' : ''}`}
-                onClick={() => setSummaryFilter('전체')}
-              >
-                전체
-              </button>
-              <button 
-                className={`filter-tab ${summaryFilter === '기쁨' ? 'active' : ''}`}
-                onClick={() => setSummaryFilter('기쁨')}
-              >
-                😊 기쁨
-              </button>
-              <button 
-                className={`filter-tab ${summaryFilter === '우울' ? 'active' : ''}`}
-                onClick={() => setSummaryFilter('우울')}
-              >
-                😔 우울
-              </button>
-              <button 
-                className={`filter-tab ${summaryFilter === '불안' ? 'active' : ''}`}
-                onClick={() => setSummaryFilter('불안')}
-              >
-                😰 불안
-              </button>
+      {/* 북마크 더보기 모달 */}
+      {isBookmarkModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsBookmarkModalOpen(false)}>
+          <div className="modal-content modal-bookmark" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-section">
+              <h3>⭐ 나의 북마크</h3>
+              <button className="close-btn" onClick={() => setIsBookmarkModalOpen(false)}>✕</button>
             </div>
 
-            {/* 요약 노트 목록 */}
-            <div className="summary-timeline">
-              <div className="timeline-label">📅 전체 나의 기록</div>
-              {filteredSummaries.map(summary => (
-                <div key={summary.id} className="summary-card">
-                  <div 
-                    className="summary-card-header"
-                    onClick={() => toggleSummaryExpand(summary.id)}
-                  >
-                    <div className="summary-datetime">{summary.datetime}</div>
-                    <div className="summary-connection-type">
-                      <span className="connection-badge">{summary.connectionType}</span>
-                    </div>
+            <div className="bookmark-info-box-centered">
+              <div className="bookmark-info-title-centered">💬 나중에 다시 보고 싶은 대화</div>
+              <div className="bookmark-info-desc-centered">
+                AI가 해준 조언 중 마음에 드는 말을 북마크하고<br/>
+                힘들 때 다시 꺼내볼 수 있어요
+              </div>
+              <div className="bookmark-howto-centered">
+                <div className="howto-title-centered">📌 북마크 저장 방법</div>
+                <div className="howto-desc-centered">
+                  채팅 중 AI의 메시지 아래에 있는 ⭐ 버튼을 클릭하면<br/>
+                  이 페이지에 자동으로 저장됩니다!
+                </div>
+              </div>
+            </div>
+
+            <div className="bookmarks-list-modal">
+              {displayedBookmarks.map(bookmark => (
+                <div key={bookmark.id} className="bookmark-item">
+                  <div className="bookmark-header">
+                    <div className="bookmark-datetime">{bookmark.date} {bookmark.time}</div>
                   </div>
-                  
-                  <div className="summary-mood-line">
-                    <span className="mood-emoji-large">{summary.moodEmoji}</span>
-                    <span className="mood-text">{summary.mood}</span>
+                  <div className="bookmark-message">{bookmark.messageText}</div>
+                  <div className="bookmark-tags">{bookmark.tags}</div>
+                  <div className="bookmark-actions">
+                    <button 
+                      className="bookmark-action-btn original-btn"
+                      onClick={() => {
+                        setIsBookmarkModalOpen(false);
+                        goToOriginalChat(bookmark);
+                      }}
+                    >
+                      💬 원본 대화
+                    </button>
+                    <button 
+                      className="bookmark-action-btn delete-btn"
+                      onClick={() => {
+                        setIsBookmarkModalOpen(false);
+                        openDeleteConfirm(bookmark.id);
+                      }}
+                    >
+                      🗑️ 삭제
+                    </button>
                   </div>
-
-                  <div className="summary-preview">
-                    {summary.mainThought}
-                  </div>
-
-                  {/* 확장된 내용 */}
-                  {expandedSummary === summary.id && (
-                    <div className="summary-expanded">
-                      <div className="expanded-section">
-                        <div className="expanded-title">💬 대화하면서 든 생각</div>
-                        <div className="expanded-tags">
-                          {summary.tags.map((tag, idx) => (
-                            <span key={idx} className="expanded-tag">{tag}</span>
-                          ))}
-                        </div>
-                        <p className="expanded-text">{summary.mainThought}</p>
-                      </div>
-
-                      <div className="expanded-section ai-summary-section">
-                        <div className="expanded-title">🎭 AI가 요약한 오늘의 대화</div>
-                        <p className="expanded-text">{summary.aiSummary}</p>
-                        <div className="keyword-tags">
-                          {summary.keywords.map((keyword, idx) => (
-                            <span key={idx} className="keyword-tag">{keyword}</span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="expanded-section">
-                        <div className="expanded-title">💡 기억하고 싶은 AI의 조언</div>
-                        <p className="expanded-text">{summary.aiAdvice}</p>
-                      </div>
-
-                      <div className="summary-actions">
-                        <button className="action-btn back-btn">← 목록으로</button>
-                        <button className="action-btn edit-btn">수정하기</button>
-                        <button className="action-btn delete-btn">삭제하기</button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
+
+            {/* 페이지네이션 */}
+            {totalBookmarkPages > 1 && (
+              <div className="pagination">
+                <button 
+                  className="page-btn"
+                  disabled={bookmarkPage === 1}
+                  onClick={() => setBookmarkPage(bookmarkPage - 1)}
+                >
+                  이전
+                </button>
+                <span className="page-info">
+                  {bookmarkPage} / {totalBookmarkPages}
+                </span>
+                <button 
+                  className="page-btn"
+                  disabled={bookmarkPage === totalBookmarkPages}
+                  onClick={() => setBookmarkPage(bookmarkPage + 1)}
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* 감정 일기 모달 (요약하기) */}
-      {isSummaryModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsSummaryModalOpen(false)}>
-          <div className="modal-content modal-summary" onClick={(e) => e.stopPropagation()}>
-            <h3>💬 감정 일기 (가장 추천)</h3>
-            <p className="modal-subtitle">AI와 대화한 후 자신의 감정과 생각을 기록하는 공간으로 전환</p>
-            
-            <div className="mood-section">
-              <div className="mood-label">오늘 나의 기분은?</div>
-              <div className="mood-options">
-                {['기쁨', '우울', '불안', '화남', '평온'].map(mood => (
-                  <button
-                    key={mood}
-                    className={`mood-btn ${summaryForm.mood === mood ? 'active' : ''}`}
-                    onClick={() => setSummaryForm({...summaryForm, mood})}
-                  >
-                    {mood === '기쁨' && '😊'}
-                    {mood === '우울' && '😔'}
-                    {mood === '불안' && '😰'}
-                    {mood === '화남' && '😠'}
-                    {mood === '평온' && '😌'}
-                    <br />
-                    {mood}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="thought-section">
-              <div className="thought-label">대화하면서 든 생각</div>
-              <div className="thought-tags">
-                {['오늘 힘들었던 점', 'AI에게 위로받은 것', '새롭게 깨달은 점', '감사한 일'].map(tag => (
-                  <span 
-                    key={tag}
-                    className={`thought-tag ${summaryForm.tags.includes(tag) ? 'active' : ''}`}
-                    onClick={() => toggleTag(tag)}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <textarea
-              className="summary-textarea"
-              placeholder="오늘 AI와 대화하면서 내가 생각보다 외로움을 많이 느끼고 있다는 걸 알았다."
-              value={summaryForm.mainThought}
-              onChange={(e) => setSummaryForm({...summaryForm, mainThought: e.target.value})}
-            />
-
-            <div className="form-group">
-              <label className="form-label">기억하고 싶은 AI의 조언</label>
-              <textarea
-                className="note-textarea small"
-                placeholder="AI가 해준 말 중 위로가 되거나 도움이 된 내용을 적어보세요"
-                value={summaryForm.aiAdvice}
-                onChange={(e) => setSummaryForm({...summaryForm, aiAdvice: e.target.value})}
-              />
-            </div>
-
-            <div className="modal-footer">
+      {/* 원본 대화 모달 */}
+      {isOriginalChatModalOpen && selectedBookmarkForChat && (
+        <div className="modal-overlay" onClick={() => setIsOriginalChatModalOpen(false)}>
+          <div className="modal-content modal-original-chat" onClick={(e) => e.stopPropagation()}>
+            <div className="original-chat-content">
+              <p className="original-chat-message">
+                {selectedBookmarkForChat.date} {selectedBookmarkForChat.time} 대화로 이동합니다.
+              </p>
               <button 
-                className="attach-btn"
-                onClick={() => alert('AI가 대화 내용을 분석하여 자동으로 요약합니다!')}
+                className="modal-confirm-btn"
+                onClick={() => {
+                  setIsOriginalChatModalOpen(false);
+                  // 실제로는 해당 날짜의 메시지로 스크롤
+                }}
               >
-                📎 채팅요약하기
-              </button>
-            </div>
-
-            <div className="modal-actions">
-              <button 
-                className="modal-cancel-btn"
-                onClick={() => setIsSummaryModalOpen(false)}
-              >
-                취소
-              </button>
-              <button 
-                className="modal-submit-btn"
-                onClick={saveSummary}
-              >
-                💾 오늘의 일기 저장하기
+                확인
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 이름 바꾸기 모달 */}
-      {isRenameModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsRenameModalOpen(false)}>
-          <div className="modal-content modal-rename" onClick={(e) => e.stopPropagation()}>
-            <h3>✏️ 이름 바꾸기</h3>
-            <p className="modal-subtitle">기록의 제목을 수정하세요</p>
-            
-            <input
-              type="text"
-              className="rename-input"
-              value={newRecordName}
-              onChange={(e) => setNewRecordName(e.target.value)}
-              placeholder="새 이름을 입력하세요"
-              maxLength={50}
-            />
-            
-            <div className="char-count">{newRecordName.length}/50</div>
-            
+      {/* 북마크 삭제 확인 모달 */}
+      {isDeleteConfirmOpen && (
+        <div className="modal-overlay" onClick={cancelDeleteBookmark}>
+          <div className="modal-content modal-delete-confirm" onClick={(e) => e.stopPropagation()}>
+            <h3 className="delete-confirm-title">이 북마크를 삭제하시겠습니까?</h3>
+            <p className="delete-confirm-message">삭제된 북마크는 복구할 수 없습니다.</p>
+            <div className="delete-confirm-actions">
+              <button className="delete-cancel-btn" onClick={cancelDeleteBookmark}>취소</button>
+              <button className="delete-confirm-btn" onClick={confirmDeleteBookmark}>삭제</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 요약하기 캘린더 모달 */}
+      {isSummaryCalendarOpen && (
+        <div className="modal-overlay" onClick={() => setIsSummaryCalendarOpen(false)}>
+          <div className="modal-content modal-summary-calendar" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-section">
+              <h3>📅 채팅 요약하기</h3>
+              <button className="close-btn" onClick={() => setIsSummaryCalendarOpen(false)}>✕</button>
+            </div>
+
+            <p className="calendar-desc">요약하고 싶은 날짜를 선택하세요</p>
+
+            <div className="calendar-container-modal">
+              <div className="calendar-header">
+                <button className="month-btn" onClick={() => changeMonth('prev')}>◀</button>
+                <div className="month-display">{currentYear}년 {currentMonth}월</div>
+                <button className="month-btn" onClick={() => changeMonth('next')}>▶</button>
+              </div>
+
+              <div className="calendar-grid">
+                <div className="weekdays">
+                  {weekDays.map(day => (
+                    <div key={day} className="weekday">{day}</div>
+                  ))}
+                </div>
+                {calendar.map((week, weekIdx) => (
+                  <div key={weekIdx} className="week-row">
+                    {week.map((day, dayIdx) => (
+                      <div 
+                        key={dayIdx} 
+                        className={`calendar-day ${!day ? 'empty' : ''} ${hasChat(day) ? 'has-chat' : 'no-chat'} ${
+                          selectedSummaryDate === `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}` ? 'selected' : ''
+                        }`}
+                        onClick={() => selectDateForSummary(day)}
+                      >
+                        {day || ''}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="summary-action-section">
+              <button 
+                className="summary-execute-btn"
+                onClick={executeSummary}
+                disabled={!selectedSummaryDate}
+              >
+                📝 채팅 요약하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 요약 결과 모달 */}
+      {isSummaryResultOpen && (
+        <div className="modal-overlay" onClick={() => setIsSummaryResultOpen(false)}>
+          <div className="modal-content modal-summary-result" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header-section">
+              <h3>📝 대화 요약</h3>
+              <button className="close-btn" onClick={() => setIsSummaryResultOpen(false)}>✕</button>
+            </div>
+
+            <div className="summary-result-box">
+              <pre className="summary-text">{summaryText}</pre>
+            </div>
+
             <div className="modal-actions">
               <button 
-                className="modal-cancel-btn"
-                onClick={() => setIsRenameModalOpen(false)}
-              >
-                취소
-              </button>
-              <button 
                 className="modal-submit-btn"
-                onClick={confirmRename}
+                onClick={() => setIsSummaryResultOpen(false)}
               >
                 확인
               </button>

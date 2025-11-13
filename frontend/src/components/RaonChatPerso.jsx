@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './RaonChat.css';
 
 const PERSOAI_API_SERVER = 'https://live-api.perso.ai';
@@ -9,11 +9,26 @@ const PERSO_SDK_URL = 'https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8
 function RaonChatPerso({ user, isLoggedIn }) {
   const { id: chatbotId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // 아바타 선택 페이지에서 전달받은 정보
+  const avatarConfig = location.state || {};
+  const {
+    sdkConfig, // SDK 세션 생성 설정
+    avatarId,
+    avatarName,
+    personality,
+    description,
+    avatarImage,
+    backgroundImage,
+    llmModel,
+    ttsModel,
+    mode
+  } = avatarConfig;
 
   // PersoAI SDK 관련 상태
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [persoSession, setPersoSession] = useState(null);
-  const [sessionId, setSessionId] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const videoRef = useRef(null);
 
@@ -111,15 +126,18 @@ function RaonChatPerso({ user, isLoggedIn }) {
     setError(null);
 
     try {
-      const llmType = chatbotInfo?.llmType || 'azure-gpt-4o';
-      const ttsType = chatbotInfo?.ttsType || 'yuri';
-      const modelStyle = chatbotInfo?.modelStyle || 'chaehee_livechat-front-white_suit-natural_loop';
-      const promptId = chatbotInfo?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb';
-      const documentId = chatbotInfo?.documentId || null;
-
       console.log('=== Creating PersoAI Session ===');
 
-      // SDK를 통해 세션 ID 생성
+      // sdkConfig 또는 chatbotInfo에서 설정 가져오기
+      const llmType = sdkConfig?.llmType || chatbotInfo?.llmType || 'azure-gpt-4o';
+      const ttsType = sdkConfig?.ttsType || chatbotInfo?.ttsType || 'yuri';
+      const modelStyle = sdkConfig?.modelStyle || chatbotInfo?.modelStyle || 'chaehee_livechat-front-white_suit-natural_loop';
+      const promptId = sdkConfig?.promptId || chatbotInfo?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb';
+      const documentId = sdkConfig?.documentId || chatbotInfo?.documentId || null;
+
+      console.log('✓ SDK Config:', { llmType, ttsType, modelStyle, promptId, documentId });
+
+      // SDK로 세션 ID 생성
       const createdSessionId = await window.PersoLiveSDK.createSessionId(
         PERSOAI_API_SERVER,
         PERSOAI_API_KEY,
@@ -185,7 +203,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
         setPersoSession(null);
       });
 
-      setSessionId(createdSessionId);
       setPersoSession(session);
       setIsSessionActive(true);
 
@@ -260,7 +277,16 @@ function RaonChatPerso({ user, isLoggedIn }) {
       <div className="main-content">
         {/* 왼쪽: AI 아바타 */}
         <div className="ai-model-container">
-          <div className="ai-display-box" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+          <div className="ai-display-box" style={{
+            padding: 0,
+            overflow: 'hidden',
+            position: 'relative',
+            ...(backgroundImage && !isSessionActive ? {
+              backgroundImage: `url(${backgroundImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            } : {})
+          }}>
             <video
               ref={videoRef}
               autoPlay
@@ -285,12 +311,36 @@ function RaonChatPerso({ user, isLoggedIn }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '20px',
-                textAlign: 'center'
+                textAlign: 'center',
+                backgroundColor: backgroundImage ? 'rgba(0, 0, 0, 0.3)' : 'transparent'
               }}>
-                <div style={{ fontSize: '80px', marginBottom: '20px' }}>AI</div>
+                {!backgroundImage && (
+                  <div style={{ fontSize: '80px', marginBottom: '20px' }}>AI</div>
+                )}
+                {avatarName && (
+                  <div style={{
+                    fontSize: '24px',
+                    fontWeight: '600',
+                    marginBottom: '10px',
+                    color: backgroundImage ? 'white' : 'inherit',
+                    textShadow: backgroundImage ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
+                  }}>
+                    {avatarName}
+                  </div>
+                )}
+                {personality && (
+                  <div style={{
+                    fontSize: '14px',
+                    marginBottom: '20px',
+                    color: backgroundImage ? 'white' : '#666',
+                    textShadow: backgroundImage ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'
+                  }}>
+                    {personality}
+                  </div>
+                )}
                 <button
                   onClick={createSession}
-                  disabled={isLoading || !chatbotId || !sdkLoaded}
+                  disabled={isLoading || (!chatbotId && !sdkConfig) || !sdkLoaded}
                   style={{
                     padding: '12px 30px',
                     fontSize: '16px',
@@ -299,8 +349,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
                     borderRadius: '25px',
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: 'white',
-                    cursor: isLoading || !chatbotId || !sdkLoaded ? 'not-allowed' : 'pointer',
-                    opacity: isLoading || !chatbotId || !sdkLoaded ? 0.6 : 1
+                    cursor: isLoading || (!chatbotId && !sdkConfig) || !sdkLoaded ? 'not-allowed' : 'pointer',
+                    opacity: isLoading || (!chatbotId && !sdkConfig) || !sdkLoaded ? 0.6 : 1,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
                   }}
                 >
                   {isLoading ? '연결 중...' : '채팅 시작'}
