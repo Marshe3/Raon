@@ -1,6 +1,6 @@
 // src/App.js
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import RaonHome from "./components/RaonHome.jsx";
 import RaonSocialLogin from "./components/RaonSocialLogin.jsx";
 import RaonChatList from "./components/RaonChatList.jsx";
@@ -21,7 +21,7 @@ function AppInner() {
   const [user, setUser] = useState(null);
 
   // 토큰 자동 갱신
-  const refreshAccessToken = async () => {
+  const refreshAccessToken = useCallback(async () => {
     try {
       console.log("Access Token 갱신 시도...");
       const response = await fetch("/raon/api/auth/refresh", {
@@ -42,10 +42,10 @@ function AppInner() {
       console.error("토큰 갱신 오류:", error);
       return false;
     }
-  };
+  }, []);
 
   // 로그인 상태 확인
-  const checkLoginStatus = async () => {
+  const checkLoginStatus = useCallback(async () => {
     try {
       console.log("로그인 상태 확인 시작...");
       const response = await fetch("/raon/api/users/me", {
@@ -83,7 +83,7 @@ function AppInner() {
     } catch (e) {
       console.error("로그인 상태 확인 오류:", e);
     }
-  };
+  }, [refreshAccessToken]);
 
   useEffect(() => {
     checkLoginStatus();
@@ -109,7 +109,7 @@ function AppInner() {
         clearTimeout(focusTimeout);
       }
     };
-  }, []);
+  }, [checkLoginStatus]);
 
   const handleLogout = async () => {
     try {

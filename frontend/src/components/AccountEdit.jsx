@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { api, apiJson } from "../lib/apiClient"; // ✅ 베이스 경로 + CSRF 자동
 
 export default function AccountEdit({ onSaved = () => {} }) {
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [nickname, setNickname] = useState("");
   const [msg, setMsg] = useState("");
@@ -19,8 +18,6 @@ export default function AccountEdit({ onSaved = () => {} }) {
         if (!stop) setNickname(me?.nickname ?? "");
       } catch (e) {
         if (!stop) setMsg("로그인이 필요합니다.");
-      } finally {
-        if (!stop) setLoading(false);
       }
     })();
     return () => {
@@ -109,10 +106,8 @@ export default function AccountEdit({ onSaved = () => {} }) {
                 />
               </label>
 
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">
-                  {loading ? "불러오는 중…" : "닉네임을 수정할 수 있어요"}
-                </span>
+              <div className="flex items-center justify-end text-xs">
+               
                 <button
                   type="button"
                   onClick={onDeleteAccount}
