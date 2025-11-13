@@ -6,7 +6,6 @@ import RaonSocialLogin from "./components/RaonSocialLogin.jsx";
 import RaonChatList from "./components/RaonChatList.jsx";
 import RaonAvatar from "./components/RaonAvatar.jsx";
 import RaonBackoffice from "./components/RaonBackoffice.jsx";
-import DebugPage from "./components/DebugPage.jsx";
 import AccountEdit from "./components/AccountEdit.jsx";
 import TopBar from "./components/TopBar.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
@@ -192,7 +191,6 @@ function AppInner() {
         <Route path="/chat/:id" element={<RaonChatPerso user={user} isLoggedIn={isLoggedIn} />} />
         <Route path="/avatar" element={<RaonAvatar />} />
         <Route path="/backoffice" element={<RaonBackoffice />} />
-        <Route path="/debug" element={<DebugPage />} />
 
         {/* 항상 마지막 */}
         <Route path="*" element={<Navigate to="/" replace />} />
