@@ -119,39 +119,54 @@ export function usePersoAI() {
   }, [initialized]);
 
   /**
-   * SDK 세션 초기화 (WebRTC)
+   * SDK 세션 초기화 (WebRTC) - 재시도 로직 포함
    */
-  const initializeSDKSession = useCallback(async (sessionId, width, height, enableVoice) => {
+  const initializeSDKSession = useCallback(async (sessionId, width, height, enableVoice, maxRetries = 2) => {
     if (!initialized) {
       throw new Error('SDK가 초기화되지 않았습니다');
     }
 
-    try {
-      console.log('🔄 SDK 세션 초기화 시작...', { sessionId, width, height, enableVoice });
+    let lastError = null;
 
-      // 먼저 API 자격증명 가져오기
-      const credResponse = await fetch('/raon/api/persoai/credentials');
-      if (!credResponse.ok) {
-        throw new Error('자격증명 로드 실패');
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 SDK 세션 초기화 시도 ${attempt}/${maxRetries}...`, { sessionId, width, height, enableVoice });
+
+        // 먼저 API 자격증명 가져오기
+        const credResponse = await fetch('/raon/api/persoai/credentials');
+        if (!credResponse.ok) {
+          throw new Error('자격증명 로드 실패');
+        }
+
+        const credentials = await credResponse.json();
+
+        // SDK로 세션 초기화
+        const sdkSession = await window.PersoLiveSDK.createSession(
+          credentials.apiServer,
+          sessionId,
+          width,
+          height,
+          enableVoice
+        );
+
+        console.log(`✅ SDK 세션 초기화 완료 (시도 ${attempt}/${maxRetries})`);
+        return sdkSession;
+      } catch (err) {
+        lastError = err;
+        console.warn(`⚠️ SDK 세션 초기화 실패 (시도 ${attempt}/${maxRetries}):`, err.message);
+
+        // 마지막 시도가 아니면 잠시 대기 후 재시도
+        if (attempt < maxRetries) {
+          const waitTime = attempt * 2000; // 2초, 4초 간격으로 대기
+          console.log(`⏳ ${waitTime/1000}초 후 재시도...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
       }
-
-      const credentials = await credResponse.json();
-
-      // SDK로 세션 초기화
-      const sdkSession = await window.PersoLiveSDK.createSession(
-        credentials.apiServer,
-        sessionId,
-        width,
-        height,
-        enableVoice
-      );
-
-      console.log('✅ SDK 세션 초기화 완료');
-      return sdkSession;
-    } catch (err) {
-      console.error('❌ SDK 세션 초기화 실패:', err);
-      throw err;
     }
+
+    // 모든 재시도 실패
+    console.error(`❌ SDK 세션 초기화 완전 실패 (${maxRetries}회 시도)`, lastError);
+    throw lastError;
   }, [initialized]);
 
   /**

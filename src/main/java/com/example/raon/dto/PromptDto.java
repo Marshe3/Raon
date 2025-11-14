@@ -2,6 +2,7 @@ package com.example.raon.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Prompt DTO
@@ -14,4 +15,5 @@ public class PromptDto {
     private String prompt;
     private String introMessage;
     private LocalDateTime createdAt;
+    private List<String> capabilities;  // WebRTC 지원 여부 확인을 위한 capability 목록
 }

@@ -10,6 +10,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,11 +34,11 @@ public class PersoAISessionService {
 
     /**
      * PersoAI 세션 생성
-     * POST /api/live_chat/v2/session/
+     * POST /api/v1/session/
      */
     public SessionResponse createSession(SessionCreateRequest request) {
         try {
-            String url = apiServer + "/api/live_chat/v2/session/";
+            String url = apiServer + "/api/v1/session/";
             
             // 요청 데이터 변환 (PersoAI API 형식에 맞춤)
             Map<String, Object> requestBody = new HashMap<>();
@@ -63,8 +64,8 @@ public class PersoAISessionService {
             requestBody.put("padding_top", request.getPaddingTop());
             requestBody.put("padding_height", request.getPaddingHeight());
 
-            // capability는 API가 자동으로 STF_WEBRTC로 설정하므로 제외
-            // requestBody.put("capability", request.getCapability());
+            // WebRTC capability 추가 (프롬프트가 요구하는 경우 필수)
+            requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
 
             if (request.getExtraData() != null) {
                 requestBody.put("extra_data", request.getExtraData());
@@ -78,7 +79,7 @@ public class PersoAISessionService {
             HttpEntity<Map<String, Object>> httpRequest = new HttpEntity<>(requestBody, headers);
             
             log.info("📤 PersoAI 세션 생성 요청: {}", url);
-            log.debug("요청 본문: {}", requestBody);
+            log.info("📦 요청 본문: {}", requestBody);
             
             ResponseEntity<String> response = restTemplate.exchange(
                 url, HttpMethod.POST, httpRequest, String.class
@@ -111,7 +112,7 @@ public class PersoAISessionService {
      */
     public SessionResponse getSession(String sessionId) {
         try {
-            String url = apiServer + "/api/live_chat/v2/session/" + sessionId + "/";
+            String url = apiServer + "/api/v1/session/" + sessionId + "/";
             
             HttpHeaders headers = new HttpHeaders();
             headers.set("PersoLive-APIKey", apiKey);

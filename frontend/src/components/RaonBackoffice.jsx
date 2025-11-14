@@ -15,6 +15,7 @@ function RaonBackoffice() {
   const [selectedModelStyle, setSelectedModelStyle] = useState(null);
   const [selectedTTS, setSelectedTTS] = useState(null);
   const [selectedLLM, setSelectedLLM] = useState(null);
+  const [selectedSTT, setSelectedSTT] = useState(null);
   const [openDropdown, setOpenDropdown] = useState(null);
 
   // ✅ 경고 해결: useCallback으로 래핑
@@ -36,6 +37,7 @@ function RaonBackoffice() {
         if (configData.modelStyles?.length > 0) setSelectedModelStyle(configData.modelStyles[0]);
         if (configData.ttsModels?.length > 0) setSelectedTTS(configData.ttsModels[0]);
         if (configData.llmModels?.length > 0) setSelectedLLM(configData.llmModels[0]);
+        if (configData.sttModels?.length > 0) setSelectedSTT(configData.sttModels[0]);
       }
 
       alert("✅ 설정 로드 성공!");
@@ -62,6 +64,7 @@ function RaonBackoffice() {
       modelStyle: selectedModelStyle,
       tts: selectedTTS,
       llm: selectedLLM,
+      stt: selectedSTT,
     };
     localStorage.setItem("raon_last_config", JSON.stringify(configuration));
     alert("✅ 설정이 저장되었습니다!");
@@ -79,10 +82,13 @@ function RaonBackoffice() {
         llmType: selectedLLM.name,
         ttsType: selectedTTS.name,
         documentId: selectedDocument?.documentId || null,
-        sttType: null,
+        sttType: selectedSTT?.name || null,
         modelStyle: selectedModelStyle?.name || null,
         backgroundImageId: selectedBackground?.backgroundImageId || null,
-        agent: navigator.userAgent,
+        agent: 1,
+        paddingLeft: 0,
+        paddingTop: 0,
+        paddingHeight: 1,
         extraData: {},
       };
       const response = await fetch("/raon/api/sessions/create", {
@@ -93,7 +99,24 @@ function RaonBackoffice() {
       });
       if (!response.ok) throw new Error(`세션 생성 실패: ${response.status}`);
       const session = await response.json();
-      navigate(`/chat/${session.sessionId}`);
+
+      // 채팅 컴포넌트로 설정 정보 전달
+      navigate(`/chat/${session.sessionId}`, {
+        state: {
+          sessionId: session.sessionId,
+          sdkConfig: {
+            promptId: selectedPrompt.promptId,
+            llmType: selectedLLM.name,
+            ttsType: selectedTTS.name,
+            sttType: selectedSTT?.name || null,
+            modelStyle: selectedModelStyle?.name || null,
+            documentId: selectedDocument?.documentId || null,
+            backgroundImageId: selectedBackground?.backgroundImageId || null,
+          },
+          avatarName: selectedPrompt.name || '기본 챗봇',
+          mode: 'backoffice'
+        }
+      });
     } catch (error) {
       alert(`채팅 시작 실패: ${error.message}`);
     } finally {
@@ -127,6 +150,7 @@ function RaonBackoffice() {
             <SettingSelect label="💬 프롬프트" required items={config.prompts} selected={selectedPrompt} setSelected={setSelectedPrompt} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="prompt" dropdownMotion={dropdownMotion} />
             <SettingSelect label="🧠 LLM 모델" required items={config.llmModels} selected={selectedLLM} setSelected={setSelectedLLM} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="llm" dropdownMotion={dropdownMotion} />
             <SettingSelect label="🎙️ TTS 모델" required items={config.ttsModels} selected={selectedTTS} setSelected={setSelectedTTS} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="tts" dropdownMotion={dropdownMotion} />
+            <SettingSelect label="🎤 STT 모델" items={config.sttModels} selected={selectedSTT} setSelected={setSelectedSTT} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="stt" dropdownMotion={dropdownMotion} />
             <SettingSelect label="🤖 모델 스타일" items={config.modelStyles} selected={selectedModelStyle} setSelected={setSelectedModelStyle} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="model" dropdownMotion={dropdownMotion} />
             <SettingSelect label="📄 문서" items={config.documents} selected={selectedDocument} setSelected={setSelectedDocument} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="document" dropdownMotion={dropdownMotion} />
             <SettingSelect label="🖼️ 배경 이미지" items={config.backgroundImages} selected={selectedBackground} setSelected={setSelectedBackground} openDropdown={openDropdown} toggleDropdown={toggleDropdown} dropdownKey="background" dropdownMotion={dropdownMotion} />
