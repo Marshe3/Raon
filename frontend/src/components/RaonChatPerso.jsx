@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './RaonChat.css';
+import { usePersoAI } from '../hooks/usePersoAI';
 
-const PERSOAI_API_SERVER = 'https://live-api.perso.ai';
-const PERSOAI_API_KEY = process.env.REACT_APP_PERSOAI_API_KEY || 'plak-ed3f1817238abf96b6c37b3edc605f1e';
 const PERSO_SDK_URL = 'https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js';
 
 function RaonChatPerso({ user, isLoggedIn }) {
@@ -11,19 +10,18 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // usePersoAI 훅 사용
+  const {
+    initializeSDKSession
+  } = usePersoAI();
+
   // 아바타 선택 페이지에서 전달받은 정보
   const avatarConfig = location.state || {};
   const {
     sdkConfig, // SDK 세션 생성 설정
-    avatarId,
     avatarName,
     personality,
-    description,
-    avatarImage,
-    backgroundImage,
-    llmModel,
-    ttsModel,
-    mode
+    backgroundImage
   } = avatarConfig;
 
   // PersoAI SDK 관련 상태
@@ -31,9 +29,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const [persoSession, setPersoSession] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const videoRef = useRef(null);
-
-  // 챗봇 정보
-  const [chatbotInfo, setChatbotInfo] = useState(null);
 
   // 메시지 목록
   const [messages, setMessages] = useState([]);
@@ -50,6 +45,16 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   // TTS 켜짐/꺼짐
   const [isTTSOn, setIsTTSOn] = useState(true);
+
+  // STT (음성 입력) 상태
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef(''); // 인식된 텍스트 임시 저장
+
+  // 녹음 관련
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
 
   // 메시지 스크롤 ref
   const messagesEndRef = useRef(null);
@@ -85,32 +90,8 @@ function RaonChatPerso({ user, isLoggedIn }) {
     };
   }, []);
 
-  // 챗봇 정보 로드
-  useEffect(() => {
-    const loadChatbotInfo = async () => {
-      try {
-        setChatbotInfo({
-          chatbotId: chatbotId,
-          chatbotName: '기본 챗봇',
-          description: 'PersoAI 기반 AI 챗봇',
-          llmType: 'azure-gpt-4o',
-          ttsType: 'chaehee',
-          modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-          promptId: 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
-          documentId: 'pld-c2104dc3d8165c42f60bcf8217c19bc8'
-        });
-      } catch (err) {
-        console.error('Failed to load chatbot info:', err);
-        setError('챗봇 정보를 불러올 수 없습니다');
-      }
-    };
 
-    if (chatbotId) {
-      loadChatbotInfo();
-    }
-  }, [chatbotId]);
-
-  // 세션 생성 (PersoAI SDK 사용)
+  // 세션 생성 (백엔드 API 사용)
   const createSession = async () => {
     if (!sdkLoaded || !window.PersoLiveSDK) {
       setError('아바타 SDK가 로드되지 않았습니다');
@@ -126,37 +107,70 @@ function RaonChatPerso({ user, isLoggedIn }) {
     setError(null);
 
     try {
-      console.log('=== Creating PersoAI Session ===');
+      console.log('=== Creating PersoAI Session via Backend ===');
 
-      // sdkConfig 또는 chatbotInfo에서 설정 가져오기
-      const llmType = sdkConfig?.llmType || chatbotInfo?.llmType || 'azure-gpt-4o';
-      const ttsType = sdkConfig?.ttsType || chatbotInfo?.ttsType || 'yuri';
-      const modelStyle = sdkConfig?.modelStyle || chatbotInfo?.modelStyle || 'chaehee_livechat-front-white_suit-natural_loop';
-      const promptId = sdkConfig?.promptId || chatbotInfo?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb';
-      const documentId = sdkConfig?.documentId || chatbotInfo?.documentId || null;
+      // sdkConfig 검증 (백오피스에서 전달받아야 함)
+      if (!sdkConfig) {
+        throw new Error('세션 설정이 전달되지 않았습니다. 백오피스에서 설정을 선택해주세요.');
+      }
 
-      console.log('✓ SDK Config:', { llmType, ttsType, modelStyle, promptId, documentId });
+      // sdkConfig에서 설정 가져오기 (하드코딩 제거)
+      const llmType = sdkConfig.llmType;
+      const ttsType = sdkConfig.ttsType;
+      const modelStyle = sdkConfig.modelStyle;
+      const promptId = sdkConfig.promptId;
+      const documentId = sdkConfig.documentId || null;
+      const backgroundImageId = sdkConfig.backgroundImageId || null;
 
-      // SDK로 세션 ID 생성
-      const createdSessionId = await window.PersoLiveSDK.createSessionId(
-        PERSOAI_API_SERVER,
-        PERSOAI_API_KEY,
-        llmType,
-        ttsType,
-        modelStyle,
-        promptId,
-        documentId,
-        null, 0, 0, 1
-      );
-      console.log('✓ Session ID created:', createdSessionId);
+      if (!llmType || !ttsType || !promptId) {
+        throw new Error('필수 세션 설정(LLM, TTS, Prompt)이 누락되었습니다.');
+      }
 
-      // WebRTC 세션 생성
-      const session = await window.PersoLiveSDK.createSession(
-        PERSOAI_API_SERVER,
-        createdSessionId,
-        1920, 1080, false
-      );
+      console.log('✓ Session Config:', { llmType, ttsType, modelStyle, promptId, documentId, backgroundImageId });
+
+      // 백엔드 API로 세션 생성 요청
+      const sttType = sdkConfig?.sttType || null;
+
+      const sessionCreateRequest = {
+        promptId: promptId,
+        llmType: llmType,
+        ttsType: ttsType,
+        sttType: sttType,
+        modelStyle: modelStyle,
+        documentId: documentId,
+        backgroundImageId: backgroundImageId,
+        agent: 1,
+        paddingLeft: 0,
+        paddingTop: 0,
+        paddingHeight: 1
+      };
+
+      console.log('✓ STT Type:', sttType);
+
+      const response = await fetch('/raon/api/sessions/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(sessionCreateRequest),
+      });
+
+      if (!response.ok) {
+        throw new Error(`세션 생성 실패: ${response.status}`);
+      }
+
+      const sessionResponse = await response.json();
+      const createdSessionId = sessionResponse.sessionId;
+      console.log('✓ Session ID created via backend:', createdSessionId);
+
+      // SDK로 WebRTC 세션 초기화
+      // 참고: 음성 입력은 브라우저의 Web Speech API를 사용하므로 enableVoice는 false
+      const session = await initializeSDKSession(createdSessionId, 1920, 1080, false);
       console.log('✓ WebRTC session created');
+      if (sttType) {
+        console.log('✓ STT enabled: 브라우저 음성 인식 사용 가능');
+      }
 
       // 비디오 엘리먼트에 연결
       session.setSrc(videoRef.current);
@@ -236,6 +250,238 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
     // SDK를 통해 메시지 전송
     persoSession.processChat(userMessage);
+  };
+
+  // Web Speech API 초기화
+  useEffect(() => {
+    if (!sdkConfig?.sttType) return;
+
+    // 브라우저가 Web Speech API를 지원하는지 확인
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      console.warn('⚠️ 이 브라우저는 음성 인식을 지원하지 않습니다');
+      return;
+    }
+
+    // Speech Recognition 인스턴스 생성
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR'; // 한국어 설정
+    recognition.continuous = true; // 계속 듣기 (사용자가 중지할 때까지)
+    recognition.interimResults = true; // 중간 결과 활성화 (실시간 인식)
+
+    // 음성 인식 결과 처리
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+
+      // 모든 인식 결과를 처리
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          // 최종 확정된 텍스트
+          finalTranscript += transcript;
+        } else {
+          // 중간 결과 (아직 확정되지 않음)
+          interimTranscript += transcript;
+        }
+      }
+
+      // 최종 확정된 텍스트를 누적
+      if (finalTranscript) {
+        transcriptRef.current += finalTranscript + ' ';
+        console.log('🎤 음성 인식 결과 (확정):', finalTranscript);
+        console.log('🎤 전체 누적 텍스트:', transcriptRef.current);
+      }
+
+      // 중간 결과도 로그에 표시
+      if (interimTranscript) {
+        console.log('🎤 음성 인식 중 (임시):', interimTranscript);
+      }
+    };
+
+    // 음성 인식 종료 처리
+    recognition.onend = () => {
+      console.log('🎤 음성 인식 종료');
+
+      // 녹음 중지 (자동으로 파일 저장됨)
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+
+      // 누적된 텍스트가 있으면 전송
+      const fullText = transcriptRef.current.trim();
+      if (persoSession && fullText) {
+        console.log('📤 최종 전송할 텍스트:', fullText);
+        persoSession.processChat(fullText);
+        transcriptRef.current = ''; // 초기화
+      }
+
+      setIsListening(false);
+    };
+
+    // 음성 인식 오류 처리
+    recognition.onerror = (event) => {
+      console.error('🎤 음성 인식 오류:', event.error);
+      let errorMessage = '음성 인식 오류가 발생했습니다';
+
+      // 녹음 중지 (자동으로 파일 저장됨)
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+
+      switch (event.error) {
+        case 'no-speech':
+          errorMessage = '음성이 감지되지 않았습니다. 다시 시도해주세요.';
+          break;
+        case 'audio-capture':
+          errorMessage = '마이크를 사용할 수 없습니다.';
+          break;
+        case 'not-allowed':
+          errorMessage = '마이크 권한이 거부되었습니다.';
+          break;
+        case 'aborted':
+          // 사용자가 의도적으로 중지한 경우 에러 메시지 표시 안함
+          console.log('🎤 사용자가 음성 인식을 중지했습니다');
+          break;
+        default:
+          errorMessage = '알 수 없는 오류가 발생했습니다.';
+          break;
+      }
+
+      if (event.error !== 'aborted') {
+        setError(errorMessage);
+      }
+
+      setIsListening(false);
+      transcriptRef.current = ''; // 오류 시 누적 텍스트 초기화
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+      // 녹음 스트림 정리
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, [sdkConfig?.sttType, persoSession]);
+
+  // 녹음 시작
+  const startRecording = async () => {
+    try {
+      // 마이크 권한 요청 및 스트림 가져오기
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // MediaRecorder 초기화
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      // 녹음 데이터 수집
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      // 녹음 종료 시 파일 저장
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        // 자동 다운로드
+        const link = document.createElement('a');
+        link.href = audioUrl;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        link.download = `raon-voice-${timestamp}.webm`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        console.log('🎙️ 녹음 파일 저장 완료:', link.download);
+
+        // 스트림 정리
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+
+        // 메모리 정리
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      // 녹음 시작
+      mediaRecorder.start();
+      console.log('🎙️ 녹음 시작');
+    } catch (err) {
+      console.error('🎙️ 녹음 시작 실패:', err);
+      setError('녹음을 시작할 수 없습니다: ' + err.message);
+    }
+  };
+
+  // 녹음 종료
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      console.log('🎙️ 녹음 종료');
+    }
+  };
+
+  // 음성 입력 시작/중지
+  const toggleVoiceInput = async () => {
+    if (!persoSession || !isSessionActive) {
+      setError('세션이 활성화되지 않았습니다');
+      return;
+    }
+
+    if (!sdkConfig?.sttType) {
+      setError('STT가 설정되지 않았습니다. 백오피스에서 STT 모델을 선택해주세요.');
+      return;
+    }
+
+    if (!recognitionRef.current) {
+      setError('음성 인식 기능을 사용할 수 없습니다.');
+      return;
+    }
+
+    try {
+      if (!isListening) {
+        // 음성 입력 및 녹음 시작
+        console.log('🎤 음성 입력 시작 - 다시 클릭하면 종료됩니다');
+        transcriptRef.current = ''; // 누적 텍스트 초기화
+        setIsListening(true);
+
+        // 녹음 시작
+        await startRecording();
+
+        // 음성 인식 시작
+        recognitionRef.current.start();
+      } else {
+        // 음성 입력 및 녹음 중지 - 사용자가 버튼을 다시 클릭
+        console.log('🎤 음성 입력 중지 (사용자 클릭)');
+
+        // 음성 인식 중지 (onend 이벤트가 호출되어 텍스트 전송)
+        recognitionRef.current.stop();
+
+        // 녹음 중지 (자동으로 파일 저장됨)
+        stopRecording();
+      }
+    } catch (err) {
+      console.error('음성 입력 오류:', err);
+      setError('음성 입력 중 오류가 발생했습니다: ' + err.message);
+      setIsListening(false);
+      transcriptRef.current = ''; // 오류 시 초기화
+      stopRecording(); // 오류 시 녹음도 중지
+    }
   };
 
   // 세션 종료
@@ -400,6 +646,29 @@ function RaonChatPerso({ user, isLoggedIn }) {
               />
               <span className="edit-icon">✏️</span>
             </div>
+            {sdkConfig?.sttType && (
+              <button
+                className="mic-btn"
+                onClick={toggleVoiceInput}
+                disabled={!isSessionActive}
+                style={{
+                  padding: '12px 18px',
+                  fontSize: '20px',
+                  border: 'none',
+                  borderRadius: '50%',
+                  background: isListening ? '#e74c3c' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  cursor: !isSessionActive ? 'not-allowed' : 'pointer',
+                  opacity: !isSessionActive ? 0.6 : 1,
+                  marginRight: '8px',
+                  transition: 'all 0.3s ease',
+                  animation: isListening ? 'pulse 1.5s infinite' : 'none'
+                }}
+                title={isListening ? '클릭하여 음성 입력 종료 및 전송' : '클릭하여 음성 입력 시작'}
+              >
+                🎤
+              </button>
+            )}
             <button
               className="send-btn"
               onClick={handleSendMessage}

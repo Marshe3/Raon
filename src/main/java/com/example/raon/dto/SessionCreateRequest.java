@@ -29,7 +29,7 @@ public class SessionCreateRequest {
     private String backgroundImageId;
     
     @JsonProperty("agent")
-    private String agent;
+    private Integer agent;
     
     @JsonProperty("paddingLeft")
     private Double paddingLeft;

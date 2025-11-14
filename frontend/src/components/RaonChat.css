@@ -1094,3 +1094,16 @@
   background: #cbd5e0;
   border-radius: 3px;
 }
+
+/* ===== 음성 입력 애니메이션 ===== */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}

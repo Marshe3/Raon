@@ -15,7 +15,7 @@ import java.util.Map;
  * PersoAI 백오피스 API 컨트롤러
  */
 @RestController
-@RequestMapping("/raon/api/persoai")
+@RequestMapping("/api/persoai")
 @CrossOrigin(origins = {"http://localhost:3000","http://localhost:8086"})
 public class PersoAIController {
 
