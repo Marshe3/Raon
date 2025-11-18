@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,9 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
+
+    @Value("${jwt.cookie.access-token-max-age}")
+    private int accessTokenCookieMaxAge;
 
     /**
      * Refresh Token을 사용하여 새로운 Access Token 발급 (쿠키 방식)
@@ -76,7 +80,7 @@ public class AuthController {
             log.info("Successfully refreshed access token for user: {}", userId);
 
             // 7. 새로운 Access Token을 쿠키로 설정
-            addTokenCookie(response, "accessToken", newAccessToken, 3600); // 1시간
+            addTokenCookie(response, "accessToken", newAccessToken, accessTokenCookieMaxAge);
 
             return ResponseEntity.ok(Map.of("message", "Token refreshed successfully"));
 
