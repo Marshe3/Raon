@@ -154,8 +154,11 @@ public class PersoAIServiceImpl implements PersoAIService {
                             log.warn("Document에 ID 필드가 없습니다: {}", node);
                             continue;
                         }
-                        
-                        if (node.has("name") && !node.get("name").isNull()) {
+
+                        // name 또는 title 필드 확인 (title을 우선 사용)
+                        if (node.has("title") && !node.get("title").isNull()) {
+                            dto.setName(node.get("title").asText());
+                        } else if (node.has("name") && !node.get("name").isNull()) {
                             dto.setName(node.get("name").asText());
                         }
                         

@@ -17,12 +17,20 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   // 아바타 선택 페이지에서 전달받은 정보
   const avatarConfig = location.state || {};
+
+  // sdkConfig 복구: sessionStorage에서 불러오기 (재연결 시)
+  const savedSdkConfig = sessionStorage.getItem('raon_sdk_config');
+  const restoredSdkConfig = savedSdkConfig ? JSON.parse(savedSdkConfig) : null;
+
   const {
-    sdkConfig, // SDK 세션 생성 설정
+    sdkConfig: stateSdkConfig, // SDK 세션 생성 설정
     avatarName,
     personality,
     backgroundImage
   } = avatarConfig;
+
+  // sdkConfig는 state에서 받은 것을 우선, 없으면 복구된 것 사용
+  const sdkConfig = stateSdkConfig || restoredSdkConfig;
 
   // PersoAI SDK 관련 상태
   const [sdkLoaded, setSdkLoaded] = useState(false);
@@ -80,6 +88,14 @@ function RaonChatPerso({ user, isLoggedIn }) {
       console.log('💾 Messages saved:', messages.length);
     }
   }, [messages]);
+
+  // sdkConfig 저장 (재연결 시 복원용)
+  useEffect(() => {
+    if (sdkConfig) {
+      sessionStorage.setItem('raon_sdk_config', JSON.stringify(sdkConfig));
+      console.log('💾 SDK Config saved:', sdkConfig);
+    }
+  }, [sdkConfig]);
 
   // PersoAI SDK 로드
   useEffect(() => {
@@ -617,9 +633,10 @@ function RaonChatPerso({ user, isLoggedIn }) {
         setPersoSession(null);
         setIsSessionActive(false);
         setMessages([]);
-        // 수동 종료 시 저장된 채팅 기록도 정리
+        // 수동 종료 시 저장된 채팅 기록 및 설정 정리
         sessionStorage.removeItem('raon_chat_messages');
-        console.log('🗑️ Chat history cleared');
+        sessionStorage.removeItem('raon_sdk_config');
+        console.log('🗑️ Chat history and SDK config cleared');
       } catch (err) {
         console.error('Session close error:', err);
       }
