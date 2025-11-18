@@ -39,6 +39,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   // 로딩 상태
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isAiResponding, setIsAiResponding] = useState(false); // AI 응답 대기 중
 
   // 메뉴 열림/닫힘
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,6 +60,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
   // 메시지 스크롤 ref
   const messagesEndRef = useRef(null);
 
+  // 복원된 메시지 보관 (재연결 시 유지용)
+  const restoredMessagesRef = useRef(null);
+
   // 스크롤을 맨 아래로 이동
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,6 +71,14 @@ function RaonChatPerso({ user, isLoggedIn }) {
   // 메시지 변경 시 스크롤
   useEffect(() => {
     scrollToBottom();
+  }, [messages]);
+
+  // 메시지 변경 시 자동 저장 (재연결 시 복원용)
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem('raon_chat_messages', JSON.stringify(messages));
+      console.log('💾 Messages saved:', messages.length);
+    }
   }, [messages]);
 
   // PersoAI SDK 로드
@@ -89,6 +101,21 @@ function RaonChatPerso({ user, isLoggedIn }) {
       }
     };
   }, []);
+
+  // TTS ON/OFF 제어
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isTTSOn;
+
+      // 오디오 트랙도 제어
+      const audioTracks = videoRef.current.srcObject?.getAudioTracks() || [];
+      audioTracks.forEach(track => {
+        track.enabled = isTTSOn;
+      });
+
+      console.log(`🔊 TTS ${isTTSOn ? 'ON' : 'OFF'}`);
+    }
+  }, [isTTSOn]);
 
 
   // 세션 생성 (백엔드 API 사용)
@@ -175,14 +202,14 @@ function RaonChatPerso({ user, isLoggedIn }) {
       // 비디오 엘리먼트에 연결
       session.setSrc(videoRef.current);
 
-      // 비디오 요소 음성 활성화
+      // 비디오 요소 음성 활성화 (TTS 상태에 따라)
       if (videoRef.current) {
-        videoRef.current.muted = false;
+        videoRef.current.muted = !isTTSOn;
         videoRef.current.volume = 1.0;
 
         const audioTracks = videoRef.current.srcObject?.getAudioTracks() || [];
         audioTracks.forEach(track => {
-          track.enabled = true;
+          track.enabled = isTTSOn;
         });
 
         videoRef.current.play().catch(err => {
@@ -190,13 +217,31 @@ function RaonChatPerso({ user, isLoggedIn }) {
         });
       }
 
+      // 인트로 메시지 생성 (한 번만 생성하여 재사용)
+      const introMessage = {
+        id: 0,
+        type: 'ai',
+        text: sdkConfig?.introMessage || '안녕하세요!',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      };
+
       // 채팅 로그 구독
       session.subscribeChatLog((chatLog) => {
+        // 재연결 후 첫 번째 호출이고 서버 메시지가 비어있으면 복원된 메시지 유지
+        if (chatLog.length === 0 && restoredMessagesRef.current) {
+          console.log('📋 Keeping restored messages (empty server log)');
+          return; // 복원된 메시지를 유지하고 종료
+        }
+
         // timestamp 기준 오름차순 정렬 (오래된 메시지가 위, 최신 메시지가 아래)
         const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
 
-        const newMessages = sortedChatLog.map((chat, index) => ({
-          id: chat.timestamp + index, // timestamp 기반 고유 ID
+        const chatMessages = sortedChatLog.map((chat, index) => ({
+          id: chat.timestamp + index + 1, // timestamp 기반 고유 ID (인트로 메시지는 id 0)
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
           time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', {
@@ -205,14 +250,59 @@ function RaonChatPerso({ user, isLoggedIn }) {
             hour12: true
           })
         }));
-        setMessages(newMessages);
+
+        // 마지막 메시지가 AI 응답이면 로딩 상태 해제
+        if (sortedChatLog.length > 0 && !sortedChatLog[sortedChatLog.length - 1].isUser) {
+          setIsAiResponding(false);
+        }
+
+        // 서버에 새 메시지가 있으면 복원 상태 해제
+        if (chatLog.length > 0 && restoredMessagesRef.current) {
+          console.log('📡 New server messages received, clearing restored state');
+          restoredMessagesRef.current = null;
+        }
+
+        // 인트로 메시지를 항상 첫 번째로 유지
+        const allMessages = [introMessage, ...chatMessages];
+
+        // AI 응답 대기 중이고, 마지막 메시지가 사용자 메시지이면 로딩 표시
+        if (sortedChatLog.length > 0 && sortedChatLog[sortedChatLog.length - 1].isUser) {
+          allMessages.push({
+            id: 'loading',
+            type: 'ai',
+            text: '입력 중...',
+            time: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }),
+            isLoading: true
+          });
+        }
+
+        setMessages(allMessages);
       });
 
       // 세션 종료 이벤트 구독
       session.onClose((manualClosed) => {
+        console.log('🔴 Session closed. Manual:', manualClosed);
+
         if (!manualClosed) {
-          setError('세션이 예기치 않게 종료되었습니다.');
+          // 예기치 않은 종료 - 자동 재연결 시도
+          console.log('🔄 Attempting auto-reconnect...');
+          setError('세션이 종료되었습니다. 5초 후 자동으로 재연결합니다...');
+
+          // 5초 후 자동 재연결
+          setTimeout(() => {
+            console.log('🔄 Auto-reconnecting...');
+            setError(null);
+            createSession();
+          }, 5000);
+        } else {
+          // 수동 종료
+          setError(null);
         }
+
         setIsSessionActive(false);
         setPersoSession(null);
       });
@@ -224,16 +314,46 @@ function RaonChatPerso({ user, isLoggedIn }) {
       console.log('📝 SDK Config:', sdkConfig);
       console.log('📝 Intro Message:', sdkConfig?.introMessage);
 
-      setMessages([{
-        id: 1,
-        type: 'ai',
-        text: sdkConfig?.introMessage || '안녕하세요!',
-        time: new Date().toLocaleTimeString('ko-KR', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        })
-      }]);
+      // 저장된 채팅 기록 복원 (재연결 시)
+      const savedMessages = sessionStorage.getItem('raon_chat_messages');
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages);
+          console.log('📥 Restoring saved messages:', parsedMessages.length);
+          setMessages(parsedMessages);
+          // 복원된 메시지를 ref에 보관 (subscribeChatLog에서 사용)
+          restoredMessagesRef.current = parsedMessages;
+        } catch (e) {
+          console.error('❌ Failed to restore messages:', e);
+          // 복원 실패 시 기본 인트로 메시지 설정
+          const defaultMessage = [{
+            id: 1,
+            type: 'ai',
+            text: sdkConfig?.introMessage || '안녕하세요!',
+            time: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+          }];
+          setMessages(defaultMessage);
+          restoredMessagesRef.current = null;
+        }
+      } else {
+        // 저장된 메시지가 없으면 기본 인트로 메시지 설정
+        const defaultMessage = [{
+          id: 1,
+          type: 'ai',
+          text: sdkConfig?.introMessage || '안녕하세요!',
+          time: new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        }];
+        setMessages(defaultMessage);
+        restoredMessagesRef.current = null;
+      }
 
     } catch (err) {
       setError('세션 생성 중 오류가 발생했습니다: ' + err.message);
@@ -249,6 +369,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
     const userMessage = inputText;
     setInputText('');
+
+    // AI 응답 대기 상태 활성화
+    setIsAiResponding(true);
 
     // SDK를 통해 메시지 전송
     persoSession.processChat(userMessage);
@@ -494,6 +617,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
         setPersoSession(null);
         setIsSessionActive(false);
         setMessages([]);
+        // 수동 종료 시 저장된 채팅 기록도 정리
+        sessionStorage.removeItem('raon_chat_messages');
+        console.log('🗑️ Chat history cleared');
       } catch (err) {
         console.error('Session close error:', err);
       }
