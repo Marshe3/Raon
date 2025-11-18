@@ -91,6 +91,14 @@ public class AuthController {
      */
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        // 현재 요청에 포함된 모든 쿠키 로깅
+        log.info("🔍 로그아웃 요청 - 현재 쿠키 목록:");
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                log.info("  - {}: {} (path: {})", cookie.getName(), cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...", cookie.getPath());
+            }
+        }
+
         String refreshToken = getRefreshTokenFromCookie(request);
 
         if (refreshToken != null && !refreshToken.isEmpty()) {
@@ -99,15 +107,24 @@ public class AuthController {
                 refreshTokenRepository.findByToken(refreshToken)
                         .ifPresent(refreshTokenRepository::delete);
 
-                log.info("Successfully logged out");
+                log.info("Successfully deleted refresh token from database");
             } catch (Exception e) {
                 log.error("Failed to delete refresh token from database", e);
             }
         }
 
-        // 쿠키 삭제
-        deleteTokenCookie(response, "accessToken");
-        deleteTokenCookie(response, "refreshToken");
+        // 쿠키 삭제 (여러 Path에 대해 시도)
+        log.info("🧹 로그아웃: 쿠키 삭제 시작");
+
+        // 모든 가능한 Path에 대해 쿠키 삭제
+        String[] paths = {"/", "/raon", "/raon/"};
+        for (String path : paths) {
+            deleteTokenCookie(response, "accessToken", path);
+            deleteTokenCookie(response, "refreshToken", path);
+            deleteTokenCookie(response, "JSESSIONID", path);
+        }
+
+        log.info("✅ 로그아웃: 쿠키 삭제 완료");
 
         return ResponseEntity.ok(Map.of("message", "Successfully logged out"));
     }
@@ -140,14 +157,15 @@ public class AuthController {
     }
 
     /**
-     * 쿠키 삭제
+     * 쿠키 삭제 (Path 지정 가능)
      */
-    private void deleteTokenCookie(HttpServletResponse response, String name) {
+    private void deleteTokenCookie(HttpServletResponse response, String name, String path) {
         Cookie cookie = new Cookie(name, null);
         cookie.setHttpOnly(true);
         cookie.setSecure(false);
-        cookie.setPath("/");
+        cookie.setPath(path);
         cookie.setMaxAge(0); // 즉시 만료
         response.addCookie(cookie);
+        log.debug("쿠키 삭제 시도: name={}, path={}", name, path);
     }
 }

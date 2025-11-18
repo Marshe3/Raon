@@ -44,6 +44,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${jwt.refresh-token-expiration}")
     private long refreshTokenExpiration;
 
+    @Value("${jwt.cookie.access-token-max-age}")
+    private int accessTokenCookieMaxAge;
+
+    @Value("${jwt.cookie.refresh-token-max-age}")
+    private int refreshTokenCookieMaxAge;
+
     @Override
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -124,10 +130,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("Saved refresh token to database for user: {}", user.getUserId());
 
         // 4. JWT 토큰을 쿠키로 전달
-        addTokenCookie(response, "accessToken", accessToken, 3600); // 1시간
-        addTokenCookie(response, "refreshToken", refreshToken, 604800); // 7일
+        addTokenCookie(response, "accessToken", accessToken, accessTokenCookieMaxAge);
+        addTokenCookie(response, "refreshToken", refreshToken, refreshTokenCookieMaxAge);
 
-        log.info("Added JWT tokens to cookies");
+        log.info("Added JWT tokens to cookies (accessToken: {}초, refreshToken: {}초)",
+                 accessTokenCookieMaxAge, refreshTokenCookieMaxAge);
 
         // 5. 프론트엔드 홈으로 리디렉션
         getRedirectStrategy().sendRedirect(request, response, "http://localhost:3000/");
