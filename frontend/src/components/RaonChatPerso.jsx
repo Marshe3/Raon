@@ -757,6 +757,19 @@ function RaonChatPerso({ user, isLoggedIn }) {
               {isSessionActive ? '연결됨 🟢' : '대기 중'} | 마이크 권한 허용됨
             </span>
           </div>
+
+          {/* TTS 토글 */}
+          <div className="tts-toggle-container">
+            <span className="tts-label">TTS 음성</span>
+            <label className="tts-switch">
+              <input
+                type="checkbox"
+                checked={isTTSOn}
+                onChange={() => setIsTTSOn(!isTTSOn)}
+              />
+              <span className="tts-slider"></span>
+            </label>
+          </div>
         </div>
 
         {/* 오른쪽: 채팅 */}
@@ -834,18 +847,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
           <div className="menu-header-side">
             <h3>설정</h3>
             <button className="close-btn" onClick={() => setIsMenuOpen(false)}>×</button>
-          </div>
-
-          <div className="menu-section-side">
-            <h4>TTS 음성</h4>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={isTTSOn}
-                onChange={() => setIsTTSOn(!isTTSOn)}
-              />
-              <span className="slider"></span>
-            </label>
           </div>
 
           {isSessionActive && (
