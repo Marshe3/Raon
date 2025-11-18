@@ -132,10 +132,12 @@ const RaonAvatar = () => {
 
   // ✅ 프리셋 선택 - 바로 채팅방으로 이동
   const handlePresetSelect = (avatar) => {
-    const firstPrompt = configurations?.prompts?.[0];
+    // 선택한 아바타의 promptId에 맞는 프롬프트 찾기
+    const selectedPrompt = configurations?.prompts?.find(p => p.promptId === avatar.promptId) || configurations?.prompts?.[0];
 
     console.log('🔍 Selected Chatbot from DB:', avatar);
-    console.log('🔍 Intro Message:', firstPrompt?.introMessage);
+    console.log('🔍 Selected Prompt:', selectedPrompt);
+    console.log('🔍 Intro Message:', selectedPrompt?.introMessage);
 
     navigate(`/chat/${avatar.id}`, {
       state: {
@@ -153,7 +155,7 @@ const RaonAvatar = () => {
           ttsType: avatar.ttsType,
           sttType: avatar.sttType || null,
           modelStyle: avatar.modelStyle,
-          introMessage: firstPrompt?.introMessage || '안녕하세요!',
+          introMessage: selectedPrompt?.introMessage || '안녕하세요!',
         },
       },
     });
@@ -230,10 +232,12 @@ const RaonAvatar = () => {
   const handleStart = () => {
     if (selectedMode === 'preset' && selectedPreset) {
       // 프리셋 모드: DB에서 가져온 챗봇 설정 사용
-      const firstPrompt = configurations?.prompts?.[0];
+      // 선택한 아바타의 promptId에 맞는 프롬프트 찾기
+      const selectedPrompt = configurations?.prompts?.find(p => p.promptId === selectedPreset.promptId) || configurations?.prompts?.[0];
 
       console.log('🔍 Selected Chatbot from DB:', selectedPreset);
-      console.log('🔍 Intro Message:', firstPrompt?.introMessage);
+      console.log('🔍 Selected Prompt:', selectedPrompt);
+      console.log('🔍 Intro Message:', selectedPrompt?.introMessage);
 
       navigate(`/chat/${selectedPreset.id}`, {
         state: {
@@ -251,7 +255,7 @@ const RaonAvatar = () => {
             ttsType: selectedPreset.ttsType,
             sttType: selectedPreset.sttType || null,
             modelStyle: selectedPreset.modelStyle,
-            introMessage: firstPrompt?.introMessage || '안녕하세요!',
+            introMessage: selectedPrompt?.introMessage || '안녕하세요!',
           },
         },
       });
