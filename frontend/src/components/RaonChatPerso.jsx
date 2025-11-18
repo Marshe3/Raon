@@ -118,6 +118,14 @@ function RaonChatPerso({ user, isLoggedIn }) {
     };
   }, []);
 
+  // SDK 로드 완료 후 자동으로 세션 재연결 시도
+  useEffect(() => {
+    if (sdkLoaded && sdkConfig && !isSessionActive) {
+      console.log('🔄 SDK loaded and config available, trying to restore session...');
+      tryRestoreSession();
+    }
+  }, [sdkLoaded, sdkConfig]);
+
   // TTS ON/OFF 제어
   useEffect(() => {
     if (videoRef.current) {
@@ -133,6 +141,175 @@ function RaonChatPerso({ user, isLoggedIn }) {
     }
   }, [isTTSOn]);
 
+  // 세션 재연결 시도 (저장된 세션 ID 사용)
+  const tryRestoreSession = async () => {
+    const savedSessionId = sessionStorage.getItem('raon_session_id');
+
+    if (!savedSessionId) {
+      console.log('💡 No saved session ID found');
+      return false;
+    }
+
+    if (!sdkConfig) {
+      console.log('💡 No SDK config found, cannot restore session');
+      return false;
+    }
+
+    console.log('🔄 Attempting to restore session:', savedSessionId);
+
+    try {
+      // 백엔드 API로 세션 유효성 확인
+      const response = await fetch(`/raon/api/sessions/${savedSessionId}`, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        console.log('⚠️ Saved session is invalid or expired');
+        sessionStorage.removeItem('raon_session_id');
+        return false;
+      }
+
+      const sessionData = await response.json();
+      console.log('✅ Saved session is still valid:', sessionData.sessionId);
+
+      // SDK로 WebRTC 세션 재초기화
+      const session = await initializeSDKSession(savedSessionId, 1920, 1080, false);
+      console.log('✅ WebRTC session reconnected');
+
+      // 비디오 엘리먼트에 연결
+      if (videoRef.current) {
+        session.setSrc(videoRef.current);
+        videoRef.current.muted = !isTTSOn;
+        videoRef.current.volume = 1.0;
+
+        const audioTracks = videoRef.current.srcObject?.getAudioTracks() || [];
+        audioTracks.forEach(track => {
+          track.enabled = isTTSOn;
+        });
+
+        videoRef.current.play().catch(err => {
+          console.warn('Video play warning:', err.message);
+        });
+      }
+
+      // 인트로 메시지 생성
+      const introMessage = {
+        id: 0,
+        type: 'ai',
+        text: sdkConfig?.introMessage || '안녕하세요!',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      };
+
+      // 채팅 로그 구독 (createSession과 동일한 로직)
+      session.subscribeChatLog((chatLog) => {
+        if (chatLog.length === 0 && restoredMessagesRef.current) {
+          console.log('📋 Keeping restored messages (empty server log)');
+          return;
+        }
+
+        const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
+
+        const chatMessages = sortedChatLog.map((chat, index) => ({
+          id: chat.timestamp + index + 1,
+          type: chat.isUser ? 'user' : 'ai',
+          text: chat.text,
+          time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        }));
+
+        if (sortedChatLog.length > 0 && !sortedChatLog[sortedChatLog.length - 1].isUser) {
+          setIsAiResponding(false);
+        }
+
+        if (chatLog.length > 0 && restoredMessagesRef.current) {
+          console.log('📡 New server messages received, clearing restored state');
+          restoredMessagesRef.current = null;
+        }
+
+        const allMessages = [introMessage, ...chatMessages];
+
+        if (sortedChatLog.length > 0 && sortedChatLog[sortedChatLog.length - 1].isUser) {
+          allMessages.push({
+            id: 'loading',
+            type: 'ai',
+            text: '입력 중...',
+            time: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            }),
+            isLoading: true
+          });
+        }
+
+        setMessages(allMessages);
+      });
+
+      // 세션 종료 이벤트 구독
+      session.onClose((manualClosed) => {
+        console.log('🔴 Session closed. Manual:', manualClosed);
+
+        if (!manualClosed) {
+          console.log('🔄 Attempting auto-reconnect...');
+          setError('세션이 종료되었습니다. 5초 후 자동으로 재연결합니다...');
+
+          setTimeout(() => {
+            console.log('🔄 Auto-reconnecting...');
+            setError(null);
+            createSession();
+          }, 5000);
+        } else {
+          setError(null);
+        }
+
+        setIsSessionActive(false);
+        setPersoSession(null);
+      });
+
+      setPersoSession(session);
+      setIsSessionActive(true);
+
+      // 저장된 채팅 기록 복원
+      const savedMessages = sessionStorage.getItem('raon_chat_messages');
+      if (savedMessages) {
+        try {
+          const parsedMessages = JSON.parse(savedMessages);
+          console.log('📥 Restoring saved messages:', parsedMessages.length);
+          setMessages(parsedMessages);
+          restoredMessagesRef.current = parsedMessages;
+        } catch (e) {
+          console.error('❌ Failed to restore messages:', e);
+          const defaultMessage = [{
+            id: 1,
+            type: 'ai',
+            text: sdkConfig?.introMessage || '안녕하세요!',
+            time: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+          }];
+          setMessages(defaultMessage);
+          restoredMessagesRef.current = null;
+        }
+      }
+
+      console.log('✅ Session restored successfully');
+      return true;
+
+    } catch (err) {
+      console.error('❌ Session restoration failed:', err);
+      sessionStorage.removeItem('raon_session_id');
+      return false;
+    }
+  };
 
   // 세션 생성 (백엔드 API 사용)
   const createSession = async () => {
@@ -206,6 +383,10 @@ function RaonChatPerso({ user, isLoggedIn }) {
       const sessionResponse = await response.json();
       const createdSessionId = sessionResponse.sessionId;
       console.log('✓ Session ID created via backend:', createdSessionId);
+
+      // 세션 ID 저장 (재연결용)
+      sessionStorage.setItem('raon_session_id', createdSessionId);
+      console.log('💾 Session ID saved for reconnection');
 
       // SDK로 WebRTC 세션 초기화
       // 참고: 음성 입력은 브라우저의 Web Speech API를 사용하므로 enableVoice는 false
@@ -633,10 +814,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
         setPersoSession(null);
         setIsSessionActive(false);
         setMessages([]);
-        // 수동 종료 시 저장된 채팅 기록 및 설정 정리
+        // 수동 종료 시 저장된 채팅 기록, 설정, 세션 ID 정리
         sessionStorage.removeItem('raon_chat_messages');
         sessionStorage.removeItem('raon_sdk_config');
-        console.log('🗑️ Chat history and SDK config cleared');
+        sessionStorage.removeItem('raon_session_id');
+        console.log('🗑️ Chat history, SDK config, and session ID cleared');
       } catch (err) {
         console.error('Session close error:', err);
       }

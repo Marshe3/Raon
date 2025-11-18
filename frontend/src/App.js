@@ -121,10 +121,20 @@ function AppInner() {
       setIsLoggedIn(false);
       setUser(null);
 
+      // 로그아웃 시 채팅 내역, SDK 설정, 세션 ID 삭제
+      sessionStorage.removeItem('raon_chat_messages');
+      sessionStorage.removeItem('raon_sdk_config');
+      sessionStorage.removeItem('raon_session_id');
+      console.log('🗑️ Logout: Chat history, SDK config, and session ID cleared');
+
       // 로그아웃 후 페이지 새로고침하여 쿠키 삭제 확실히 반영
       window.location.href = "/";
     } catch (e) {
       console.error("Logout failed:", e);
+      // 에러가 발생해도 sessionStorage 삭제
+      sessionStorage.removeItem('raon_chat_messages');
+      sessionStorage.removeItem('raon_sdk_config');
+      sessionStorage.removeItem('raon_session_id');
       // 에러가 발생해도 페이지 새로고침
       window.location.href = "/";
     }

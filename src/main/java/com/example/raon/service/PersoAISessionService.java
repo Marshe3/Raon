@@ -6,10 +6,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,83 +32,167 @@ public class PersoAISessionService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public PersoAISessionService() {
-        this.restTemplate = new RestTemplate();
+    // 재시도 설정
+    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static final long RETRY_DELAY_MS = 1000; // 1초
+
+    public PersoAISessionService(RestTemplateBuilder restTemplateBuilder) {
+        // 타임아웃 설정: 연결 타임아웃 10초, 읽기 타임아웃 30초
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(10))
+                .setReadTimeout(Duration.ofSeconds(30))
+                .build();
         this.objectMapper = new ObjectMapper();
     }
 
     /**
-     * PersoAI 세션 생성
+     * PersoAI 세션 생성 (재시도 로직 포함)
      * POST /api/v1/session/
      */
     public SessionResponse createSession(SessionCreateRequest request) {
+        String url = apiServer + "/api/v1/session/";
+
+        // 요청 데이터 변환 (PersoAI API 형식에 맞춤)
+        Map<String, Object> requestBody = buildRequestBody(request);
+
+        // HTTP 요청 헤더
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("PersoLive-APIKey", apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> httpRequest = new HttpEntity<>(requestBody, headers);
+
+        log.info("📤 PersoAI 세션 생성 요청: {}", url);
+        log.debug("📦 요청 본문: {}", requestBody);
+
+        // 재시도 로직
+        Exception lastException = null;
+        for (int attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+            try {
+                log.info("🔄 세션 생성 시도 {}/{}", attempt, MAX_RETRY_ATTEMPTS);
+
+                ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, httpRequest, String.class
+                );
+
+                // 응답 파싱
+                JsonNode root = objectMapper.readTree(response.getBody());
+
+                SessionResponse sessionResponse = new SessionResponse();
+                sessionResponse.setSessionId(root.get("session_id").asText());
+
+                if (root.has("sdp")) {
+                    sessionResponse.setSdp(root.get("sdp").asText());
+                }
+                if (root.has("ice_servers")) {
+                    sessionResponse.setIceServers(root.get("ice_servers"));
+                }
+
+                log.info("✅ 세션 생성 완료 (시도 {}): {}", attempt, sessionResponse.getSessionId());
+                return sessionResponse;
+
+            } catch (HttpServerErrorException e) {
+                lastException = e;
+                log.warn("⚠️ 서버 에러 (시도 {}): {} - {}", attempt, e.getStatusCode(), e.getResponseBodyAsString());
+
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    log.info("⏳ {}ms 후 재시도...", RETRY_DELAY_MS);
+                    sleep(RETRY_DELAY_MS);
+                }
+
+            } catch (HttpClientErrorException e) {
+                // PersoAI API의 간헐적 버그: "Prompt is required for Capability STF_WEBRTC" 에러는 재시도
+                String responseBody = e.getResponseBodyAsString();
+                boolean isIntermittentPromptError = responseBody != null &&
+                        responseBody.contains("Prompt is required for Capability STF_WEBRTC");
+
+                if (isIntermittentPromptError && attempt < MAX_RETRY_ATTEMPTS) {
+                    lastException = e;
+                    log.warn("⚠️ PersoAI 간헐적 validation 에러 (시도 {}): {} - {}",
+                            attempt, e.getStatusCode(), responseBody);
+                    log.info("⏳ {}ms 후 재시도... (PersoAI API 버그 우회)", RETRY_DELAY_MS);
+                    sleep(RETRY_DELAY_MS);
+                } else {
+                    // 일반 클라이언트 에러는 재시도하지 않음
+                    log.error("❌ 클라이언트 에러: {} - {}", e.getStatusCode(), responseBody);
+                    throw new RuntimeException("세션 생성 실패 (클라이언트 에러): " + e.getMessage(), e);
+                }
+
+            } catch (ResourceAccessException e) {
+                lastException = e;
+                log.warn("⚠️ 네트워크 타임아웃/연결 실패 (시도 {}): {}", attempt, e.getMessage());
+
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    log.info("⏳ {}ms 후 재시도...", RETRY_DELAY_MS);
+                    sleep(RETRY_DELAY_MS);
+                }
+
+            } catch (Exception e) {
+                lastException = e;
+                log.error("❌ 예상치 못한 에러 (시도 {}): {}", attempt, e.getMessage(), e);
+
+                if (attempt < MAX_RETRY_ATTEMPTS) {
+                    log.info("⏳ {}ms 후 재시도...", RETRY_DELAY_MS);
+                    sleep(RETRY_DELAY_MS);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // 모든 재시도 실패
+        log.error("❌ {} 번의 재시도 후에도 세션 생성 실패", MAX_RETRY_ATTEMPTS);
+        throw new RuntimeException("세션 생성 실패 (재시도 " + MAX_RETRY_ATTEMPTS + "회): " +
+                                   (lastException != null ? lastException.getMessage() : "Unknown error"),
+                                   lastException);
+    }
+
+    /**
+     * 요청 본문 생성
+     */
+    private Map<String, Object> buildRequestBody(SessionCreateRequest request) {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("prompt", request.getPromptId());
+        requestBody.put("llm_type", request.getLlmType());
+        requestBody.put("tts_type", request.getTtsType());
+
+        if (request.getDocumentId() != null) {
+            requestBody.put("document", request.getDocumentId());
+        }
+        if (request.getSttType() != null) {
+            requestBody.put("stt_type", request.getSttType());
+        }
+        if (request.getModelStyle() != null) {
+            requestBody.put("model_style", request.getModelStyle());
+        }
+        if (request.getBackgroundImageId() != null) {
+            requestBody.put("background_image", request.getBackgroundImageId());
+        }
+
+        requestBody.put("agent", request.getAgent());
+        requestBody.put("padding_left", request.getPaddingLeft());
+        requestBody.put("padding_top", request.getPaddingTop());
+        requestBody.put("padding_height", request.getPaddingHeight());
+
+        // WebRTC capability 추가 (프롬프트가 요구하는 경우 필수)
+        requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
+
+        if (request.getExtraData() != null) {
+            requestBody.put("extra_data", request.getExtraData());
+        }
+
+        return requestBody;
+    }
+
+    /**
+     * 재시도 대기
+     */
+    private void sleep(long milliseconds) {
         try {
-            String url = apiServer + "/api/v1/session/";
-            
-            // 요청 데이터 변환 (PersoAI API 형식에 맞춤)
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("prompt", request.getPromptId());
-            requestBody.put("llm_type", request.getLlmType());
-            requestBody.put("tts_type", request.getTtsType());
-            
-            if (request.getDocumentId() != null) {
-                requestBody.put("document", request.getDocumentId());
-            }
-            if (request.getSttType() != null) {
-                requestBody.put("stt_type", request.getSttType());
-            }
-            if (request.getModelStyle() != null) {
-                requestBody.put("model_style", request.getModelStyle());
-            }
-            if (request.getBackgroundImageId() != null) {
-                requestBody.put("background_image", request.getBackgroundImageId());
-            }
-            
-            requestBody.put("agent", request.getAgent());
-            requestBody.put("padding_left", request.getPaddingLeft());
-            requestBody.put("padding_top", request.getPaddingTop());
-            requestBody.put("padding_height", request.getPaddingHeight());
-
-            // WebRTC capability 추가 (프롬프트가 요구하는 경우 필수)
-            requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
-
-            if (request.getExtraData() != null) {
-                requestBody.put("extra_data", request.getExtraData());
-            }
-            
-            // HTTP 요청
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("PersoLive-APIKey", apiKey);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            HttpEntity<Map<String, Object>> httpRequest = new HttpEntity<>(requestBody, headers);
-            
-            log.info("📤 PersoAI 세션 생성 요청: {}", url);
-            log.info("📦 요청 본문: {}", requestBody);
-            
-            ResponseEntity<String> response = restTemplate.exchange(
-                url, HttpMethod.POST, httpRequest, String.class
-            );
-            
-            // 응답 파싱
-            JsonNode root = objectMapper.readTree(response.getBody());
-            
-            SessionResponse sessionResponse = new SessionResponse();
-            sessionResponse.setSessionId(root.get("session_id").asText());
-            
-            if (root.has("sdp")) {
-                sessionResponse.setSdp(root.get("sdp").asText());
-            }
-            if (root.has("ice_servers")) {
-                sessionResponse.setIceServers(root.get("ice_servers"));
-            }
-            
-            log.info("✅ 세션 생성 완료: {}", sessionResponse.getSessionId());
-            return sessionResponse;
-            
-        } catch (Exception e) {
-            log.error("❌ 세션 생성 실패", e);
-            throw new RuntimeException("세션 생성 실패: " + e.getMessage(), e);
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("재시도 대기 중 인터럽트 발생");
         }
     }
 

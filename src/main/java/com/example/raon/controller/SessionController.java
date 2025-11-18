@@ -41,4 +41,20 @@ public class SessionController {
             return ResponseEntity.status(500).body(error);
         }
     }
+
+    @GetMapping("/{sessionId}")
+    public ResponseEntity<?> getSession(@PathVariable String sessionId) {
+        try {
+            log.info("🔍 세션 조회 요청: {}", sessionId);
+            SessionResponse response = sessionService.getSession(sessionId);
+            log.info("✅ 세션 조회 성공: {}", sessionId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("❌ 세션 조회 실패: {}", e.getMessage(), e);
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "세션 조회 실패");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(404).body(error);
+        }
+    }
 }
