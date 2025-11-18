@@ -47,17 +47,19 @@ public class SecurityConfig {
                     "/loginSuccess", "/loginFailure"
                 ).permitAll()
 
-                // 백오피스/디버그/채팅 API (개발 중 편의상 오픈)
+                // 백오피스/디버그/채팅/챗봇 API (개발 중 편의상 오픈)
                 .requestMatchers(
                     "/api/backoffice/**",
                     "/api/persoai/**",
                     "/api/sessions/**",
                     "/api/chat/**",
+                    "/api/chatbots/**",
                     "/api/debug/**",
                     "/raon/api/backoffice/**",
                     "/raon/api/persoai/**",
                     "/raon/api/sessions/**",
                     "/raon/api/chat/**",
+                    "/raon/api/chatbots/**",
                     "/raon/api/debug/**"
                 ).permitAll()
 

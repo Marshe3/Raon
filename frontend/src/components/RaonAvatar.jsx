@@ -130,10 +130,33 @@ const RaonAvatar = () => {
     }
   };
 
-  // ✅ 프리셋 선택(중복 제거)
+  // ✅ 프리셋 선택 - 바로 채팅방으로 이동
   const handlePresetSelect = (avatar) => {
-    setSelectedPreset(avatar);
-    setPresetStep(2); // 배경 선택 단계로 이동
+    const firstPrompt = configurations?.prompts?.[0];
+
+    console.log('🔍 Selected Chatbot from DB:', avatar);
+    console.log('🔍 Intro Message:', firstPrompt?.introMessage);
+
+    navigate(`/chat/${avatar.id}`, {
+      state: {
+        avatarId: avatar.id,
+        avatarName: avatar.name,
+        personality: avatar.personality,
+        avatarImage: avatar.image,
+        backgroundImage: null, // 배경 이미지 없이 바로 시작
+        mode: 'preset',
+        // DB에서 가져온 챗봇 설정을 SDK 세션 생성에 사용
+        sdkConfig: {
+          promptId: avatar.promptId,
+          documentId: avatar.documentId,
+          llmType: avatar.llmType,
+          ttsType: avatar.ttsType,
+          sttType: avatar.sttType || null,
+          modelStyle: avatar.modelStyle,
+          introMessage: firstPrompt?.introMessage || '안녕하세요!',
+        },
+      },
+    });
   };
 
   // 커스텀 입력 변경
