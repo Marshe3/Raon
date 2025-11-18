@@ -116,11 +116,17 @@ function AppInner() {
         method: "POST",
         credentials: "include"
       });
+
+      // 상태 초기화
       setIsLoggedIn(false);
       setUser(null);
-      navigate("/");
+
+      // 로그아웃 후 페이지 새로고침하여 쿠키 삭제 확실히 반영
+      window.location.href = "/";
     } catch (e) {
       console.error("Logout failed:", e);
+      // 에러가 발생해도 페이지 새로고침
+      window.location.href = "/";
     }
   };
 
@@ -128,9 +134,11 @@ function AppInner() {
   const onKakao = () => {
     window.Kakao?.Auth?.authorize({
       redirectUri: `${window.location.origin}/login/oauth2/code/kakao`,
+      prompt: 'login', // 항상 로그인 화면 표시
     });
   };
   const onGoogle = () => {
+    // CustomAuthorizationRequestResolver가 prompt=login 파라미터를 자동으로 추가
     window.location.href = "/oauth2/authorization/google";
   };
 

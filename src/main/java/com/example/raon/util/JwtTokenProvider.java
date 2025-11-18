@@ -1,5 +1,6 @@
 package com.example.raon.util;
 
+import com.example.raon.config.StartupTokenCleanup;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -11,6 +12,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 
@@ -95,7 +98,25 @@ public class JwtTokenProvider {
      */
     public boolean validateToken(String token) {
         try {
-            parseClaims(token);
+            Claims claims = parseClaims(token);
+
+            // 서버 재시작 시 기존 토큰 무효화 (개발 환경)
+            LocalDateTime serverStartTime = StartupTokenCleanup.getServerStartTime();
+            if (serverStartTime != null) {
+                Date issuedAt = claims.getIssuedAt();
+                if (issuedAt != null) {
+                    LocalDateTime tokenIssuedTime = LocalDateTime.ofInstant(
+                        issuedAt.toInstant(), ZoneId.systemDefault()
+                    );
+
+                    if (tokenIssuedTime.isBefore(serverStartTime)) {
+                        log.warn("서버 재시작 이전에 발급된 토큰입니다. 토큰 발급 시간: {}, 서버 시작 시간: {}",
+                                 tokenIssuedTime, serverStartTime);
+                        return false;
+                    }
+                }
+            }
+
             return true;
         } catch (SecurityException | MalformedJwtException e) {
             log.error("잘못된 JWT 서명입니다.", e);
