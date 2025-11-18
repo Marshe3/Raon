@@ -221,11 +221,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
       setIsSessionActive(true);
 
       console.log('=== Session Setup Complete ===');
+      console.log('📝 SDK Config:', sdkConfig);
+      console.log('📝 Intro Message:', sdkConfig?.introMessage);
 
       setMessages([{
         id: 1,
         type: 'ai',
-        text: '안녕! 오늘 기분은 어때? 😊',
+        text: sdkConfig?.introMessage || '안녕하세요!',
         time: new Date().toLocaleTimeString('ko-KR', {
           hour: '2-digit',
           minute: '2-digit',

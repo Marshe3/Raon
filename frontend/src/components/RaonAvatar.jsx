@@ -98,7 +98,7 @@ const RaonAvatar = () => {
     const loadConfigurations = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/raon/api/backoffice/configurations', {
+        const response = await fetch('/raon/api/backoffice/configurations?forceRefresh=true', {
           credentials: 'include',
           cache: 'no-cache',
         });
@@ -233,6 +233,9 @@ const RaonAvatar = () => {
     if (selectedMode === 'preset' && selectedPreset) {
       // 프리셋 모드: 백엔드 설정 전달
       const firstPrompt = configurations?.prompts?.[0];
+      console.log('🔍 All Prompts:', configurations?.prompts);
+      console.log('🔍 First Prompt:', firstPrompt);
+      console.log('🔍 Intro Message:', firstPrompt?.introMessage);
 
       navigate('/chat/new', {
         state: {
@@ -245,6 +248,7 @@ const RaonAvatar = () => {
           // SDK가 세션 생성 시 사용할 설정
           sdkConfig: {
             promptId: firstPrompt?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
+            introMessage: firstPrompt?.introMessage || '안녕하세요!',
             llmType: selectedPreset.llmType,
             ttsType: selectedPreset.ttsType,
             modelStyle: selectedPreset.modelStyle,
@@ -255,6 +259,9 @@ const RaonAvatar = () => {
     } else if (selectedMode === 'custom') {
       // 커스텀 모드: 사용자 선택 설정
       const firstPrompt = configurations?.prompts?.[0];
+      console.log('🔍 All Prompts:', configurations?.prompts);
+      console.log('🔍 First Prompt:', firstPrompt);
+      console.log('🔍 Intro Message:', firstPrompt?.introMessage);
 
       navigate('/chat/new', {
         state: {
@@ -264,6 +271,7 @@ const RaonAvatar = () => {
           // SDK가 세션 생성 시 사용할 설정
           sdkConfig: {
             promptId: firstPrompt?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
+            introMessage: firstPrompt?.introMessage || '안녕하세요!',
             llmType: customConfig.llm,
             ttsType: customConfig.tts,
             modelStyle: configurations?.modelStyles?.[0]?.name || 'chaehee_livechat-front-white_suit-natural_loop',

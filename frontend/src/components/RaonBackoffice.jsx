@@ -100,12 +100,16 @@ function RaonBackoffice() {
       if (!response.ok) throw new Error(`세션 생성 실패: ${response.status}`);
       const session = await response.json();
 
+      console.log('🔍 Selected Prompt:', selectedPrompt);
+      console.log('🔍 Intro Message:', selectedPrompt.introMessage);
+
       // 채팅 컴포넌트로 설정 정보 전달
       navigate(`/chat/${session.sessionId}`, {
         state: {
           sessionId: session.sessionId,
           sdkConfig: {
             promptId: selectedPrompt.promptId,
+            introMessage: selectedPrompt.introMessage || '안녕하세요!',
             llmType: selectedLLM.name,
             ttsType: selectedTTS.name,
             sttType: selectedSTT?.name || null,
