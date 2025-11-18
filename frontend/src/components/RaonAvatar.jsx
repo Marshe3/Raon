@@ -28,70 +28,45 @@ const RaonAvatar = () => {
   });
   const [backgroundPreview, setBackgroundPreview] = useState(null);
 
-  // 6개 프리셋 아바타 - 백엔드 설정 매핑 포함
-  const presetAvatars = [
-    {
-      id: 1,
-      name: '밝은 친구',
-      personality: '항상 긍정적이고 밝은 에너지',
-      description: '당신의 하루를 밝게 만들어줄 친구',
-      image: '/avatars/chaehee.png',
-      // 백엔드 설정
-      llmType: 'azure-gpt-4o',
-      ttsType: 'chaehee',
-      modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-    },
-    {
-      id: 2,
-      name: '차분한 조언자',
-      personality: '신중하고 깊이 있는 대화',
-      description: '고민을 함께 나누고 해결책을 찾아가요',
-      image: '/avatars/curi.png',
-      llmType: 'azure-gpt-4o',
-      ttsType: 'yuri',
-      modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-    },
-    {
-      id: 3,
-      name: '열정적인 동기부여자',
-      personality: '목표 달성을 응원하는 에너지',
-      description: '당신의 꿈을 향한 여정을 함께 해요',
-      image: '/avatars/eilee.png',
-      llmType: 'azure-gpt-4o',
-      ttsType: 'eilee',
-      modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-    },
-    {
-      id: 4,
-      name: '따뜻한 위로자',
-      personality: '공감과 위로의 대화',
-      description: '힘든 순간에 따뜻하게 안아줄게요',
-      image: '/avatars/hns.png',
-      llmType: 'azure-gpt-4o',
-      ttsType: 'yuri',
-      modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-    },
-    {
-      id: 5,
-      name: '재미있는 친구',
-      personality: '유머러스하고 즐거운 대화',
-      description: '웃음과 재미를 선물할게요',
-      image: '/avatars/yoori.png',
-      llmType: 'azure-gpt-4o',
-      ttsType: 'yuri',
-      modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-    },
-    {
-      id: 6,
-      name: '지적인 탐구자',
-      personality: '호기심 많고 지식이 풍부',
-      description: '흥미로운 주제를 함께 탐구해요',
-      image: '/avatars/curi.png',
-      llmType: 'azure-gpt-4o',
-      ttsType: 'chaehee',
-      modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
-    },
-  ];
+  // DB에서 가져온 챗봇 목록
+  const [presetAvatars, setPresetAvatars] = useState([]);
+
+  // 챗봇 목록 DB에서 가져오기
+  useEffect(() => {
+    const loadChatbots = async () => {
+      try {
+        const response = await fetch('http://localhost:8086/raon/api/chatbots/public');
+        if (!response.ok) {
+          throw new Error('챗봇 목록을 불러오는데 실패했습니다');
+        }
+        const data = await response.json();
+
+        // DB 데이터를 프리셋 아바타 형식으로 변환
+        const avatars = data.map(chatbot => ({
+          id: chatbot.id,
+          name: chatbot.chatbotName,
+          personality: chatbot.description || '친근한 대화 상대',
+          description: chatbot.description || 'AI 챗봇',
+          image: '/avatars/default.png', // 기본 이미지
+          // DB에서 가져온 설정
+          llmType: chatbot.llmType,
+          ttsType: chatbot.ttsType,
+          sttType: chatbot.sttType,
+          modelStyle: chatbot.modelStyle,
+          promptId: chatbot.promptId,
+          documentId: chatbot.documentId,
+        }));
+
+        setPresetAvatars(avatars);
+        console.log('✅ 챗봇 목록 로드 완료:', avatars);
+      } catch (error) {
+        console.error('❌ 챗봇 목록 로드 실패:', error);
+        alert('챗봇 목록을 불러오는데 실패했습니다.');
+      }
+    };
+
+    loadChatbots();
+  }, []);
 
   // 백오피스 API에서 설정 정보 가져오기
   useEffect(() => {
@@ -228,16 +203,16 @@ const RaonAvatar = () => {
     setPresetBackgroundPreview(null);
   };
 
-  // 시작/취소 - SDK가 세션을 생성하도록 아바타 정보만 전달
+  // 시작/취소 - DB에 저장된 챗봇 정보로 세션 생성
   const handleStart = () => {
     if (selectedMode === 'preset' && selectedPreset) {
-      // 프리셋 모드: 백엔드 설정 전달
+      // 프리셋 모드: DB에서 가져온 챗봇 설정 사용
       const firstPrompt = configurations?.prompts?.[0];
-      console.log('🔍 All Prompts:', configurations?.prompts);
-      console.log('🔍 First Prompt:', firstPrompt);
+
+      console.log('🔍 Selected Chatbot from DB:', selectedPreset);
       console.log('🔍 Intro Message:', firstPrompt?.introMessage);
 
-      navigate('/chat/new', {
+      navigate(`/chat/${selectedPreset.id}`, {
         state: {
           avatarId: selectedPreset.id,
           avatarName: selectedPreset.name,
@@ -245,22 +220,22 @@ const RaonAvatar = () => {
           avatarImage: selectedPreset.image,
           backgroundImage: presetBackgroundPreview,
           mode: 'preset',
-          // SDK가 세션 생성 시 사용할 설정
+          // DB에서 가져온 챗봇 설정을 SDK 세션 생성에 사용
           sdkConfig: {
-            promptId: firstPrompt?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
-            introMessage: firstPrompt?.introMessage || '안녕하세요!',
+            promptId: selectedPreset.promptId,
+            documentId: selectedPreset.documentId,
             llmType: selectedPreset.llmType,
             ttsType: selectedPreset.ttsType,
+            sttType: selectedPreset.sttType || null,
             modelStyle: selectedPreset.modelStyle,
-            documentId: configurations?.documents?.[0]?.documentId || null,
+            introMessage: firstPrompt?.introMessage || '안녕하세요!',
           },
         },
       });
     } else if (selectedMode === 'custom') {
       // 커스텀 모드: 사용자 선택 설정
       const firstPrompt = configurations?.prompts?.[0];
-      console.log('🔍 All Prompts:', configurations?.prompts);
-      console.log('🔍 First Prompt:', firstPrompt);
+      console.log('🔍 Custom Config:', customConfig);
       console.log('🔍 Intro Message:', firstPrompt?.introMessage);
 
       navigate('/chat/new', {
@@ -274,6 +249,7 @@ const RaonAvatar = () => {
             introMessage: firstPrompt?.introMessage || '안녕하세요!',
             llmType: customConfig.llm,
             ttsType: customConfig.tts,
+            sttType: configurations?.sttModels?.[0]?.name || null,
             modelStyle: configurations?.modelStyles?.[0]?.name || 'chaehee_livechat-front-white_suit-natural_loop',
             documentId: configurations?.documents?.[0]?.documentId || null,
           },
