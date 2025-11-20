@@ -1,64 +1,153 @@
-// src/components/RaonHome.jsx
-import React from "react";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FileText, MessageSquare, History, CheckCircle, Sparkles, Zap, Target } from 'lucide-react';
+import './RaonHome.css';
 
-export default function RaonHome({
-  chats = [],
-  onNavigate = () => {},
-  onOpenChat = () => {},
-  onSeeMore = () => {},
-}) {
+function RaonHome() {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen bg-[#EEF3FF]">
-      {/* 전역 TopBar는 App.js에서 렌더됩니다. */}
+    <div className="home-container">
+      {/* 히어로 섹션 */}
+      <div className="hero-section">
+        <div className="hero-content">
+          <div className="hero-badge">
+            🎯 AI 기반 면접 준비 플랫폼
+          </div>
+          <h1 className="hero-title">
+            완벽한 면접을 위한<br/>
+            당신만의 AI 아바타 코치
+          </h1>
+          <p className="hero-description">
+            실전과 같은 AI 면접관과의 연습부터 전문적인 서류 첨삭까지,<br/>
+            RAON이 당신의 성공적인 면접을 함께합니다
+          </p>
+          <button 
+            className="hero-button"
+            onClick={() => navigate('/avatar')}
+          >
+            지금 시작하기 →
+          </button>
+        </div>
+      </div>
 
-      <main className="mx-auto max-w-5xl p-6">
-        <h1 className="text-xl font-extrabold text-center">RAON</h1>
-        <p className="text-sm text-center text-gray-700">
-          AI 아바타와 함께하는 일상의 동반자
-        </p>
+      {/* 주요 기능 카드 */}
+      <div className="service-cards">
+        <ServiceCard
+          icon={<MessageSquare className="service-icon" />}
+          title="AI 면접 연습"
+          description="6가지 직종별 맞춤 면접 시뮬레이션"
+          features={["실시간 피드백", "음성 녹음 지원", "답변 간결성 분석"]}
+          color="blue"
+          badge="인기"
+          onClick={() => navigate('/avatar')}
+        />
+        <ServiceCard
+          icon={<FileText className="service-icon" />}
+          title="서류 첨삭"
+          description="AI가 분석하는 이력서 & 자소서"
+          features={["강점 분석", "개선 제안", "추천 문구"]}
+          color="indigo"
+          onClick={() => navigate('/document-review')}
+        />
+        <ServiceCard
+          icon={<History className="service-icon" />}
+          title="학습 기록"
+          description="나의 면접 연습 히스토리"
+          features={["점수 확인", "다시보기", "성장 추적"]}
+          color="purple"
+          onClick={() => navigate('/history')}
+        />
+      </div>
 
-        {/* 배너 */}
-        <div className="mt-6 rounded-2xl border-2 border-dashed border-gray-300 bg-white/70 p-6 text-center">
-          <div className="text-lg font-semibold text-gray-500">RAON</div>
-          <div className="text-sm text-gray-400">로고 이미지</div>
-          <div className="text-sm text-gray-400">배너</div>
+      {/* 특징 섹션 */}
+      <div className="features-section">
+        <div className="features-header">
+          <h2 className="features-title">왜 RAON을 선택해야 할까요?</h2>
+          <p className="features-subtitle">AI 기술로 더 효과적인 면접 준비를 경험하세요</p>
         </div>
 
-        {/* 채팅 리스트 */}
-        <section className="mt-8">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">내 채팅방</h2>
-            <button
-              onClick={onSeeMore}
-              className="text-sm px-2 py-1 rounded hover:text-gray-900"
-            >
-              + 더 보기
-            </button>
-          </div>
-          <ul className="mt-3 space-y-3">
-            {chats.map((c) => (
-              <li key={c.id}>
-                <button
-                  onClick={() => onOpenChat(c.id)}
-                  className="w-full text-left bg-white p-4 rounded-xl ring-1 ring-gray-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9C86F7]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[15px] font-semibold">{c.title}</p>
-                      <p className="mt-1 text-[13px] text-gray-600">
-                        {c.lastMessage}
-                      </p>
-                    </div>
-                    <p className="whitespace-nowrap text-[12px] text-gray-500">
-                      {c.updatedAt}
-                    </p>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </main>
+        <div className="features-grid">
+          <FeatureBox
+            icon={<Sparkles className="feature-icon" />}
+            title="실전 같은 경험"
+            description="실제 면접과 동일한 환경에서 AI 면접관과 연습하세요"
+            color="yellow"
+          />
+          <FeatureBox
+            icon={<Zap className="feature-icon" />}
+            title="즉각적인 피드백"
+            description="답변 후 바로 받는 AI의 분석과 개선 방안"
+            color="orange"
+          />
+          <FeatureBox
+            icon={<Target className="feature-icon" />}
+            title="맞춤형 학습"
+            description="직종별 특화된 질문과 평가 기준"
+            color="green"
+          />
+        </div>
+      </div>
+
+      {/* CTA 섹션 */}
+      <div className="cta-section">
+        <h2 className="cta-title">지금 바로 면접 준비를 시작하세요</h2>
+        <p className="cta-description">
+          무료로 시작하고, 당신의 면접 실력을 한 단계 업그레이드하세요
+        </p>
+        <button 
+          className="cta-button"
+          onClick={() => navigate('/avatar')}
+        >
+          첫 면접 연습 시작하기
+        </button>
+      </div>
     </div>
   );
 }
+
+// 서비스 카드 컴포넌트
+function ServiceCard({ icon, title, description, features, color, badge, onClick }) {
+  return (
+    <div className={`service-card service-card-${color}`} onClick={onClick}>
+      {badge && (
+        <div className="service-badge">{badge}</div>
+      )}
+      
+      <div className={`service-card-icon service-card-icon-${color}`}>
+        {icon}
+      </div>
+      
+      <h3 className="service-card-title">{title}</h3>
+      <p className="service-card-description">{description}</p>
+      
+      <ul className="service-features">
+        {features.map((feature, idx) => (
+          <li key={idx} className="service-feature-item">
+            <CheckCircle className="feature-check-icon" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+      
+      <button className={`service-button service-button-${color}`}>
+        시작하기
+      </button>
+    </div>
+  );
+}
+
+// 특징 박스 컴포넌트
+function FeatureBox({ icon, title, description, color }) {
+  return (
+    <div className="feature-box">
+      <div className={`feature-box-icon feature-box-icon-${color}`}>
+        {icon}
+      </div>
+      <h3 className="feature-box-title">{title}</h3>
+      <p className="feature-box-description">{description}</p>
+    </div>
+  );
+}
+
+export default RaonHome;

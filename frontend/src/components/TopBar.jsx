@@ -1,6 +1,6 @@
-// src/components/TopBar.jsx
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import "./TopBar.css";
 
 export default function TopBar({ isLoggedIn = false, user = null, onLogout = () => {} }) {
   const navigate = useNavigate();
@@ -11,51 +11,68 @@ export default function TopBar({ isLoggedIn = false, user = null, onLogout = () 
     "사용자";
 
   return (
-    <header className="sticky top-0 z-10">
-      <div className="mx-auto max-w-5xl px-3 sm:px-4">
-        <div className="mt-2 rounded-t-2xl bg-[#9C86F7] text-white shadow-sm">
-          <div className="flex items-center justify-between px-3 py-2 sm:px-4">
-            <Link
-              to="/"
-              aria-label="홈으로"
-              className="font-bold tracking-tight rounded px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-            >
-              RAON
+    <header className="top-bar">
+      <div className="top-bar-container">
+        <div className="top-bar-content">
+          {/* 왼쪽: 로고 */}
+          <div className="top-bar-left">
+            <Link to="/" className="logo-link">
+              <div className="logo-icon">R</div>
+              <h1 className="logo-text">RAON</h1>
             </Link>
+          </div>
 
-            <nav className="flex items-center gap-4 text-[13px] sm:text-sm">
-              <button onClick={() => navigate("/avatar")} className="rounded px-1.5 py-1 hover:bg-white/15">아바타</button>
-              <button onClick={() => navigate("/chatlist")} className="rounded px-1.5 py-1 hover:bg-white/15">채팅방</button>
-              <button onClick={() => navigate("/summary")} className="rounded px-1.5 py-1 hover:bg-white/15">요약</button>
-              <button onClick={() => navigate("/note")} className="rounded px-1.5 py-1 hover:bg-white/15">노트</button>
-              <button onClick={() => navigate("/menu")} className="rounded px-1.5 py-1 hover:bg-white/15">메뉴</button>
+          {/* 중앙: 메뉴 */}
+          <nav className="top-bar-center">
+            <button 
+              onClick={() => navigate("/")} 
+              className="nav-button"
+            >
+              홈
+            </button>
+            <button 
+              onClick={() => navigate("/avatar")} 
+              className="nav-button"
+            >
+              면접 연습
+            </button>
+            <button 
+              onClick={() => navigate("/document-review")} 
+              className="nav-button"
+            >
+              서류 첨삭
+            </button>
+            <button 
+              onClick={() => navigate("/history")} 
+              className="nav-button"
+            >
+              학습 기록
+            </button>
+          </nav>
 
-              {isLoggedIn ? (
-                <div className="flex items-center gap-2">
-                  {/* 🔽 이름(또는 닉네임)을 누르면 /account 이동 */}
-                  <button
-                    onClick={() => navigate("/account")}
-                    title="회원정보 수정"
-                    className="rounded px-2 py-1 bg-white/0 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                  >
-                    {displayName}님
-                  </button>
-                  <button
-                    onClick={onLogout}
-                    className="rounded px-2 py-1 bg-white/20 hover:bg白/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                  >
-                    로그아웃
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  className="rounded px-2 py-1 bg-white/20 hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          {/* 오른쪽: 사용자 정보 */}
+          <div className="top-bar-right">
+            {isLoggedIn ? (
+              <div className="user-section">
+                <button
+                  onClick={() => navigate("/account")}
+                  className="user-name-button"
+                  title="회원정보 수정"
                 >
-                  로그인
-                </Link>
-              )}
-            </nav>
+                  {displayName}님
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="logout-button"
+                >
+                  로그아웃
+                </button>
+              </div>
+            ) : (
+              <Link to="/login" className="login-button">
+                로그인
+              </Link>
+            )}
           </div>
         </div>
       </div>
