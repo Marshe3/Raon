@@ -355,11 +355,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 채팅 로그 구독 (createSession과 동일한 로직)
       session.subscribeChatLog((chatLog) => {
-        if (chatLog.length === 0 && restoredMessagesRef.current) {
-          logger.log('📋 Keeping restored messages (empty server log)');
-          return;
-        }
-
+        // SDK에서 오는 채팅 로그를 정렬
         const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
 
         // 새로운 AI 메시지 감지 및 백엔드 저장
@@ -373,7 +369,8 @@ function RaonChatPerso({ user, isLoggedIn }) {
           prevChatLogLengthRef.current = sortedChatLog.length;
         }
 
-        const chatMessages = sortedChatLog.map((chat, index) => ({
+        // SDK 메시지를 UI 형식으로 변환
+        const sdkMessages = sortedChatLog.map((chat, index) => ({
           id: chat.timestamp + index + 1,
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
@@ -384,16 +381,47 @@ function RaonChatPerso({ user, isLoggedIn }) {
           })
         }));
 
+        // 복원된 메시지가 있으면 유지하고 새 SDK 메시지와 병합
+        let finalMessages = [];
+
+        if (restoredMessagesRef.current && restoredMessagesRef.current.length > 0) {
+          logger.log('📋 Merging restored messages with SDK messages');
+
+          // 인트로 메시지 제외한 복원된 메시지 (id !== 0)
+          const restoredWithoutIntro = restoredMessagesRef.current.filter(m => m.id !== 0);
+
+          // 복원된 메시지와 SDK 메시지를 텍스트 기준으로 중복 제거하며 병합
+          const messageMap = new Map();
+
+          // 복원된 메시지를 먼저 추가
+          restoredWithoutIntro.forEach(msg => {
+            messageMap.set(msg.text, msg);
+          });
+
+          // SDK 메시지 추가 (중복되지 않는 것만)
+          sdkMessages.forEach(msg => {
+            if (!messageMap.has(msg.text)) {
+              messageMap.set(msg.text, msg);
+            }
+          });
+
+          finalMessages = Array.from(messageMap.values());
+
+          // 새 메시지가 추가되었으면 복원 상태 해제
+          if (sdkMessages.length > 0) {
+            logger.log('📡 New SDK messages merged with restored messages');
+            restoredMessagesRef.current = null;
+          }
+        } else {
+          // 복원된 메시지가 없으면 SDK 메시지만 사용
+          finalMessages = sdkMessages;
+        }
+
         if (sortedChatLog.length > 0 && !sortedChatLog[sortedChatLog.length - 1].isUser) {
           setIsAiResponding(false);
         }
 
-        if (chatLog.length > 0 && restoredMessagesRef.current) {
-          logger.log('📡 New server messages received, clearing restored state');
-          restoredMessagesRef.current = null;
-        }
-
-        const allMessages = [introMessage, ...chatMessages];
+        const allMessages = [introMessage, ...finalMessages];
 
         if (sortedChatLog.length > 0 && sortedChatLog[sortedChatLog.length - 1].isUser) {
           allMessages.push({
@@ -592,13 +620,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 채팅 로그 구독
       session.subscribeChatLog((chatLog) => {
-        // 재연결 후 첫 번째 호출이고 서버 메시지가 비어있으면 복원된 메시지 유지
-        if (chatLog.length === 0 && restoredMessagesRef.current) {
-          logger.log('📋 Keeping restored messages (empty server log)');
-          return; // 복원된 메시지를 유지하고 종료
-        }
-
-        // timestamp 기준 오름차순 정렬 (오래된 메시지가 위, 최신 메시지가 아래)
+        // SDK에서 오는 채팅 로그를 정렬
         const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
 
         // 새로운 AI 메시지 감지 및 백엔드 저장
@@ -612,8 +634,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
           prevChatLogLengthRef.current = sortedChatLog.length;
         }
 
-        const chatMessages = sortedChatLog.map((chat, index) => ({
-          id: chat.timestamp + index + 1, // timestamp 기반 고유 ID (인트로 메시지는 id 0)
+        // SDK 메시지를 UI 형식으로 변환
+        const sdkMessages = sortedChatLog.map((chat, index) => ({
+          id: chat.timestamp + index + 1,
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
           time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', {
@@ -623,19 +646,49 @@ function RaonChatPerso({ user, isLoggedIn }) {
           })
         }));
 
+        // 복원된 메시지가 있으면 유지하고 새 SDK 메시지와 병합
+        let finalMessages = [];
+
+        if (restoredMessagesRef.current && restoredMessagesRef.current.length > 0) {
+          logger.log('📋 Merging restored messages with SDK messages');
+
+          // 인트로 메시지 제외한 복원된 메시지 (id !== 0)
+          const restoredWithoutIntro = restoredMessagesRef.current.filter(m => m.id !== 0);
+
+          // 복원된 메시지와 SDK 메시지를 텍스트 기준으로 중복 제거하며 병합
+          const messageMap = new Map();
+
+          // 복원된 메시지를 먼저 추가
+          restoredWithoutIntro.forEach(msg => {
+            messageMap.set(msg.text, msg);
+          });
+
+          // SDK 메시지 추가 (중복되지 않는 것만)
+          sdkMessages.forEach(msg => {
+            if (!messageMap.has(msg.text)) {
+              messageMap.set(msg.text, msg);
+            }
+          });
+
+          finalMessages = Array.from(messageMap.values());
+
+          // 새 메시지가 추가되었으면 복원 상태 해제
+          if (sdkMessages.length > 0) {
+            logger.log('📡 New SDK messages merged with restored messages');
+            restoredMessagesRef.current = null;
+          }
+        } else {
+          // 복원된 메시지가 없으면 SDK 메시지만 사용
+          finalMessages = sdkMessages;
+        }
+
         // 마지막 메시지가 AI 응답이면 로딩 상태 해제
         if (sortedChatLog.length > 0 && !sortedChatLog[sortedChatLog.length - 1].isUser) {
           setIsAiResponding(false);
         }
 
-        // 서버에 새 메시지가 있으면 복원 상태 해제
-        if (chatLog.length > 0 && restoredMessagesRef.current) {
-          logger.log('📡 New server messages received, clearing restored state');
-          restoredMessagesRef.current = null;
-        }
-
         // 인트로 메시지를 항상 첫 번째로 유지
-        const allMessages = [introMessage, ...chatMessages];
+        const allMessages = [introMessage, ...finalMessages];
 
         // AI 응답 대기 중이고, 마지막 메시지가 사용자 메시지이면 로딩 표시
         if (sortedChatLog.length > 0 && sortedChatLog[sortedChatLog.length - 1].isUser) {
