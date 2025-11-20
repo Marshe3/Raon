@@ -13,7 +13,6 @@ import java.util.List;
 @RequestMapping("/api/chatbots")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "http://localhost:3000")
 public class ChatbotController {
 
     private final ChatbotService chatbotService;

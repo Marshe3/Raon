@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PersoAI 세션 재연결 테스트</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    .section {
+      margin: 20px 0;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+    .success { color: green; }
+    .error { color: red; }
+    .info { color: blue; }
+    video {
+      width: 100%;
+      max-width: 640px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    input {
+      padding: 8px;
+      font-size: 14px;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>PersoAI 세션 재연결 테스트</h1>
+
+  <div class="section">
+    <h2>1단계: 세션 생성</h2>
+    <button id="createBtn">세션 생성</button>
+    <button id="closeBtn" disabled>세션 종료</button>
+    <div>세션 ID: <strong id="sessionId">-</strong></div>
+  </div>
+
+  <div class="section">
+    <h2>2단계: 세션 재연결 테스트</h2>
+    <p>세션 ID를 입력하고 재연결 버튼을 클릭하세요:</p>
+    <input type="text" id="reconnectInput" placeholder="세션 ID 입력">
+    <button id="reconnectBtn">재연결 시도</button>
+    <button id="checkBtn">세션 유효성 확인</button>
+  </div>
+
+  <div class="section">
+    <h2>3단계: 메시지 테스트</h2>
+    <input type="text" id="messageInput" placeholder="메시지 입력">
+    <button id="sendBtn" disabled>메시지 전송</button>
+  </div>
+
+  <div class="section">
+    <h2>비디오</h2>
+    <video id="video" autoplay playsinline></video>
+  </div>
+
+  <div class="section">
+    <h2>로그</h2>
+    <button id="clearLog">로그 지우기</button>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script src="https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js"></script>
+  <script>
+    let currentSession = null;
+    let currentSessionId = null;
+
+    // 로그 출력 함수
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+      logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[${type}]`, message);
+    }
+
+    // 백엔드에서 credentials 가져오기
+    async function getCredentials() {
+      try {
+        const response = await fetch('http://localhost:8086/raon/api/persoai/credentials');
+        if (!response.ok) throw new Error('Credentials 로드 실패');
+        return await response.json();
+      } catch (err) {
+        log(`❌ Credentials 로드 실패: ${err.message}`, 'error');
+        throw err;
+      }
+    }
+
+    // 백엔드를 통해 세션 생성
+    async function createSessionViaBackend() {
+      try {
+        log('🔄 백엔드로 세션 생성 요청 중...', 'info');
+
+        const response = await fetch('http://localhost:8086/raon/api/sessions/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            promptId: 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
+            llmType: 'azure-gpt-4o',
+            ttsType: 'yuri',
+            sttType: 'default',
+            modelStyle: 'chaehee_livechat-front-white_suit-natural_loop',
+            documentId: 'pld-c2104dc3d8165c42f60bcf8217c19bc8',
+            backgroundImageId: null,
+            agent: 1,
+            paddingLeft: 0,
+            paddingTop: 0,
+            paddingHeight: 1
+          })
+        });
+
+        if (!response.ok) throw new Error(`세션 생성 실패: ${response.status}`);
+
+        const data = await response.json();
+        log(`✅ 백엔드에서 세션 생성 완료: ${data.sessionId}`, 'success');
+        return data.sessionId;
+      } catch (err) {
+        log(`❌ 세션 생성 실패: ${err.message}`, 'error');
+        throw err;
+      }
+    }
+
+    // SDK로 WebRTC 세션 초기화
+    async function initializeSDKSession(sessionId) {
+      try {
+        log(`🔄 SDK 세션 초기화 중... (ID: ${sessionId})`, 'info');
+
+        const credentials = await getCredentials();
+        const session = await window.PersoLiveSDK.createSession(
+          credentials.apiServer,
+          sessionId,
+          1920,
+          1080,
+          false
+        );
+
+        session.setSrc(document.getElementById('video'));
+
+        log(`✅ SDK 세션 초기화 완료`, 'success');
+        return session;
+      } catch (err) {
+        log(`❌ SDK 세션 초기화 실패: ${err.message}`, 'error');
+        throw err;
+      }
+    }
+
+    // 세션 유효성 확인
+    async function checkSession(sessionId) {
+      try {
+        log(`🔍 세션 유효성 확인 중... (ID: ${sessionId})`, 'info');
+
+        const response = await fetch(`http://localhost:8086/raon/api/sessions/${sessionId}`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`세션 조회 실패: ${response.status}`);
+        }
+
+        const data = await response.json();
+        log(`✅ 세션이 유효합니다: ${data.sessionId}`, 'success');
+        return true;
+      } catch (err) {
+        log(`❌ 세션이 유효하지 않거나 만료됨: ${err.message}`, 'error');
+        return false;
+      }
+    }
+
+    // 이벤트 리스너
+    document.getElementById('createBtn').addEventListener('click', async () => {
+      try {
+        const sessionId = await createSessionViaBackend();
+        currentSessionId = sessionId;
+        document.getElementById('sessionId').textContent = sessionId;
+        document.getElementById('reconnectInput').value = sessionId;
+
+        currentSession = await initializeSDKSession(sessionId);
+
+        // 채팅 로그 구독
+        currentSession.subscribeChatLog((chatLog) => {
+          log(`📨 채팅 로그 수신: ${chatLog.length}개 메시지`, 'info');
+        });
+
+        document.getElementById('closeBtn').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+
+        log('🎉 세션 생성 완료! 이제 세션을 종료하고 재연결을 테스트하세요.', 'success');
+      } catch (err) {
+        log(`❌ 오류 발생: ${err.message}`, 'error');
+      }
+    });
+
+    document.getElementById('closeBtn').addEventListener('click', () => {
+      if (currentSession) {
+        currentSession.close();
+        currentSession = null;
+        log('🔴 세션 종료됨 (세션 ID는 유지됨)', 'info');
+        document.getElementById('closeBtn').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+        log('💡 이제 "재연결 시도" 버튼을 눌러 세션을 재사용할 수 있는지 테스트하세요.', 'info');
+      }
+    });
+
+    document.getElementById('reconnectBtn').addEventListener('click', async () => {
+      const sessionId = document.getElementById('reconnectInput').value.trim();
+      if (!sessionId) {
+        alert('세션 ID를 입력하세요');
+        return;
+      }
+
+      try {
+        log('', 'info');
+        log('=== 재연결 테스트 시작 ===', 'info');
+
+        // 1. 세션 유효성 확인
+        const isValid = await checkSession(sessionId);
+        if (!isValid) {
+          log('❌ 재연결 실패: 세션이 만료되었거나 유효하지 않습니다', 'error');
+          return;
+        }
+
+        // 2. SDK로 재연결
+        currentSession = await initializeSDKSession(sessionId);
+        currentSessionId = sessionId;
+        document.getElementById('sessionId').textContent = sessionId;
+
+        // 채팅 로그 구독
+        currentSession.subscribeChatLog((chatLog) => {
+          log(`📨 채팅 로그 수신: ${chatLog.length}개 메시지`, 'info');
+          if (chatLog.length > 0) {
+            log(`📋 이전 대화 기록이 복원되었습니다!`, 'success');
+          }
+        });
+
+        document.getElementById('closeBtn').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+
+        log('🎉 재연결 성공! PersoAI는 세션 재사용을 지원합니다.', 'success');
+      } catch (err) {
+        log(`❌ 재연결 실패: ${err.message}`, 'error');
+      }
+    });
+
+    document.getElementById('checkBtn').addEventListener('click', async () => {
+      const sessionId = document.getElementById('reconnectInput').value.trim();
+      if (!sessionId) {
+        alert('세션 ID를 입력하세요');
+        return;
+      }
+      await checkSession(sessionId);
+    });
+
+    document.getElementById('sendBtn').addEventListener('click', () => {
+      const message = document.getElementById('messageInput').value.trim();
+      if (!message || !currentSession) return;
+
+      log(`📤 메시지 전송: "${message}"`, 'info');
+      currentSession.processChat(message);
+      document.getElementById('messageInput').value = '';
+    });
+
+    document.getElementById('clearLog').addEventListener('click', () => {
+      document.getElementById('log').innerHTML = '';
+    });
+
+    // 초기 메시지
+    window.addEventListener('load', () => {
+      log('✅ PersoAI SDK 로드 완료', 'success');
+      log('', 'info');
+      log('📋 테스트 시나리오:', 'info');
+      log('1. "세션 생성" 버튼 클릭', 'info');
+      log('2. 메시지를 몇 개 보내서 대화 기록 생성', 'info');
+      log('3. "세션 종료" 버튼 클릭', 'info');
+      log('4. "재연결 시도" 버튼 클릭하여 같은 세션 ID로 재연결', 'info');
+      log('5. 채팅 로그에 이전 대화 기록이 복원되는지 확인', 'info');
+      log('', 'info');
+    });
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactDOM from "react-dom";
 import "./RaonBackoffice.css";
+import { logger } from "../utils/logger";
 
 function RaonBackoffice() {
   const navigate = useNavigate();
@@ -100,8 +101,8 @@ function RaonBackoffice() {
       if (!response.ok) throw new Error(`세션 생성 실패: ${response.status}`);
       const session = await response.json();
 
-      console.log('🔍 Selected Prompt:', selectedPrompt);
-      console.log('🔍 Intro Message:', selectedPrompt.introMessage);
+      logger.log('🔍 Selected Prompt:', selectedPrompt);
+      logger.log('🔍 Intro Message:', selectedPrompt.introMessage);
 
       // 채팅 컴포넌트로 설정 정보 전달
       navigate(`/chat/${session.sessionId}`, {

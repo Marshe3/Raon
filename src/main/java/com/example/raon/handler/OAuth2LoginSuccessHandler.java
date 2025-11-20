@@ -2,7 +2,7 @@ package com.example.raon.handler;
 
 import com.example.raon.domain.RefreshToken;
 import com.example.raon.domain.SocialType;
-import com.example.raon.domain.UserEntity;
+import com.example.raon.domain.User;
 import com.example.raon.repository.RefreshTokenRepository;
 import com.example.raon.repository.UserRepository;
 import com.example.raon.service.UserOauthTokenService;
@@ -50,6 +50,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${jwt.cookie.refresh-token-max-age}")
     private int refreshTokenCookieMaxAge;
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
+    @Value("${server.servlet.session.cookie.secure:false}")
+    private boolean cookieSecure;
+
     @Override
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -68,7 +74,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("Extracted socialId: {} for provider: {}", socialId, registrationId);
 
         // DB에서 사용자 조회
-        UserEntity user = userRepository.findBySocialTypeAndSocialId(socialType, socialId)
+        User user = userRepository.findBySocialTypeAndSocialId(socialType, socialId)
                 .orElseThrow(() -> new RuntimeException("OAuth2LoginSuccessHandler: User not found after OAuth2 login. This should not happen."));
 
         // OAuth Provider 리프레시 토큰 저장 (기존 기능 유지)
@@ -137,7 +143,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
                  accessTokenCookieMaxAge, refreshTokenCookieMaxAge);
 
         // 5. 프론트엔드 홈으로 리디렉션
-        getRedirectStrategy().sendRedirect(request, response, "http://localhost:3000/");
+        getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/");
     }
 
     private String extractSocialId(OAuth2User oAuth2User, String registrationId) {
@@ -156,7 +162,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     private void addTokenCookie(HttpServletResponse response, String name, String value, int maxAge) {
         jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie(name, value);
         cookie.setHttpOnly(true); // XSS 공격 방지
-        cookie.setSecure(false); // 개발 환경에서는 false (운영 환경에서는 true로 변경)
+        cookie.setSecure(cookieSecure); // 환경별 설정 사용
         cookie.setPath("/");
         cookie.setMaxAge(maxAge);
         cookie.setAttribute("SameSite", "Lax"); // CSRF 방어

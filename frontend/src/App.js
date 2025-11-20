@@ -9,6 +9,7 @@ import RaonBackoffice from "./components/RaonBackoffice.jsx";
 import AccountEdit from "./components/AccountEdit.jsx";
 import TopBar from "./components/TopBar.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
+import { logger } from "./utils/logger";
 
 export default function App() {
   return <AppInner />;
@@ -22,23 +23,23 @@ function AppInner() {
   // 토큰 자동 갱신
   const refreshAccessToken = useCallback(async () => {
     try {
-      console.log("Access Token 갱신 시도...");
+      logger.log("Access Token 갱신 시도...");
       const response = await fetch("/raon/api/auth/refresh", {
         method: "POST",
         credentials: "include"
       });
 
       if (response.ok) {
-        console.log("Access Token 갱신 성공");
+        logger.log("Access Token 갱신 성공");
         return true;
       } else {
-        console.log("Access Token 갱신 실패 - 로그아웃 처리");
+        logger.log("Access Token 갱신 실패 - 로그아웃 처리");
         setIsLoggedIn(false);
         setUser(null);
         return false;
       }
     } catch (error) {
-      console.error("토큰 갱신 오류:", error);
+      logger.error("토큰 갱신 오류:", error);
       return false;
     }
   }, []);
@@ -46,20 +47,20 @@ function AppInner() {
   // 로그인 상태 확인
   const checkLoginStatus = useCallback(async () => {
     try {
-      console.log("로그인 상태 확인 시작...");
+      logger.log("로그인 상태 확인 시작...");
       const response = await fetch("/raon/api/users/me", {
         credentials: "include"
       });
-      console.log("API 응답 상태:", response.status);
+      logger.log("API 응답 상태:", response.status);
 
       if (response.ok) {
         const userData = await response.json();
-        console.log("로그인된 사용자 정보:", userData);
+        logger.log("로그인된 사용자 정보:", userData);
         setUser(userData);
         setIsLoggedIn(true);
       } else if (response.status === 401) {
         // Access Token이 만료된 경우 자동 갱신 시도
-        console.log("Access Token 만료 - 갱신 시도");
+        logger.log("Access Token 만료 - 갱신 시도");
         const refreshed = await refreshAccessToken();
 
         if (refreshed) {
@@ -80,7 +81,7 @@ function AppInner() {
         setIsLoggedIn(false);
       }
     } catch (e) {
-      console.error("로그인 상태 확인 오류:", e);
+      logger.error("로그인 상태 확인 오류:", e);
     }
   }, [refreshAccessToken]);
 
@@ -96,7 +97,7 @@ function AppInner() {
 
       // 5초 후에만 로그인 상태 확인 (과도한 API 호출 방지)
       focusTimeout = setTimeout(() => {
-        console.log("페이지 포커스 감지 - 로그인 상태 재확인");
+        logger.log("페이지 포커스 감지 - 로그인 상태 재확인");
         checkLoginStatus();
       }, 5000);
     };
@@ -125,12 +126,12 @@ function AppInner() {
       sessionStorage.removeItem('raon_chat_messages');
       sessionStorage.removeItem('raon_sdk_config');
       sessionStorage.removeItem('raon_session_id');
-      console.log('🗑️ Logout: Chat history, SDK config, and session ID cleared');
+      logger.log('🗑️ Logout: Chat history, SDK config, and session ID cleared');
 
       // 로그아웃 후 페이지 새로고침하여 쿠키 삭제 확실히 반영
       window.location.href = "/";
     } catch (e) {
-      console.error("Logout failed:", e);
+      logger.error("Logout failed:", e);
       // 에러가 발생해도 sessionStorage 삭제
       sessionStorage.removeItem('raon_chat_messages');
       sessionStorage.removeItem('raon_sdk_config');
@@ -153,7 +154,7 @@ function AppInner() {
   };
 
   const handleOpenChat = (id) => {
-    console.log('Opening chat with chatbot ID:', id);
+    logger.log('Opening chat with chatbot ID:', id);
     navigate(`/chat/${id}`);
   };
 

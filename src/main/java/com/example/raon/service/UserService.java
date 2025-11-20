@@ -1,7 +1,7 @@
 package com.example.raon.service;
 
 import com.example.raon.domain.SocialType;
-import com.example.raon.domain.UserEntity;
+import com.example.raon.domain.User;
 import com.example.raon.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ public class UserService {
      * - 없으면 새로 생성
      */
     @Transactional
-    public UserEntity createOrUpdateSocialUser(SocialType socialType, 
+    public User createOrUpdateSocialUser(SocialType socialType, 
                                                String socialId,
                                                String email,
                                                String nickname,
@@ -43,7 +43,7 @@ public class UserService {
             })
             .orElseGet(() -> {
                 // 새 사용자 생성
-                UserEntity newUser = new UserEntity();
+                User newUser = new User();
                 newUser.setSocialType(socialType);
                 newUser.setSocialId(socialId);
                 newUser.setEmail(email);
@@ -51,7 +51,7 @@ public class UserService {
                 newUser.setProfileImage(profileImage);
                 newUser.setLastLogin(LocalDateTime.now());
                 
-                UserEntity savedUser = userRepository.save(newUser);
+                User savedUser = userRepository.save(newUser);
                 log.info("신규 사용자 생성 - userId: {}, socialType: {}", savedUser.getUserId(), socialType);
                 return savedUser;
             });
@@ -62,16 +62,16 @@ public class UserService {
      * 컨트롤러의 /api/users/me 에서 이메일이 없을 때 호출
      */
     @Transactional
-    public UserEntity getOrCreateByProviderId(String providerId) {
+    public User getOrCreateByProviderId(String providerId) {
         ProviderKey key = parseProviderId(providerId); // GOOGLE/KAKAO만 허용
         return userRepository.findBySocialTypeAndSocialId(key.socialType, key.socialId)
             .orElseGet(() -> {
-                UserEntity u = new UserEntity();
+                User u = new User();
                 u.setSocialType(key.socialType);
                 u.setSocialId(key.socialId);
                 // 이메일/닉네임/프로필은 모를 수 있음
                 u.setLastLogin(LocalDateTime.now());
-                UserEntity saved = userRepository.save(u);
+                User saved = userRepository.save(u);
                 log.info("providerId 신규 사용자 생성 - providerId: {}, userId: {}", providerId, saved.getUserId());
                 return saved;
             });
@@ -112,7 +112,7 @@ public class UserService {
     /**
      * 사용자 ID로 조회
      */
-    public UserEntity getUserById(Long userId) {
+    public User getUserById(Long userId) {
         return userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. userId: " + userId));
     }
@@ -120,7 +120,7 @@ public class UserService {
     /**
      * 이메일로 사용자 조회
      */
-    public UserEntity getUserByEmail(String email) {
+    public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
             .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. email: " + email));
     }
@@ -128,7 +128,7 @@ public class UserService {
     /**
      * 소셜 ID로 사용자 조회
      */
-    public UserEntity getUserBySocialId(String socialId) {
+    public User getUserBySocialId(String socialId) {
         return userRepository.findBySocialId(socialId)
             .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. socialId: " + socialId));
     }
@@ -137,8 +137,8 @@ public class UserService {
      * 프로필 정보 업데이트
      */
     @Transactional
-    public UserEntity updateProfile(Long userId, String nickname, String profileImage) {
-        UserEntity user = getUserById(userId);
+    public User updateProfile(Long userId, String nickname, String profileImage) {
+        User user = getUserById(userId);
         
         if (nickname != null) {
             user.setNickname(nickname);
@@ -156,7 +156,7 @@ public class UserService {
      */
     @Transactional
     public void deleteUser(Long userId) {
-        UserEntity user = getUserById(userId);
+        User user = getUserById(userId);
         user.setDeletedAt(LocalDateTime.now());
         log.info("사용자 탈퇴 - userId: {}", userId);
     }
@@ -164,14 +164,14 @@ public class UserService {
     /**
      * 활성 사용자 목록 조회
      */
-    public List<UserEntity> getActiveUsers() {
+    public List<User> getActiveUsers() {
         return userRepository.findByDeletedAtIsNull();
     }
     
     /**
      * 닉네임으로 사용자 검색
      */
-    public List<UserEntity> searchUsersByNickname(String keyword) {
+    public List<User> searchUsersByNickname(String keyword) {
         return userRepository.findByNicknameContaining(keyword);
     }
     
@@ -185,7 +185,7 @@ public class UserService {
     /**
      * 최근 가입자 조회 (7일 이내)
      */
-    public List<UserEntity> getRecentUsers() {
+    public List<User> getRecentUsers() {
         LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
         return userRepository.findByJoinDateAfter(weekAgo);
     }

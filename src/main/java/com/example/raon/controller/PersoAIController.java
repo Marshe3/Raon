@@ -16,7 +16,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/persoai")
-@CrossOrigin(origins = {"http://localhost:3000","http://localhost:8086"})
 public class PersoAIController {
 
     private static final Logger logger = LoggerFactory.getLogger(PersoAIController.class);
