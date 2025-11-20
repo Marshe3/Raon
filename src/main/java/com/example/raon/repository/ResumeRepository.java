@@ -40,9 +40,4 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
      * 사용자의 기본 이력서 조회 by userId
      */
     Optional<Resume> findByUser_UserIdAndIsDefaultTrue(Long userId);
-
-    /**
-     * 사용자의 모든 기본 이력서 조회 (기본 설정 변경 시 사용)
-     */
-    List<Resume> findByUserAndIsDefaultTrue(Long userId);
 }
