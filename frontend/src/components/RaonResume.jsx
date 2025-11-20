@@ -31,6 +31,7 @@ function RaonResume() {
   // 이력서 목록 조회
   useEffect(() => {
     fetchResumes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchResumes = async () => {
