@@ -202,26 +202,125 @@ public class PersoAISessionService {
     public SessionResponse getSession(String sessionId) {
         try {
             String url = apiServer + "/api/v1/session/" + sessionId + "/";
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.set("PersoLive-APIKey", apiKey);
-            
+
             HttpEntity<Void> request = new HttpEntity<>(headers);
-            
+
             ResponseEntity<String> response = restTemplate.exchange(
                 url, HttpMethod.GET, request, String.class
             );
-            
+
             JsonNode root = objectMapper.readTree(response.getBody());
-            
+
             SessionResponse sessionResponse = new SessionResponse();
             sessionResponse.setSessionId(root.get("session_id").asText());
-            
+
             return sessionResponse;
-            
+
         } catch (Exception e) {
             log.error("❌ 세션 조회 실패", e);
             throw new RuntimeException("세션 조회 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 모든 활성 세션 조회
+     */
+    public JsonNode getAllSessions() {
+        try {
+            String url = apiServer + "/api/v1/session/";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("PersoLive-APIKey", apiKey);
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+
+            log.info("📋 모든 세션 조회 요청: {}", url);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                url, HttpMethod.GET, request, String.class
+            );
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            log.info("✅ 세션 목록 조회 완료");
+
+            return root;
+
+        } catch (Exception e) {
+            log.error("❌ 세션 목록 조회 실패", e);
+            throw new RuntimeException("세션 목록 조회 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 세션 삭제
+     */
+    public void deleteSession(String sessionId) {
+        try {
+            String url = apiServer + "/api/v1/session/" + sessionId + "/";
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("PersoLive-APIKey", apiKey);
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+
+            log.info("🗑️ 세션 삭제 요청: {}", sessionId);
+
+            restTemplate.exchange(url, HttpMethod.DELETE, request, String.class);
+
+            log.info("✅ 세션 삭제 완료: {}", sessionId);
+
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.warn("⚠️ 세션이 이미 삭제됨: {}", sessionId);
+            } else {
+                log.error("❌ 세션 삭제 실패: {} - {}", sessionId, e.getMessage());
+                throw new RuntimeException("세션 삭제 실패: " + e.getMessage(), e);
+            }
+        } catch (Exception e) {
+            log.error("❌ 세션 삭제 실패: {}", sessionId, e);
+            throw new RuntimeException("세션 삭제 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 모든 활성 세션 정리
+     */
+    public int cleanupAllSessions() {
+        try {
+            log.info("🧹 모든 활성 세션 정리 시작");
+
+            JsonNode sessions = getAllSessions();
+
+            if (!sessions.has("results") || !sessions.get("results").isArray()) {
+                log.info("✅ 정리할 세션이 없습니다");
+                return 0;
+            }
+
+            JsonNode results = sessions.get("results");
+            int totalCount = results.size();
+            int successCount = 0;
+
+            log.info("📊 총 {} 개의 활성 세션 발견", totalCount);
+
+            for (JsonNode session : results) {
+                String sessionId = session.get("session_id").asText();
+                try {
+                    deleteSession(sessionId);
+                    successCount++;
+                } catch (Exception e) {
+                    log.warn("⚠️ 세션 삭제 중 에러 (계속 진행): {}", sessionId);
+                }
+            }
+
+            log.info("✅ 세션 정리 완료: {}/{} 개 삭제", successCount, totalCount);
+            return successCount;
+
+        } catch (Exception e) {
+            log.error("❌ 세션 정리 실패", e);
+            throw new RuntimeException("세션 정리 실패: " + e.getMessage(), e);
         }
     }
 }

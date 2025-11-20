@@ -1,6 +1,7 @@
 // frontend/src/hooks/usePersoAI.js
 
 import { useState, useEffect, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 /**
  * PersoAI SDK 통합을 위한 React Hook
@@ -28,9 +29,9 @@ export function usePersoAI() {
     const checkSDK = () => {
       if (window.PersoLiveSDK) {
         setInitialized(true);
-        console.log('✅ PersoLive SDK 준비 완료');
+        logger.log('✅ PersoLive SDK 준비 완료');
       } else {
-        console.warn('⚠️ PersoLive SDK가 아직 로드되지 않았습니다');
+        logger.warn('⚠️ PersoLive SDK가 아직 로드되지 않았습니다');
         setTimeout(checkSDK, 100);
       }
     };
@@ -46,7 +47,7 @@ export function usePersoAI() {
     setError(null);
 
     try {
-      console.log('🔄 설정 로드 시작...');
+      logger.log('🔄 설정 로드 시작...');
 
       const url = `/raon/api/backoffice/configurations?forceRefresh=${forceRefresh}`;
       const response = await fetch(url);
@@ -58,7 +59,7 @@ export function usePersoAI() {
       const data = await response.json();
       setConfig(data);
 
-      console.log('✅ 설정 로드 완료:', {
+      logger.log('✅ 설정 로드 완료:', {
         prompts: data.prompts?.length || 0,
         documents: data.documents?.length || 0,
         backgrounds: data.backgroundImages?.length || 0,
@@ -69,7 +70,7 @@ export function usePersoAI() {
 
       return data;
     } catch (err) {
-      console.error('❌ 설정 로드 실패:', err);
+      logger.error('❌ 설정 로드 실패:', err);
       setError(err.message);
       throw err;
     } finally {
@@ -89,7 +90,7 @@ export function usePersoAI() {
     setError(null);
 
     try {
-      console.log('🔄 세션 생성 시작...', sessionConfig);
+      logger.log('🔄 세션 생성 시작...', sessionConfig);
 
       // 백엔드 API로 세션 생성 요청
       const response = await fetch('/raon/api/sessions/create', {
@@ -106,11 +107,11 @@ export function usePersoAI() {
       }
 
       const session = await response.json();
-      console.log('✅ 세션 생성 완료:', session);
+      logger.log('✅ 세션 생성 완료:', session);
 
       return session;
     } catch (err) {
-      console.error('❌ 세션 생성 실패:', err);
+      logger.error('❌ 세션 생성 실패:', err);
       setError(err.message);
       throw err;
     } finally {
@@ -130,7 +131,7 @@ export function usePersoAI() {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🔄 SDK 세션 초기화 시도 ${attempt}/${maxRetries}...`, { sessionId, width, height, enableVoice });
+        logger.log(`🔄 SDK 세션 초기화 시도 ${attempt}/${maxRetries}...`, { sessionId, width, height, enableVoice });
 
         // 먼저 API 자격증명 가져오기
         const credResponse = await fetch('/raon/api/persoai/credentials');
@@ -149,23 +150,23 @@ export function usePersoAI() {
           enableVoice
         );
 
-        console.log(`✅ SDK 세션 초기화 완료 (시도 ${attempt}/${maxRetries})`);
+        logger.log(`✅ SDK 세션 초기화 완료 (시도 ${attempt}/${maxRetries})`);
         return sdkSession;
       } catch (err) {
         lastError = err;
-        console.warn(`⚠️ SDK 세션 초기화 실패 (시도 ${attempt}/${maxRetries}):`, err.message);
+        logger.warn(`⚠️ SDK 세션 초기화 실패 (시도 ${attempt}/${maxRetries}):`, err.message);
 
         // 마지막 시도가 아니면 잠시 대기 후 재시도
         if (attempt < maxRetries) {
           const waitTime = attempt * 2000; // 2초, 4초 간격으로 대기
-          console.log(`⏳ ${waitTime/1000}초 후 재시도...`);
+          logger.log(`⏳ ${waitTime/1000}초 후 재시도...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
     }
 
     // 모든 재시도 실패
-    console.error(`❌ SDK 세션 초기화 완전 실패 (${maxRetries}회 시도)`, lastError);
+    logger.error(`❌ SDK 세션 초기화 완전 실패 (${maxRetries}회 시도)`, lastError);
     throw lastError;
   }, [initialized]);
 
@@ -174,7 +175,7 @@ export function usePersoAI() {
    */
   const sendMessage = useCallback(async (sessionId, message) => {
     try {
-      console.log('📤 메시지 전송:', { sessionId, message });
+      logger.log('📤 메시지 전송:', { sessionId, message });
 
       const response = await fetch(`/raon/api/sessions/${sessionId}/message`, {
         method: 'POST',
@@ -190,11 +191,11 @@ export function usePersoAI() {
       }
 
       const result = await response.json();
-      console.log('✅ 메시지 전송 완료:', result);
+      logger.log('✅ 메시지 전송 완료:', result);
 
       return result;
     } catch (err) {
-      console.error('❌ 메시지 전송 실패:', err);
+      logger.error('❌ 메시지 전송 실패:', err);
       throw err;
     }
   }, []);
@@ -204,7 +205,7 @@ export function usePersoAI() {
    */
   const terminateSession = useCallback(async (sessionId) => {
     try {
-      console.log('🔄 세션 종료 시작:', sessionId);
+      logger.log('🔄 세션 종료 시작:', sessionId);
 
       const response = await fetch(`/raon/api/sessions/${sessionId}/terminate`, {
         method: 'POST',
@@ -215,9 +216,9 @@ export function usePersoAI() {
         throw new Error(`세션 종료 실패: ${response.status}`);
       }
 
-      console.log('✅ 세션 종료 완료');
+      logger.log('✅ 세션 종료 완료');
     } catch (err) {
-      console.error('❌ 세션 종료 실패:', err);
+      logger.error('❌ 세션 종료 실패:', err);
       throw err;
     }
   }, []);

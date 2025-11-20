@@ -2,6 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './RaonChat.css';
 import { usePersoAI } from '../hooks/usePersoAI';
+import { logger } from '../utils/logger';
+import AvatarDisplay from './chat/AvatarDisplay';
+import ChatMessages from './chat/ChatMessages';
+import ChatInput from './chat/ChatInput';
+import SideMenu from './chat/SideMenu';
+import ErrorNotification from './chat/ErrorNotification';
+import RestoreButton from './chat/RestoreButton';
 
 const PERSO_SDK_URL = 'https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js';
 
@@ -47,13 +54,16 @@ function RaonChatPerso({ user, isLoggedIn }) {
   // 로딩 상태
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isAiResponding, setIsAiResponding] = useState(false); // AI 응답 대기 중
+  const [_isAiResponding, setIsAiResponding] = useState(false); // AI 응답 대기 중 (향후 UI에서 사용 예정)
 
   // 메뉴 열림/닫힘
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // TTS 켜짐/꺼짐
   const [isTTSOn, setIsTTSOn] = useState(true);
+
+  // 복원 가능한 대화 내역 여부
+  const [hasRestorableHistory, setHasRestorableHistory] = useState(false);
 
   // STT (음성 입력) 상태
   const [isListening, setIsListening] = useState(false);
@@ -65,27 +75,42 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
 
-  // 메시지 스크롤 ref
-  const messagesEndRef = useRef(null);
-
   // 복원된 메시지 보관 (재연결 시 유지용)
   const restoredMessagesRef = useRef(null);
 
-  // 스크롤을 맨 아래로 이동
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // 이전 채팅 로그 길이 추적 (새 메시지 감지용)
+  const prevChatLogLengthRef = useRef(0);
+
+  // AI 메시지를 백엔드에 저장하는 헬퍼 함수
+  const saveAIMessageToBackend = async (content) => {
+    const sessionId = sessionStorage.getItem('raon_session_id');
+    if (!sessionId) return;
+
+    try {
+      await fetch(`/raon/api/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          role: 'assistant',
+          content: content
+        })
+      });
+      logger.log('💾 AI message saved to backend');
+    } catch (err) {
+      logger.warn('⚠️ Failed to save AI message to backend:', err);
+    }
   };
 
-  // 메시지 변경 시 스크롤
+  // 메시지 변경 시 자동 저장 (재연결 시 복원용) - 세션 ID별로 구분
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // 메시지 변경 시 자동 저장 (재연결 시 복원용)
-  useEffect(() => {
-    if (messages.length > 0) {
-      sessionStorage.setItem('raon_chat_messages', JSON.stringify(messages));
-      console.log('💾 Messages saved:', messages.length);
+    const sessionId = sessionStorage.getItem('raon_session_id');
+    if (messages.length > 0 && sessionId) {
+      const sessionKey = `raon_chat_messages_${sessionId}`;
+      sessionStorage.setItem(sessionKey, JSON.stringify(messages));
+      logger.log('💾 Messages saved for session:', sessionId, messages.length);
     }
   }, [messages]);
 
@@ -93,7 +118,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   useEffect(() => {
     if (sdkConfig) {
       sessionStorage.setItem('raon_sdk_config', JSON.stringify(sdkConfig));
-      console.log('💾 SDK Config saved:', sdkConfig);
+      logger.log('💾 SDK Config saved:', sdkConfig);
     }
   }, [sdkConfig]);
 
@@ -103,7 +128,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
     script.src = PERSO_SDK_URL;
     script.async = true;
     script.onload = () => {
-      console.log('PersoAI SDK loaded');
+      logger.log('PersoAI SDK loaded');
       setSdkLoaded(true);
     };
     script.onerror = () => {
@@ -118,13 +143,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
     };
   }, []);
 
-  // SDK 로드 완료 후 자동으로 세션 재연결 시도
+  // SDK 로드 완료 후 복원 가능한 대화 확인
   useEffect(() => {
-    if (sdkLoaded && sdkConfig && !isSessionActive) {
-      console.log('🔄 SDK loaded and config available, trying to restore session...');
-      tryRestoreSession();
+    if (sdkLoaded && !isSessionActive) {
+      checkRestorableHistory();
     }
-  }, [sdkLoaded, sdkConfig]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sdkLoaded, isSessionActive]);
 
   // TTS ON/OFF 제어
   useEffect(() => {
@@ -137,25 +162,149 @@ function RaonChatPerso({ user, isLoggedIn }) {
         track.enabled = isTTSOn;
       });
 
-      console.log(`🔊 TTS ${isTTSOn ? 'ON' : 'OFF'}`);
+      logger.log(`🔊 TTS ${isTTSOn ? 'ON' : 'OFF'}`);
     }
   }, [isTTSOn]);
 
-  // 세션 재연결 시도 (저장된 세션 ID 사용)
+  // 복원 가능한 대화 내역 확인
+  const checkRestorableHistory = async () => {
+    const savedSessionId = sessionStorage.getItem('raon_session_id');
+    const chatRoomId = sessionStorage.getItem('raon_chat_room_id');
+
+    // 세션 ID나 채팅방 ID가 있으면 복원 가능
+    if (savedSessionId || chatRoomId) {
+      try {
+        // 백엔드에서 메시지 확인
+        let hasMessages = false;
+
+        if (chatRoomId) {
+          const response = await fetch(`/raon/api/chatrooms/${chatRoomId}/messages`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const messages = await response.json();
+            hasMessages = messages.length > 0;
+          }
+        } else if (savedSessionId) {
+          const response = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const messages = await response.json();
+            hasMessages = messages.length > 0;
+          }
+        }
+
+        setHasRestorableHistory(hasMessages);
+        if (hasMessages) {
+          logger.log('📋 복원 가능한 대화 내역이 있습니다');
+        }
+      } catch (err) {
+        logger.warn('⚠️ Failed to check restorable history:', err);
+        setHasRestorableHistory(false);
+      }
+    } else {
+      setHasRestorableHistory(false);
+    }
+  };
+
+  // 채팅 내역 수동 복원 (사용자가 버튼 클릭 시)
+  const restoreChatHistory = async () => {
+    const chatRoomId = sessionStorage.getItem('raon_chat_room_id');
+    const savedSessionId = sessionStorage.getItem('raon_session_id');
+
+    if (!chatRoomId && !savedSessionId) {
+      setError('복원할 대화 내역이 없습니다.');
+      return;
+    }
+
+    try {
+      logger.log('📥 채팅 내역 복원 시작...');
+      let messagesData = [];
+
+      // 채팅방 ID로 복원 시도 (우선순위 1)
+      if (chatRoomId) {
+        const response = await fetch(`/raon/api/chatrooms/${chatRoomId}/messages`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          messagesData = await response.json();
+          logger.log('📥 채팅방에서 메시지 로드:', messagesData.length);
+        }
+      }
+
+      // 세션 ID로 복원 시도 (우선순위 2)
+      if (messagesData.length === 0 && savedSessionId) {
+        const response = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          messagesData = await response.json();
+          logger.log('📥 세션에서 메시지 로드:', messagesData.length);
+        }
+      }
+
+      if (messagesData.length > 0) {
+        const restoredMessages = messagesData.map(msg => ({
+          id: msg.messageId,
+          type: msg.role === 'user' ? 'user' : 'ai',
+          text: msg.content,
+          time: new Date(msg.createdAt).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        }));
+
+        // 인트로 메시지 추가 (없는 경우)
+        const hasIntro = restoredMessages.some(m => m.type === 'ai' && m.id === 0);
+        if (!hasIntro) {
+          restoredMessages.unshift({
+            id: 0,
+            type: 'ai',
+            text: sdkConfig?.introMessage || '안녕하세요!',
+            time: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+          });
+        }
+
+        setMessages(restoredMessages);
+        restoredMessagesRef.current = restoredMessages;
+        setHasRestorableHistory(false); // 복원 후 버튼 숨김
+        logger.log('✅ 채팅 내역 복원 완료:', restoredMessages.length);
+
+        // 성공 메시지
+        setError('✅ 이전 대화가 복원되었습니다!');
+        setTimeout(() => setError(null), 3000);
+      } else {
+        setError('복원할 메시지가 없습니다.');
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      logger.error('❌ 채팅 내역 복원 실패:', err);
+      setError('채팅 내역 복원에 실패했습니다.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  // 세션 재연결 시도 (저장된 세션 ID 사용) - 자동 재연결 시에만 사용
   const tryRestoreSession = async () => {
     const savedSessionId = sessionStorage.getItem('raon_session_id');
 
     if (!savedSessionId) {
-      console.log('💡 No saved session ID found');
+      logger.log('💡 No saved session ID found');
       return false;
     }
 
     if (!sdkConfig) {
-      console.log('💡 No SDK config found, cannot restore session');
+      logger.log('💡 No SDK config found, cannot restore session');
       return false;
     }
 
-    console.log('🔄 Attempting to restore session:', savedSessionId);
+    logger.log('🔄 Attempting to restore session:', savedSessionId);
 
     try {
       // 백엔드 API로 세션 유효성 확인
@@ -164,17 +313,17 @@ function RaonChatPerso({ user, isLoggedIn }) {
       });
 
       if (!response.ok) {
-        console.log('⚠️ Saved session is invalid or expired');
+        logger.log('⚠️ Saved session is invalid or expired');
         sessionStorage.removeItem('raon_session_id');
         return false;
       }
 
       const sessionData = await response.json();
-      console.log('✅ Saved session is still valid:', sessionData.sessionId);
+      logger.log('✅ Saved session is still valid:', sessionData.sessionId);
 
       // SDK로 WebRTC 세션 재초기화
       const session = await initializeSDKSession(savedSessionId, 1920, 1080, false);
-      console.log('✅ WebRTC session reconnected');
+      logger.log('✅ WebRTC session reconnected');
 
       // 비디오 엘리먼트에 연결
       if (videoRef.current) {
@@ -188,7 +337,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
         });
 
         videoRef.current.play().catch(err => {
-          console.warn('Video play warning:', err.message);
+          logger.warn('Video play warning:', err.message);
         });
       }
 
@@ -206,14 +355,22 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 채팅 로그 구독 (createSession과 동일한 로직)
       session.subscribeChatLog((chatLog) => {
-        if (chatLog.length === 0 && restoredMessagesRef.current) {
-          console.log('📋 Keeping restored messages (empty server log)');
-          return;
-        }
-
+        // SDK에서 오는 채팅 로그를 정렬
         const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
 
-        const chatMessages = sortedChatLog.map((chat, index) => ({
+        // 새로운 AI 메시지 감지 및 백엔드 저장
+        if (sortedChatLog.length > prevChatLogLengthRef.current) {
+          const newMessages = sortedChatLog.slice(prevChatLogLengthRef.current);
+          newMessages.forEach(msg => {
+            if (!msg.isUser) {
+              saveAIMessageToBackend(msg.text);
+            }
+          });
+          prevChatLogLengthRef.current = sortedChatLog.length;
+        }
+
+        // SDK 메시지를 UI 형식으로 변환
+        const sdkMessages = sortedChatLog.map((chat, index) => ({
           id: chat.timestamp + index + 1,
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
@@ -224,16 +381,47 @@ function RaonChatPerso({ user, isLoggedIn }) {
           })
         }));
 
+        // 복원된 메시지가 있으면 유지하고 새 SDK 메시지와 병합
+        let finalMessages = [];
+
+        if (restoredMessagesRef.current && restoredMessagesRef.current.length > 0) {
+          logger.log('📋 Merging restored messages with SDK messages');
+
+          // 인트로 메시지 제외한 복원된 메시지 (id !== 0)
+          const restoredWithoutIntro = restoredMessagesRef.current.filter(m => m.id !== 0);
+
+          // 복원된 메시지와 SDK 메시지를 텍스트 기준으로 중복 제거하며 병합
+          const messageMap = new Map();
+
+          // 복원된 메시지를 먼저 추가
+          restoredWithoutIntro.forEach(msg => {
+            messageMap.set(msg.text, msg);
+          });
+
+          // SDK 메시지 추가 (중복되지 않는 것만)
+          sdkMessages.forEach(msg => {
+            if (!messageMap.has(msg.text)) {
+              messageMap.set(msg.text, msg);
+            }
+          });
+
+          finalMessages = Array.from(messageMap.values());
+
+          // 새 메시지가 추가되었으면 복원 상태 해제
+          if (sdkMessages.length > 0) {
+            logger.log('📡 New SDK messages merged with restored messages');
+            restoredMessagesRef.current = null;
+          }
+        } else {
+          // 복원된 메시지가 없으면 SDK 메시지만 사용
+          finalMessages = sdkMessages;
+        }
+
         if (sortedChatLog.length > 0 && !sortedChatLog[sortedChatLog.length - 1].isUser) {
           setIsAiResponding(false);
         }
 
-        if (chatLog.length > 0 && restoredMessagesRef.current) {
-          console.log('📡 New server messages received, clearing restored state');
-          restoredMessagesRef.current = null;
-        }
-
-        const allMessages = [introMessage, ...chatMessages];
+        const allMessages = [introMessage, ...finalMessages];
 
         if (sortedChatLog.length > 0 && sortedChatLog[sortedChatLog.length - 1].isUser) {
           allMessages.push({
@@ -254,15 +442,15 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 세션 종료 이벤트 구독
       session.onClose((manualClosed) => {
-        console.log('🔴 Session closed. Manual:', manualClosed);
+        logger.log('🔴 Session closed. Manual:', manualClosed);
 
         if (!manualClosed) {
-          console.log('🔄 Attempting auto-reconnect...');
-          setError('세션이 종료되었습니다. 5초 후 자동으로 재연결합니다...');
+          logger.log('🔄 Attempting auto-reconnect...');
+          setError('연결이 끊어졌습니다. 5초 후 자동으로 재연결하며 이전 대화를 복원합니다...');
 
           setTimeout(() => {
-            console.log('🔄 Auto-reconnecting...');
-            setError(null);
+            logger.log('🔄 Auto-reconnecting with previous conversation...');
+            setError('재연결 중...');
             createSession();
           }, 5000);
         } else {
@@ -276,36 +464,24 @@ function RaonChatPerso({ user, isLoggedIn }) {
       setPersoSession(session);
       setIsSessionActive(true);
 
-      // 저장된 채팅 기록 복원
-      const savedMessages = sessionStorage.getItem('raon_chat_messages');
-      if (savedMessages) {
-        try {
-          const parsedMessages = JSON.parse(savedMessages);
-          console.log('📥 Restoring saved messages:', parsedMessages.length);
-          setMessages(parsedMessages);
-          restoredMessagesRef.current = parsedMessages;
-        } catch (e) {
-          console.error('❌ Failed to restore messages:', e);
-          const defaultMessage = [{
-            id: 1,
-            type: 'ai',
-            text: sdkConfig?.introMessage || '안녕하세요!',
-            time: new Date().toLocaleTimeString('ko-KR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-          }];
-          setMessages(defaultMessage);
-          restoredMessagesRef.current = null;
-        }
-      }
+      // 인트로 메시지만 표시 (채팅 내역은 사용자가 수동으로 복원)
+      const defaultMessage = [{
+        id: 0,
+        type: 'ai',
+        text: sdkConfig?.introMessage || '안녕하세요!',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      }];
+      setMessages(defaultMessage);
 
-      console.log('✅ Session restored successfully');
+      logger.log('✅ Session restored successfully (without chat history)');
       return true;
 
     } catch (err) {
-      console.error('❌ Session restoration failed:', err);
+      logger.error('❌ Session restoration failed:', err);
       sessionStorage.removeItem('raon_session_id');
       return false;
     }
@@ -327,7 +503,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
     setError(null);
 
     try {
-      console.log('=== Creating PersoAI Session via Backend ===');
+      logger.log('=== Creating PersoAI Session via Backend ===');
 
       // sdkConfig 검증 (백오피스에서 전달받아야 함)
       if (!sdkConfig) {
@@ -346,10 +522,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
         throw new Error('필수 세션 설정(LLM, TTS, Prompt)이 누락되었습니다.');
       }
 
-      console.log('✓ Session Config:', { llmType, ttsType, modelStyle, promptId, documentId, backgroundImageId });
+      logger.log('✓ Session Config:', { llmType, ttsType, modelStyle, promptId, documentId, backgroundImageId });
 
       // 백엔드 API로 세션 생성 요청
       const sttType = sdkConfig?.sttType || null;
+
+      // 이전 채팅방 ID 확인 (같은 채팅방에서 대화 이어가기)
+      const previousChatRoomId = sessionStorage.getItem('raon_chat_room_id');
 
       const sessionCreateRequest = {
         promptId: promptId,
@@ -362,10 +541,15 @@ function RaonChatPerso({ user, isLoggedIn }) {
         agent: 1,
         paddingLeft: 0,
         paddingTop: 0,
-        paddingHeight: 1
+        paddingHeight: 1,
+        previousChatRoomId: previousChatRoomId ? parseInt(previousChatRoomId) : null
       };
 
-      console.log('✓ STT Type:', sttType);
+      logger.log('✓ STT Type:', sttType);
+      if (previousChatRoomId) {
+        logger.log('✓ Previous Chat Room ID:', previousChatRoomId);
+        logger.log('🔗 이전 대화 컨텍스트가 AI에게 전달됩니다');
+      }
 
       const response = await fetch('/raon/api/sessions/create', {
         method: 'POST',
@@ -382,18 +566,26 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       const sessionResponse = await response.json();
       const createdSessionId = sessionResponse.sessionId;
-      console.log('✓ Session ID created via backend:', createdSessionId);
+      const chatRoomId = sessionResponse.chatRoomId;
+      logger.log('✓ Session ID created via backend:', createdSessionId);
+      logger.log('✓ Chat Room ID:', chatRoomId);
 
       // 세션 ID 저장 (재연결용)
       sessionStorage.setItem('raon_session_id', createdSessionId);
-      console.log('💾 Session ID saved for reconnection');
+      logger.log('💾 Session ID saved for reconnection');
+
+      // 채팅방 ID 저장 (컨텍스트 연결용)
+      if (chatRoomId) {
+        sessionStorage.setItem('raon_chat_room_id', chatRoomId);
+        logger.log('💾 Chat Room ID saved for context continuity');
+      }
 
       // SDK로 WebRTC 세션 초기화
       // 참고: 음성 입력은 브라우저의 Web Speech API를 사용하므로 enableVoice는 false
       const session = await initializeSDKSession(createdSessionId, 1920, 1080, false);
-      console.log('✓ WebRTC session created');
+      logger.log('✓ WebRTC session created');
       if (sttType) {
-        console.log('✓ STT enabled: 브라우저 음성 인식 사용 가능');
+        logger.log('✓ STT enabled: 브라우저 음성 인식 사용 가능');
       }
 
       // 비디오 엘리먼트에 연결
@@ -410,7 +602,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
         });
 
         videoRef.current.play().catch(err => {
-          console.warn('Video play warning:', err.message);
+          logger.warn('Video play warning:', err.message);
         });
       }
 
@@ -428,17 +620,23 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 채팅 로그 구독
       session.subscribeChatLog((chatLog) => {
-        // 재연결 후 첫 번째 호출이고 서버 메시지가 비어있으면 복원된 메시지 유지
-        if (chatLog.length === 0 && restoredMessagesRef.current) {
-          console.log('📋 Keeping restored messages (empty server log)');
-          return; // 복원된 메시지를 유지하고 종료
-        }
-
-        // timestamp 기준 오름차순 정렬 (오래된 메시지가 위, 최신 메시지가 아래)
+        // SDK에서 오는 채팅 로그를 정렬
         const sortedChatLog = [...chatLog].sort((a, b) => a.timestamp - b.timestamp);
 
-        const chatMessages = sortedChatLog.map((chat, index) => ({
-          id: chat.timestamp + index + 1, // timestamp 기반 고유 ID (인트로 메시지는 id 0)
+        // 새로운 AI 메시지 감지 및 백엔드 저장
+        if (sortedChatLog.length > prevChatLogLengthRef.current) {
+          const newMessages = sortedChatLog.slice(prevChatLogLengthRef.current);
+          newMessages.forEach(msg => {
+            if (!msg.isUser) {
+              saveAIMessageToBackend(msg.text);
+            }
+          });
+          prevChatLogLengthRef.current = sortedChatLog.length;
+        }
+
+        // SDK 메시지를 UI 형식으로 변환
+        const sdkMessages = sortedChatLog.map((chat, index) => ({
+          id: chat.timestamp + index + 1,
           type: chat.isUser ? 'user' : 'ai',
           text: chat.text,
           time: new Date(chat.timestamp).toLocaleTimeString('ko-KR', {
@@ -448,19 +646,49 @@ function RaonChatPerso({ user, isLoggedIn }) {
           })
         }));
 
+        // 복원된 메시지가 있으면 유지하고 새 SDK 메시지와 병합
+        let finalMessages = [];
+
+        if (restoredMessagesRef.current && restoredMessagesRef.current.length > 0) {
+          logger.log('📋 Merging restored messages with SDK messages');
+
+          // 인트로 메시지 제외한 복원된 메시지 (id !== 0)
+          const restoredWithoutIntro = restoredMessagesRef.current.filter(m => m.id !== 0);
+
+          // 복원된 메시지와 SDK 메시지를 텍스트 기준으로 중복 제거하며 병합
+          const messageMap = new Map();
+
+          // 복원된 메시지를 먼저 추가
+          restoredWithoutIntro.forEach(msg => {
+            messageMap.set(msg.text, msg);
+          });
+
+          // SDK 메시지 추가 (중복되지 않는 것만)
+          sdkMessages.forEach(msg => {
+            if (!messageMap.has(msg.text)) {
+              messageMap.set(msg.text, msg);
+            }
+          });
+
+          finalMessages = Array.from(messageMap.values());
+
+          // 새 메시지가 추가되었으면 복원 상태 해제
+          if (sdkMessages.length > 0) {
+            logger.log('📡 New SDK messages merged with restored messages');
+            restoredMessagesRef.current = null;
+          }
+        } else {
+          // 복원된 메시지가 없으면 SDK 메시지만 사용
+          finalMessages = sdkMessages;
+        }
+
         // 마지막 메시지가 AI 응답이면 로딩 상태 해제
         if (sortedChatLog.length > 0 && !sortedChatLog[sortedChatLog.length - 1].isUser) {
           setIsAiResponding(false);
         }
 
-        // 서버에 새 메시지가 있으면 복원 상태 해제
-        if (chatLog.length > 0 && restoredMessagesRef.current) {
-          console.log('📡 New server messages received, clearing restored state');
-          restoredMessagesRef.current = null;
-        }
-
         // 인트로 메시지를 항상 첫 번째로 유지
-        const allMessages = [introMessage, ...chatMessages];
+        const allMessages = [introMessage, ...finalMessages];
 
         // AI 응답 대기 중이고, 마지막 메시지가 사용자 메시지이면 로딩 표시
         if (sortedChatLog.length > 0 && sortedChatLog[sortedChatLog.length - 1].isUser) {
@@ -482,17 +710,17 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 세션 종료 이벤트 구독
       session.onClose((manualClosed) => {
-        console.log('🔴 Session closed. Manual:', manualClosed);
+        logger.log('🔴 Session closed. Manual:', manualClosed);
 
         if (!manualClosed) {
           // 예기치 않은 종료 - 자동 재연결 시도
-          console.log('🔄 Attempting auto-reconnect...');
-          setError('세션이 종료되었습니다. 5초 후 자동으로 재연결합니다...');
+          logger.log('🔄 Attempting auto-reconnect...');
+          setError('연결이 끊어졌습니다. 5초 후 자동으로 재연결하며 이전 대화를 복원합니다...');
 
           // 5초 후 자동 재연결
           setTimeout(() => {
-            console.log('🔄 Auto-reconnecting...');
-            setError(null);
+            logger.log('🔄 Auto-reconnecting with previous conversation...');
+            setError('재연결 중...');
             createSession();
           }, 5000);
         } else {
@@ -507,68 +735,67 @@ function RaonChatPerso({ user, isLoggedIn }) {
       setPersoSession(session);
       setIsSessionActive(true);
 
-      console.log('=== Session Setup Complete ===');
-      console.log('📝 SDK Config:', sdkConfig);
-      console.log('📝 Intro Message:', sdkConfig?.introMessage);
+      logger.log('=== Session Setup Complete ===');
+      logger.log('📝 SDK Config:', sdkConfig);
+      logger.log('📝 Intro Message:', sdkConfig?.introMessage);
 
-      // 저장된 채팅 기록 복원 (재연결 시)
-      const savedMessages = sessionStorage.getItem('raon_chat_messages');
-      if (savedMessages) {
-        try {
-          const parsedMessages = JSON.parse(savedMessages);
-          console.log('📥 Restoring saved messages:', parsedMessages.length);
-          setMessages(parsedMessages);
-          // 복원된 메시지를 ref에 보관 (subscribeChatLog에서 사용)
-          restoredMessagesRef.current = parsedMessages;
-        } catch (e) {
-          console.error('❌ Failed to restore messages:', e);
-          // 복원 실패 시 기본 인트로 메시지 설정
-          const defaultMessage = [{
-            id: 1,
-            type: 'ai',
-            text: sdkConfig?.introMessage || '안녕하세요!',
-            time: new Date().toLocaleTimeString('ko-KR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-          }];
-          setMessages(defaultMessage);
-          restoredMessagesRef.current = null;
-        }
-      } else {
-        // 저장된 메시지가 없으면 기본 인트로 메시지 설정
-        const defaultMessage = [{
-          id: 1,
-          type: 'ai',
-          text: sdkConfig?.introMessage || '안녕하세요!',
-          time: new Date().toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          })
-        }];
-        setMessages(defaultMessage);
-        restoredMessagesRef.current = null;
+      // 인트로 메시지만 표시 (채팅 내역은 사용자가 수동으로 복원)
+      const defaultMessage = [{
+        id: 0,
+        type: 'ai',
+        text: sdkConfig?.introMessage || '안녕하세요!',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      }];
+      setMessages(defaultMessage);
+      restoredMessagesRef.current = null;
+
+      // 복원 가능한 대화가 있는지 확인
+      if (previousChatRoomId || chatRoomId) {
+        checkRestorableHistory();
       }
 
     } catch (err) {
       setError('세션 생성 중 오류가 발생했습니다: ' + err.message);
-      console.error('❌ Session creation error:', err);
+      logger.error('❌ Session creation error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   // 메시지 전송 (PersoAI SDK 사용)
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputText.trim() || !persoSession) return;
 
     const userMessage = inputText;
+    const sessionId = sessionStorage.getItem('raon_session_id');
     setInputText('');
 
     // AI 응답 대기 상태 활성화
     setIsAiResponding(true);
+
+    // 백엔드에 사용자 메시지 저장
+    if (sessionId) {
+      try {
+        await fetch(`/raon/api/sessions/${sessionId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            role: 'user',
+            content: userMessage
+          })
+        });
+        logger.log('💾 User message saved to backend');
+      } catch (err) {
+        logger.warn('⚠️ Failed to save user message to backend:', err);
+      }
+    }
 
     // SDK를 통해 메시지 전송
     persoSession.processChat(userMessage);
@@ -582,7 +809,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn('⚠️ 이 브라우저는 음성 인식을 지원하지 않습니다');
+      logger.warn('⚠️ 이 브라우저는 음성 인식을 지원하지 않습니다');
       return;
     }
 
@@ -613,19 +840,19 @@ function RaonChatPerso({ user, isLoggedIn }) {
       // 최종 확정된 텍스트를 누적
       if (finalTranscript) {
         transcriptRef.current += finalTranscript + ' ';
-        console.log('🎤 음성 인식 결과 (확정):', finalTranscript);
-        console.log('🎤 전체 누적 텍스트:', transcriptRef.current);
+        logger.log('🎤 음성 인식 결과 (확정):', finalTranscript);
+        logger.log('🎤 전체 누적 텍스트:', transcriptRef.current);
       }
 
       // 중간 결과도 로그에 표시
       if (interimTranscript) {
-        console.log('🎤 음성 인식 중 (임시):', interimTranscript);
+        logger.log('🎤 음성 인식 중 (임시):', interimTranscript);
       }
     };
 
     // 음성 인식 종료 처리
     recognition.onend = () => {
-      console.log('🎤 음성 인식 종료');
+      logger.log('🎤 음성 인식 종료');
 
       // 녹음 중지 (자동으로 파일 저장됨)
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -635,7 +862,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
       // 누적된 텍스트가 있으면 전송
       const fullText = transcriptRef.current.trim();
       if (persoSession && fullText) {
-        console.log('📤 최종 전송할 텍스트:', fullText);
+        logger.log('📤 최종 전송할 텍스트:', fullText);
         persoSession.processChat(fullText);
         transcriptRef.current = ''; // 초기화
       }
@@ -645,7 +872,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
     // 음성 인식 오류 처리
     recognition.onerror = (event) => {
-      console.error('🎤 음성 인식 오류:', event.error);
+      logger.error('🎤 음성 인식 오류:', event.error);
       let errorMessage = '음성 인식 오류가 발생했습니다';
 
       // 녹음 중지 (자동으로 파일 저장됨)
@@ -665,7 +892,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
           break;
         case 'aborted':
           // 사용자가 의도적으로 중지한 경우 에러 메시지 표시 안함
-          console.log('🎤 사용자가 음성 인식을 중지했습니다');
+          logger.log('🎤 사용자가 음성 인식을 중지했습니다');
           break;
         default:
           errorMessage = '알 수 없는 오류가 발생했습니다.';
@@ -729,7 +956,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
         link.click();
         document.body.removeChild(link);
 
-        console.log('🎙️ 녹음 파일 저장 완료:', link.download);
+        logger.log('🎙️ 녹음 파일 저장 완료:', link.download);
 
         // 스트림 정리
         if (streamRef.current) {
@@ -743,9 +970,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       // 녹음 시작
       mediaRecorder.start();
-      console.log('🎙️ 녹음 시작');
+      logger.log('🎙️ 녹음 시작');
     } catch (err) {
-      console.error('🎙️ 녹음 시작 실패:', err);
+      logger.error('🎙️ 녹음 시작 실패:', err);
       setError('녹음을 시작할 수 없습니다: ' + err.message);
     }
   };
@@ -754,7 +981,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-      console.log('🎙️ 녹음 종료');
+      logger.log('🎙️ 녹음 종료');
     }
   };
 
@@ -778,7 +1005,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
     try {
       if (!isListening) {
         // 음성 입력 및 녹음 시작
-        console.log('🎤 음성 입력 시작 - 다시 클릭하면 종료됩니다');
+        logger.log('🎤 음성 입력 시작 - 다시 클릭하면 종료됩니다');
         transcriptRef.current = ''; // 누적 텍스트 초기화
         setIsListening(true);
 
@@ -789,7 +1016,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
         recognitionRef.current.start();
       } else {
         // 음성 입력 및 녹음 중지 - 사용자가 버튼을 다시 클릭
-        console.log('🎤 음성 입력 중지 (사용자 클릭)');
+        logger.log('🎤 음성 입력 중지 (사용자 클릭)');
 
         // 음성 인식 중지 (onend 이벤트가 호출되어 텍스트 전송)
         recognitionRef.current.stop();
@@ -798,7 +1025,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
         stopRecording();
       }
     } catch (err) {
-      console.error('음성 입력 오류:', err);
+      logger.error('음성 입력 오류:', err);
       setError('음성 입력 중 오류가 발생했습니다: ' + err.message);
       setIsListening(false);
       transcriptRef.current = ''; // 오류 시 초기화
@@ -810,25 +1037,27 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const endSession = async () => {
     if (persoSession) {
       try {
+        const sessionId = sessionStorage.getItem('raon_session_id');
         persoSession.close();
         setPersoSession(null);
         setIsSessionActive(false);
         setMessages([]);
         // 수동 종료 시 저장된 채팅 기록, 설정, 세션 ID 정리
-        sessionStorage.removeItem('raon_chat_messages');
+        if (sessionId) {
+          const sessionKey = `raon_chat_messages_${sessionId}`;
+          sessionStorage.removeItem(sessionKey);
+        }
         sessionStorage.removeItem('raon_sdk_config');
         sessionStorage.removeItem('raon_session_id');
-        console.log('🗑️ Chat history, SDK config, and session ID cleared');
+        // ⚠️ 채팅방 ID는 유지 (같은 채팅방에서 계속 대화)
+        // sessionStorage.removeItem('raon_chat_room_id'); <- 제거하지 않음
+        // prevChatLogLength 초기화
+        prevChatLogLengthRef.current = 0;
+        logger.log('🗑️ Chat history, SDK config, and session ID cleared');
+        logger.log('✅ Chat Room ID maintained for conversation continuity');
       } catch (err) {
-        console.error('Session close error:', err);
+        logger.error('Session close error:', err);
       }
-    }
-  };
-
-  // Enter 키 처리
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
     }
   };
 
@@ -849,241 +1078,53 @@ function RaonChatPerso({ user, isLoggedIn }) {
       {/* 메인 컨텐츠 */}
       <div className="main-content">
         {/* 왼쪽: AI 아바타 */}
-        <div className="ai-model-container">
-          <div className="ai-display-box" style={{
-            padding: 0,
-            overflow: 'hidden',
-            position: 'relative',
-            ...(backgroundImage && !isSessionActive ? {
-              backgroundImage: `url(${backgroundImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            } : {})
-          }}>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted={false}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: isSessionActive ? 'block' : 'none'
-              }}
-            />
-            {!isSessionActive && (
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '20px',
-                textAlign: 'center',
-                backgroundColor: backgroundImage ? 'rgba(0, 0, 0, 0.3)' : 'transparent'
-              }}>
-                {!backgroundImage && (
-                  <div style={{ fontSize: '80px', marginBottom: '20px' }}>AI</div>
-                )}
-                {avatarName && (
-                  <div style={{
-                    fontSize: '24px',
-                    fontWeight: '600',
-                    marginBottom: '10px',
-                    color: backgroundImage ? 'white' : 'inherit',
-                    textShadow: backgroundImage ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
-                  }}>
-                    {avatarName}
-                  </div>
-                )}
-                {personality && (
-                  <div style={{
-                    fontSize: '14px',
-                    marginBottom: '20px',
-                    color: backgroundImage ? 'white' : '#666',
-                    textShadow: backgroundImage ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'
-                  }}>
-                    {personality}
-                  </div>
-                )}
-                <button
-                  onClick={createSession}
-                  disabled={isLoading || (!chatbotId && !sdkConfig) || !sdkLoaded}
-                  style={{
-                    padding: '12px 30px',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    border: 'none',
-                    borderRadius: '25px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    cursor: isLoading || (!chatbotId && !sdkConfig) || !sdkLoaded ? 'not-allowed' : 'pointer',
-                    opacity: isLoading || (!chatbotId && !sdkConfig) || !sdkLoaded ? 0.6 : 1,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                  }}
-                >
-                  {isLoading ? '연결 중...' : '채팅 시작'}
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="ai-status-bar">
-            <span className="status-label">상태:</span>
-            <span className="status-indicator"></span>
-            <span className="status-text">
-              {isSessionActive ? '연결됨 🟢' : '대기 중'} | 마이크 권한 허용됨
-            </span>
-          </div>
-
-          {/* TTS 토글 */}
-          <div className="tts-toggle-container">
-            <span className="tts-label">TTS 음성</span>
-            <label className="tts-switch">
-              <input
-                type="checkbox"
-                checked={isTTSOn}
-                onChange={() => setIsTTSOn(!isTTSOn)}
-              />
-              <span className="tts-slider"></span>
-            </label>
-          </div>
-        </div>
+        <AvatarDisplay
+          videoRef={videoRef}
+          isSessionActive={isSessionActive}
+          isLoading={isLoading}
+          backgroundImage={backgroundImage}
+          avatarName={avatarName}
+          personality={personality}
+          isTTSOn={isTTSOn}
+          setIsTTSOn={setIsTTSOn}
+          onStartSession={createSession}
+          chatbotId={chatbotId}
+          sdkConfig={sdkConfig}
+          sdkLoaded={sdkLoaded}
+        />
 
         {/* 오른쪽: 채팅 */}
         <div className="chat-container">
-          <div className="chat-messages">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`message-${message.type}`}
-              >
-                <div className={`message-bubble-${message.type}`}>
-                  {message.text}
-                </div>
-                <div className={`message-time-${message.type}`}>
-                  {message.time}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="chat-input-section">
-            <div className="input-box">
-              <input
-                type="text"
-                className="input-field"
-                placeholder="메시지를 입력하세요..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={!isSessionActive}
-              />
-              <span className="edit-icon">✏️</span>
-            </div>
-            {sdkConfig?.sttType && (
-              <button
-                className="mic-btn"
-                onClick={toggleVoiceInput}
-                disabled={!isSessionActive}
-                style={{
-                  padding: '12px 18px',
-                  fontSize: '20px',
-                  border: 'none',
-                  borderRadius: '50%',
-                  background: isListening ? '#e74c3c' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  cursor: !isSessionActive ? 'not-allowed' : 'pointer',
-                  opacity: !isSessionActive ? 0.6 : 1,
-                  marginRight: '8px',
-                  transition: 'all 0.3s ease',
-                  animation: isListening ? 'pulse 1.5s infinite' : 'none'
-                }}
-                title={isListening ? '클릭하여 음성 입력 종료 및 전송' : '클릭하여 음성 입력 시작'}
-              >
-                🎤
-              </button>
-            )}
-            <button
-              className="send-btn"
-              onClick={handleSendMessage}
-              disabled={!isSessionActive || !inputText.trim()}
-            >
-              ➤
-            </button>
-          </div>
+          <RestoreButton
+            onRestore={restoreChatHistory}
+            hasRestorableHistory={hasRestorableHistory}
+          />
+          <ChatMessages messages={messages} />
+          <ChatInput
+            inputText={inputText}
+            setInputText={setInputText}
+            onSendMessage={handleSendMessage}
+            onToggleVoiceInput={toggleVoiceInput}
+            isSessionActive={isSessionActive}
+            isListening={isListening}
+            sttType={sdkConfig?.sttType}
+          />
         </div>
       </div>
 
-      {/* 메뉴 오버레이 */}
-      {isMenuOpen && <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}></div>}
-
       {/* 사이드 메뉴 */}
-      {isMenuOpen && (
-        <div className="side-menu">
-          <div className="menu-header-side">
-            <h3>설정</h3>
-            <button className="close-btn" onClick={() => setIsMenuOpen(false)}>×</button>
-          </div>
+      <SideMenu
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        isSessionActive={isSessionActive}
+        onEndSession={endSession}
+      />
 
-          {isSessionActive && (
-            <div className="menu-section-side">
-              <button
-                onClick={endSession}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#e74c3c',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '600'
-                }}
-              >
-                세션 종료
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 에러 메시지 */}
-      {error && (
-        <div style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          background: '#fee',
-          color: '#c33',
-          padding: '15px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 9999,
-          maxWidth: '400px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>⚠️ {error}</span>
-            <button
-              onClick={() => setError(null)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#c33',
-                fontSize: '20px',
-                cursor: 'pointer',
-                marginLeft: '15px'
-              }}
-            >×</button>
-          </div>
-        </div>
-      )}
+      {/* 에러 알림 */}
+      <ErrorNotification
+        error={error}
+        onClose={() => setError(null)}
+      />
     </div>
   );
 }

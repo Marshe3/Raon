@@ -1,6 +1,6 @@
 package com.example.raon.controller;
 
-import com.example.raon.domain.UserEntity;
+import com.example.raon.domain.User;
 import com.example.raon.dto.user.response.UserResponseDto;
 import com.example.raon.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,7 @@ public class UserController {
 
 	 /** GET /api/users/me */
 	 @GetMapping("/me")
-	 public ResponseEntity<UserEntity> me(@AuthenticationPrincipal Object principal) {
+	 public ResponseEntity<User> me(@AuthenticationPrincipal Object principal) {
 	     if (principal == null) return ResponseEntity.status(401).build();
 
 	     // JWT 인증인 경우 (UserPrincipal)
@@ -39,7 +39,7 @@ public class UserController {
 	         com.example.raon.security.UserPrincipal userPrincipal = (com.example.raon.security.UserPrincipal) principal;
 	         Long userId = userPrincipal.getUserId();
 	         log.info("JWT authenticated user - userId: {}", userId);
-	         UserEntity user = userService.getUserById(userId);
+	         User user = userService.getUserById(userId);
 	         return ResponseEntity.ok(user);
 	     }
 
@@ -56,7 +56,7 @@ public class UserController {
 	     String email = safeGetEmail(oauth2User);
 	     if (email != null && !email.isBlank()) {
 	         try {
-	             UserEntity user = userService.getUserByEmail(email);
+	             User user = userService.getUserByEmail(email);
 	             return ResponseEntity.ok(user);
 	         } catch (IllegalArgumentException ignore) {
 	             // 이메일로 미등록인 경우 → providerId fallback
@@ -70,22 +70,22 @@ public class UserController {
 	         return ResponseEntity.badRequest().build();
 	     }
 	
-	     UserEntity user = userService.getOrCreateByProviderId(providerId);
+	     User user = userService.getOrCreateByProviderId(providerId);
 	     return ResponseEntity.ok(user);
 	 }
 	
 	 /** PATCH /api/users/me */
 	 @PatchMapping("/me")
-	 public ResponseEntity<UserEntity> updateMe(
+	 public ResponseEntity<User> updateMe(
 	         @AuthenticationPrincipal Object principal,
 	         @RequestBody ProfileUpdateRequest request
 	 ) {
 	     if (principal == null) return ResponseEntity.status(401).build();
 	
-	     UserEntity me = resolveMe(principal);
+	     User me = resolveMe(principal);
 	     if (me == null) return ResponseEntity.status(400).build();
 	
-	     UserEntity updated = userService.updateProfile(
+	     User updated = userService.updateProfile(
 	             me.getUserId(), // ※ getUserId로 통일
 	             request.getNickname(),
 	             request.getProfileImage()
@@ -98,7 +98,7 @@ public class UserController {
 	 public ResponseEntity<Void> deleteMe(@AuthenticationPrincipal Object principal) {
 	     if (principal == null) return ResponseEntity.status(401).build();
 	
-	     UserEntity me = resolveMe(principal);
+	     User me = resolveMe(principal);
 	     if (me == null) return ResponseEntity.status(400).build();
 	
 	     userService.deleteUser(me.getUserId()); // ※ getUserId로 통일
@@ -112,7 +112,7 @@ public class UserController {
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDto> getUser(@PathVariable Long userId) {
         log.info("사용자 조회 요청 - userId: {}", userId);
-        UserEntity user = userService.getUserById(userId);
+        User user = userService.getUserById(userId);
         return ResponseEntity.ok(new UserResponseDto(user));
     }
     
@@ -123,7 +123,7 @@ public class UserController {
     @GetMapping("/email/{email}")
     public ResponseEntity<UserResponseDto> getUserByEmail(@PathVariable String email) {
         log.info("이메일로 사용자 조회 - email: {}", email);
-        UserEntity user = userService.getUserByEmail(email);
+        User user = userService.getUserByEmail(email);
         return ResponseEntity.ok(new UserResponseDto(user));
     }
     
@@ -137,7 +137,7 @@ public class UserController {
             @RequestBody ProfileUpdateRequest request) {
         
         log.info("프로필 업데이트 요청 - userId: {}", userId);
-        UserEntity user = userService.updateProfile(
+        User user = userService.updateProfile(
             userId, 
             request.getNickname(), 
             request.getProfileImage()
@@ -165,7 +165,7 @@ public class UserController {
             @RequestParam String keyword) {
         
         log.info("사용자 검색 - keyword: {}", keyword);
-        List<UserEntity> users = userService.searchUsersByNickname(keyword);
+        List<User> users = userService.searchUsersByNickname(keyword);
         List<UserResponseDto> response = users.stream()
                 .map(UserResponseDto::new)
                 .collect(Collectors.toList());
@@ -179,7 +179,7 @@ public class UserController {
     @GetMapping("/active")
     public ResponseEntity<List<UserResponseDto>> getActiveUsers() {
         log.info("활성 사용자 목록 조회");
-        List<UserEntity> users = userService.getActiveUsers();
+        List<User> users = userService.getActiveUsers();
         List<UserResponseDto> response = users.stream()
                 .map(UserResponseDto::new)
                 .collect(Collectors.toList());
@@ -193,7 +193,7 @@ public class UserController {
     @GetMapping("/recent")
     public ResponseEntity<List<UserResponseDto>> getRecentUsers() {
         log.info("최근 가입자 조회");
-        List<UserEntity> users = userService.getRecentUsers();
+        List<User> users = userService.getRecentUsers();
         List<UserResponseDto> response = users.stream()
                 .map(UserResponseDto::new)
                 .collect(Collectors.toList());
@@ -259,7 +259,7 @@ public class UserController {
 	 }
 	
 	 /** 현재 로그인 사용자 엔티티 결정 (이메일→없으면 providerId) */
-	 private UserEntity resolveMe(Object principal) {
+	 private User resolveMe(Object principal) {
 	     // JWT 인증인 경우
 	     if (principal instanceof com.example.raon.security.UserPrincipal) {
 	         com.example.raon.security.UserPrincipal userPrincipal = (com.example.raon.security.UserPrincipal) principal;

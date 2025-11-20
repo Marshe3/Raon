@@ -1,7 +1,7 @@
 package com.example.raon.dto.user.response;
 
 import com.example.raon.domain.SocialType;
-import com.example.raon.domain.UserEntity;
+import com.example.raon.domain.User;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -16,7 +16,7 @@ public class UserResponseDto {
     private SocialType socialType;
     private LocalDateTime joinDate;
 
-    public UserResponseDto(UserEntity user) {
+    public UserResponseDto(User user) {
         this.userId = user.getUserId();
         this.email = user.getEmail();
         this.nickname = user.getNickname();

@@ -45,4 +45,7 @@ public class SessionCreateRequest {
     
     @JsonProperty("extraData")
     private Map<String, Object> extraData;
+
+    @JsonProperty("previousChatRoomId")
+    private Long previousChatRoomId;
 }

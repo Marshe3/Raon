@@ -1,7 +1,7 @@
 package com.example.raon.controller;
 
 import com.example.raon.domain.RefreshToken;
-import com.example.raon.domain.UserEntity;
+import com.example.raon.domain.User;
 import com.example.raon.repository.RefreshTokenRepository;
 import com.example.raon.repository.UserRepository;
 import com.example.raon.util.JwtTokenProvider;
@@ -67,7 +67,7 @@ public class AuthController {
 
             // 5. 사용자 정보 조회
             Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
-            UserEntity user = userRepository.findById(userId)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             // 6. 새로운 Access Token 생성

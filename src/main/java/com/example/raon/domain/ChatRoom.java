@@ -30,6 +30,9 @@ public class ChatRoom {
     @Column(name = "chat_id")
     private Long id;
 
+    @Column(name = "perso_session_id", unique = true, nullable = false)
+    private String persoSessionId;
+
     @OneToMany(mappedBy = "chatRoom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Message> messages = new ArrayList<>();
 
@@ -38,11 +41,16 @@ public class ChatRoom {
     private LocalDateTime createdAt;
 
     @Builder
-    public ChatRoom(Long id) {
+    public ChatRoom(Long id, String persoSessionId) {
         this.id = id;
+        this.persoSessionId = persoSessionId;
     }
 
     public void addMessage(Message message) {
         messages.add(message);
+    }
+
+    public void updateSessionId(String newSessionId) {
+        this.persoSessionId = newSessionId;
     }
 }

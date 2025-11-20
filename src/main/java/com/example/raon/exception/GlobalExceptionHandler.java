@@ -65,6 +65,111 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * UserNotFoundException 처리
+     */
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUserNotFoundException(UserNotFoundException e) {
+        log.warn("⚠️ User not found: {}", e.getMessage());
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "User Not Found");
+        error.put("message", e.getMessage());
+        error.put("status", 404);
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * ChatRoomNotFoundException 처리
+     */
+    @ExceptionHandler(ChatRoomNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleChatRoomNotFoundException(ChatRoomNotFoundException e) {
+        log.warn("⚠️ ChatRoom not found: {}", e.getMessage());
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "ChatRoom Not Found");
+        error.put("message", e.getMessage());
+        error.put("status", 404);
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * ChatbotNotFoundException 처리
+     */
+    @ExceptionHandler(ChatbotNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleChatbotNotFoundException(ChatbotNotFoundException e) {
+        log.warn("⚠️ Chatbot not found: {}", e.getMessage());
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "Chatbot Not Found");
+        error.put("message", e.getMessage());
+        error.put("status", 404);
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * SessionCreationException 처리
+     */
+    @ExceptionHandler(SessionCreationException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionCreationException(SessionCreationException e) {
+        log.error("❌ Session creation failed: {}", e.getMessage(), e);
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "Session Creation Failed");
+        error.put("message", e.getMessage());
+        error.put("status", 500);
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    /**
+     * PersoAIApiException 처리
+     */
+    @ExceptionHandler(PersoAIApiException.class)
+    public ResponseEntity<Map<String, Object>> handlePersoAIApiException(PersoAIApiException e) {
+        log.error("❌ PersoAI API error ({}): {}", e.getStatusCode(), e.getMessage(), e);
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "PersoAI API Error");
+        error.put("message", e.getMessage());
+        error.put("status", e.getStatusCode());
+
+        return ResponseEntity.status(e.getStatusCode()).body(error);
+    }
+
+    /**
+     * InvalidTokenException 처리
+     */
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidTokenException(InvalidTokenException e) {
+        log.warn("⚠️ Invalid token: {}", e.getMessage());
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "Invalid Token");
+        error.put("message", e.getMessage());
+        error.put("status", 401);
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * TokenExpiredException 처리
+     */
+    @ExceptionHandler(TokenExpiredException.class)
+    public ResponseEntity<Map<String, Object>> handleTokenExpiredException(TokenExpiredException e) {
+        log.warn("⚠️ Token expired: {}", e.getMessage());
+
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", "Token Expired");
+        error.put("message", e.getMessage());
+        error.put("status", 401);
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
      * RuntimeException 처리
      */
     @ExceptionHandler(RuntimeException.class)

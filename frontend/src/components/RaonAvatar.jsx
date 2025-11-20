@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RaonAvatar.css';
+import { logger } from '../utils/logger';
 
 const RaonAvatar = () => {
   const navigate = useNavigate();
@@ -58,9 +59,9 @@ const RaonAvatar = () => {
         }));
 
         setPresetAvatars(avatars);
-        console.log('✅ 챗봇 목록 로드 완료:', avatars);
+        logger.log('✅ 챗봇 목록 로드 완료:', avatars);
       } catch (error) {
-        console.error('❌ 챗봇 목록 로드 실패:', error);
+        logger.error('❌ 챗봇 목록 로드 실패:', error);
         alert('챗봇 목록을 불러오는데 실패했습니다.');
       }
     };
@@ -85,7 +86,7 @@ const RaonAvatar = () => {
         const data = await response.json();
         setConfigurations(data);
       } catch (error) {
-        console.error('설정 로드 실패:', error);
+        logger.error('설정 로드 실패:', error);
         alert('설정 정보를 불러오는데 실패했습니다. 기본 설정을 사용합니다.');
       } finally {
         setLoading(false);
@@ -135,9 +136,9 @@ const RaonAvatar = () => {
     // 선택한 아바타의 promptId에 맞는 프롬프트 찾기
     const selectedPrompt = configurations?.prompts?.find(p => p.promptId === avatar.promptId) || configurations?.prompts?.[0];
 
-    console.log('🔍 Selected Chatbot from DB:', avatar);
-    console.log('🔍 Selected Prompt:', selectedPrompt);
-    console.log('🔍 Intro Message:', selectedPrompt?.introMessage);
+    logger.log('🔍 Selected Chatbot from DB:', avatar);
+    logger.log('🔍 Selected Prompt:', selectedPrompt);
+    logger.log('🔍 Intro Message:', selectedPrompt?.introMessage);
 
     navigate(`/chat/${avatar.id}`, {
       state: {
@@ -235,9 +236,9 @@ const RaonAvatar = () => {
       // 선택한 아바타의 promptId에 맞는 프롬프트 찾기
       const selectedPrompt = configurations?.prompts?.find(p => p.promptId === selectedPreset.promptId) || configurations?.prompts?.[0];
 
-      console.log('🔍 Selected Chatbot from DB:', selectedPreset);
-      console.log('🔍 Selected Prompt:', selectedPrompt);
-      console.log('🔍 Intro Message:', selectedPrompt?.introMessage);
+      logger.log('🔍 Selected Chatbot from DB:', selectedPreset);
+      logger.log('🔍 Selected Prompt:', selectedPrompt);
+      logger.log('🔍 Intro Message:', selectedPrompt?.introMessage);
 
       navigate(`/chat/${selectedPreset.id}`, {
         state: {
@@ -262,8 +263,8 @@ const RaonAvatar = () => {
     } else if (selectedMode === 'custom') {
       // 커스텀 모드: 사용자 선택 설정
       const firstPrompt = configurations?.prompts?.[0];
-      console.log('🔍 Custom Config:', customConfig);
-      console.log('🔍 Intro Message:', firstPrompt?.introMessage);
+      logger.log('🔍 Custom Config:', customConfig);
+      logger.log('🔍 Intro Message:', firstPrompt?.introMessage);
 
       navigate('/chat/new', {
         state: {

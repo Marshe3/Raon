@@ -1,12 +1,14 @@
 // src/main/java/com/example/raon/config/SecurityConfig.java
 package com.example.raon.config;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.example.raon.handler.OAuth2LoginSuccessHandler;
 import com.example.raon.security.JwtAuthenticationFilter;
 import com.example.raon.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -29,6 +31,12 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ClientRegistrationRepository clientRegistrationRepository;
+
+    @Value("${app.cors.allowed-origins}")
+    private String allowedOrigins;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -87,12 +95,12 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService)
                 )
                 .successHandler(oAuth2LoginSuccessHandler)
-                .failureUrl("http://localhost:3000/login?error=true")
+                .failureUrl(frontendUrl + "/login?error=true")
             )
             // 로그아웃 설정 (JWT 방식에서는 프론트엔드에서 토큰 삭제)
             .logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("http://localhost:3000/")
+                .logoutSuccessUrl(frontendUrl + "/")
                 .deleteCookies("JSESSIONID")
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
@@ -104,12 +112,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration c = new CorsConfiguration();
-        // 프론트 개발 서버
-        c.setAllowedOrigins(List.of("http://localhost:3000"));
-        // ✅ PATCH/DELETE/OPTIONS 포함
+        // 환경별 설정에서 허용된 origin 목록 로드
+        c.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
+        // PATCH/DELETE/OPTIONS 포함
         c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        // ✅ CSRF 헤더 포함
-        c.setAllowedHeaders(List.of("*", "X-XSRF-TOKEN", "X-CSRF-TOKEN", "Content-Type", "Authorization"));
+        // 필요한 헤더만 명시적으로 허용
+        c.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "X-CSRF-TOKEN"));
         c.setAllowCredentials(true);
         c.setMaxAge(3600L);
 
