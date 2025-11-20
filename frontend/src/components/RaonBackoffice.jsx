@@ -41,7 +41,7 @@ function RaonBackoffice() {
         if (configData.sttModels?.length > 0) setSelectedSTT(configData.sttModels[0]);
       }
 
-      alert("✅ 설정 로드 성공!");
+      
     } catch (error) {
       alert(`❌ 설정 로드 실패: ${error.message}`);
     } finally {

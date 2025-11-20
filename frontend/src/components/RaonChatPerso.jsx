@@ -8,6 +8,7 @@ import ChatMessages from './chat/ChatMessages';
 import ChatInput from './chat/ChatInput';
 import SideMenu from './chat/SideMenu';
 import ErrorNotification from './chat/ErrorNotification';
+import RestoreButton from './chat/RestoreButton';
 
 const PERSO_SDK_URL = 'https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js';
 
@@ -60,6 +61,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   // TTS 켜짐/꺼짐
   const [isTTSOn, setIsTTSOn] = useState(true);
+
+  // 복원 가능한 대화 내역 여부
+  const [hasRestorableHistory, setHasRestorableHistory] = useState(false);
 
   // STT (음성 입력) 상태
   const [isListening, setIsListening] = useState(false);
@@ -139,14 +143,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
     };
   }, []);
 
-  // SDK 로드 완료 후 자동으로 세션 재연결 시도
+  // SDK 로드 완료 후 복원 가능한 대화 확인
   useEffect(() => {
-    if (sdkLoaded && sdkConfig && !isSessionActive) {
-      logger.log('🔄 SDK loaded and config available, trying to restore session...');
-      tryRestoreSession();
+    if (sdkLoaded && !isSessionActive) {
+      checkRestorableHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sdkLoaded, sdkConfig]);
+  }, [sdkLoaded, isSessionActive]);
 
   // TTS ON/OFF 제어
   useEffect(() => {
@@ -163,7 +166,131 @@ function RaonChatPerso({ user, isLoggedIn }) {
     }
   }, [isTTSOn]);
 
-  // 세션 재연결 시도 (저장된 세션 ID 사용)
+  // 복원 가능한 대화 내역 확인
+  const checkRestorableHistory = async () => {
+    const savedSessionId = sessionStorage.getItem('raon_session_id');
+    const chatRoomId = sessionStorage.getItem('raon_chat_room_id');
+
+    // 세션 ID나 채팅방 ID가 있으면 복원 가능
+    if (savedSessionId || chatRoomId) {
+      try {
+        // 백엔드에서 메시지 확인
+        let hasMessages = false;
+
+        if (chatRoomId) {
+          const response = await fetch(`/raon/api/chatrooms/${chatRoomId}/messages`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const messages = await response.json();
+            hasMessages = messages.length > 0;
+          }
+        } else if (savedSessionId) {
+          const response = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const messages = await response.json();
+            hasMessages = messages.length > 0;
+          }
+        }
+
+        setHasRestorableHistory(hasMessages);
+        if (hasMessages) {
+          logger.log('📋 복원 가능한 대화 내역이 있습니다');
+        }
+      } catch (err) {
+        logger.warn('⚠️ Failed to check restorable history:', err);
+        setHasRestorableHistory(false);
+      }
+    } else {
+      setHasRestorableHistory(false);
+    }
+  };
+
+  // 채팅 내역 수동 복원 (사용자가 버튼 클릭 시)
+  const restoreChatHistory = async () => {
+    const chatRoomId = sessionStorage.getItem('raon_chat_room_id');
+    const savedSessionId = sessionStorage.getItem('raon_session_id');
+
+    if (!chatRoomId && !savedSessionId) {
+      setError('복원할 대화 내역이 없습니다.');
+      return;
+    }
+
+    try {
+      logger.log('📥 채팅 내역 복원 시작...');
+      let messagesData = [];
+
+      // 채팅방 ID로 복원 시도 (우선순위 1)
+      if (chatRoomId) {
+        const response = await fetch(`/raon/api/chatrooms/${chatRoomId}/messages`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          messagesData = await response.json();
+          logger.log('📥 채팅방에서 메시지 로드:', messagesData.length);
+        }
+      }
+
+      // 세션 ID로 복원 시도 (우선순위 2)
+      if (messagesData.length === 0 && savedSessionId) {
+        const response = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          messagesData = await response.json();
+          logger.log('📥 세션에서 메시지 로드:', messagesData.length);
+        }
+      }
+
+      if (messagesData.length > 0) {
+        const restoredMessages = messagesData.map(msg => ({
+          id: msg.messageId,
+          type: msg.role === 'user' ? 'user' : 'ai',
+          text: msg.content,
+          time: new Date(msg.createdAt).toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+          })
+        }));
+
+        // 인트로 메시지 추가 (없는 경우)
+        const hasIntro = restoredMessages.some(m => m.type === 'ai' && m.id === 0);
+        if (!hasIntro) {
+          restoredMessages.unshift({
+            id: 0,
+            type: 'ai',
+            text: sdkConfig?.introMessage || '안녕하세요!',
+            time: new Date().toLocaleTimeString('ko-KR', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            })
+          });
+        }
+
+        setMessages(restoredMessages);
+        restoredMessagesRef.current = restoredMessages;
+        setHasRestorableHistory(false); // 복원 후 버튼 숨김
+        logger.log('✅ 채팅 내역 복원 완료:', restoredMessages.length);
+
+        // 성공 메시지
+        setError('✅ 이전 대화가 복원되었습니다!');
+        setTimeout(() => setError(null), 3000);
+      } else {
+        setError('복원할 메시지가 없습니다.');
+        setTimeout(() => setError(null), 3000);
+      }
+    } catch (err) {
+      logger.error('❌ 채팅 내역 복원 실패:', err);
+      setError('채팅 내역 복원에 실패했습니다.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  // 세션 재연결 시도 (저장된 세션 ID 사용) - 자동 재연결 시에만 사용
   const tryRestoreSession = async () => {
     const savedSessionId = sessionStorage.getItem('raon_session_id');
 
@@ -309,93 +436,20 @@ function RaonChatPerso({ user, isLoggedIn }) {
       setPersoSession(session);
       setIsSessionActive(true);
 
-      // 백엔드에서 채팅 기록 복원 (우선순위 1)
-      try {
-        const messagesResponse = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
-          credentials: 'include'
-        });
+      // 인트로 메시지만 표시 (채팅 내역은 사용자가 수동으로 복원)
+      const defaultMessage = [{
+        id: 0,
+        type: 'ai',
+        text: sdkConfig?.introMessage || '안녕하세요!',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      }];
+      setMessages(defaultMessage);
 
-        if (messagesResponse.ok) {
-          const messagesData = await messagesResponse.json();
-          logger.log('📥 Messages loaded from backend:', messagesData.length);
-
-          if (messagesData.length > 0) {
-            const restoredMessages = messagesData.map(msg => ({
-              id: msg.messageId,
-              type: msg.role === 'user' ? 'user' : 'ai',
-              text: msg.content,
-              time: new Date(msg.createdAt).toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              })
-            }));
-
-            // 인트로 메시지가 없으면 추가
-            const hasIntro = restoredMessages.some(m => m.type === 'ai' && m.id === 0);
-            if (!hasIntro) {
-              restoredMessages.unshift({
-                id: 0,
-                type: 'ai',
-                text: sdkConfig?.introMessage || '안녕하세요!',
-                time: new Date().toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true
-                })
-              });
-            }
-
-            setMessages(restoredMessages);
-            restoredMessagesRef.current = restoredMessages;
-            logger.log('✅ Messages restored from backend');
-            return true;
-          }
-        }
-      } catch (err) {
-        logger.warn('⚠️ Failed to load messages from backend, trying sessionStorage:', err);
-      }
-
-      // sessionStorage에서 채팅 기록 복원 (우선순위 2 - 백엔드 실패 시)
-      const sessionKey = `raon_chat_messages_${savedSessionId}`;
-      const savedMessages = sessionStorage.getItem(sessionKey);
-      if (savedMessages) {
-        try {
-          const parsedMessages = JSON.parse(savedMessages);
-          logger.log('📥 Restoring messages from sessionStorage:', parsedMessages.length);
-          setMessages(parsedMessages);
-          restoredMessagesRef.current = parsedMessages;
-        } catch (e) {
-          logger.error('❌ Failed to restore messages:', e);
-          const defaultMessage = [{
-            id: 0,
-            type: 'ai',
-            text: sdkConfig?.introMessage || '안녕하세요!',
-            time: new Date().toLocaleTimeString('ko-KR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-          }];
-          setMessages(defaultMessage);
-          restoredMessagesRef.current = null;
-        }
-      } else {
-        // 저장된 메시지 없음 - 인트로 메시지만 표시
-        const defaultMessage = [{
-          id: 0,
-          type: 'ai',
-          text: sdkConfig?.introMessage || '안녕하세요!',
-          time: new Date().toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          })
-        }];
-        setMessages(defaultMessage);
-      }
-
-      logger.log('✅ Session restored successfully');
+      logger.log('✅ Session restored successfully (without chat history)');
       return true;
 
     } catch (err) {
@@ -632,102 +686,23 @@ function RaonChatPerso({ user, isLoggedIn }) {
       logger.log('📝 SDK Config:', sdkConfig);
       logger.log('📝 Intro Message:', sdkConfig?.introMessage);
 
-      // 자동 재연결 시 이전 대화 복원 (previousChatRoomId가 있으면 자동 재연결)
-      if (previousChatRoomId) {
-        try {
-          logger.log('🔄 Auto-reconnect detected, loading previous messages from chatRoomId:', previousChatRoomId);
-          const messagesResponse = await fetch(`/raon/api/chatrooms/${previousChatRoomId}/messages`, {
-            credentials: 'include'
-          });
+      // 인트로 메시지만 표시 (채팅 내역은 사용자가 수동으로 복원)
+      const defaultMessage = [{
+        id: 0,
+        type: 'ai',
+        text: sdkConfig?.introMessage || '안녕하세요!',
+        time: new Date().toLocaleTimeString('ko-KR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      }];
+      setMessages(defaultMessage);
+      restoredMessagesRef.current = null;
 
-          if (messagesResponse.ok) {
-            const messagesData = await messagesResponse.json();
-            logger.log('📥 Previous messages loaded from chatroom:', messagesData.length);
-
-            if (messagesData.length > 0) {
-              const restoredMessages = messagesData.map(msg => ({
-                id: msg.messageId,
-                type: msg.role === 'user' ? 'user' : 'ai',
-                text: msg.content,
-                time: new Date(msg.createdAt).toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true
-                })
-              }));
-
-              // 인트로 메시지가 없으면 추가
-              const hasIntro = restoredMessages.some(m => m.type === 'ai' && m.id === 0);
-              if (!hasIntro) {
-                restoredMessages.unshift({
-                  id: 0,
-                  type: 'ai',
-                  text: sdkConfig?.introMessage || '안녕하세요!',
-                  time: new Date().toLocaleTimeString('ko-KR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                  })
-                });
-              }
-
-              setMessages(restoredMessages);
-              restoredMessagesRef.current = restoredMessages;
-              logger.log('✅ Previous conversation restored on auto-reconnect');
-
-              // 재연결 성공 메시지 표시 후 3초 뒤 자동 제거
-              setError('✅ 재연결 완료! 이전 대화가 복원되었습니다.');
-              setTimeout(() => {
-                setError(null);
-              }, 3000);
-
-              return; // 복원 성공 시 종료
-            }
-          }
-        } catch (err) {
-          logger.warn('⚠️ Failed to load previous messages on auto-reconnect:', err);
-        }
-      }
-
-      // 자동 재연결이 아니거나 메시지 로드 실패 시: 세션 ID별 sessionStorage에서 복원 시도
-      const sessionKey = `raon_chat_messages_${createdSessionId}`;
-      const savedMessages = sessionStorage.getItem(sessionKey);
-      if (savedMessages) {
-        try {
-          const parsedMessages = JSON.parse(savedMessages);
-          logger.log('📥 Restoring saved messages from sessionStorage:', parsedMessages.length);
-          setMessages(parsedMessages);
-          restoredMessagesRef.current = parsedMessages;
-        } catch (e) {
-          logger.error('❌ Failed to restore messages:', e);
-          // 복원 실패 시 기본 인트로 메시지 설정
-          const defaultMessage = [{
-            id: 1,
-            type: 'ai',
-            text: sdkConfig?.introMessage || '안녕하세요!',
-            time: new Date().toLocaleTimeString('ko-KR', {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true
-            })
-          }];
-          setMessages(defaultMessage);
-          restoredMessagesRef.current = null;
-        }
-      } else {
-        // 저장된 메시지가 없으면 기본 인트로 메시지 설정
-        const defaultMessage = [{
-          id: 1,
-          type: 'ai',
-          text: sdkConfig?.introMessage || '안녕하세요!',
-          time: new Date().toLocaleTimeString('ko-KR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          })
-        }];
-        setMessages(defaultMessage);
-        restoredMessagesRef.current = null;
+      // 복원 가능한 대화가 있는지 확인
+      if (previousChatRoomId || chatRoomId) {
+        checkRestorableHistory();
       }
 
     } catch (err) {
@@ -1067,6 +1042,10 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
         {/* 오른쪽: 채팅 */}
         <div className="chat-container">
+          <RestoreButton
+            onRestore={restoreChatHistory}
+            hasRestorableHistory={hasRestorableHistory}
+          />
           <ChatMessages messages={messages} />
           <ChatInput
             inputText={inputText}
