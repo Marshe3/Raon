@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import { ko } from 'date-fns/locale';
+import 'react-datepicker/dist/react-datepicker.css';
 import './RaonResume.css';
 
 /**
@@ -64,6 +67,8 @@ function RaonResume() {
         educationType: '',
         schoolName: '',
         major: '',
+        startDate: '',
+        endDate: '',
         attendancePeriod: '',
         status: '',
         gpa: '',
@@ -80,14 +85,39 @@ function RaonResume() {
     }));
   };
 
+  // Date 객체를 YYYY.MM 형식으로 변환
+  const formatDateToYearMonth = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}.${month}`;
+  };
+
   // 학력 변경
   const handleEducationChange = (index, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      educations: prev.educations.map((edu, i) =>
-        i === index ? { ...edu, [field]: value } : edu
-      )
-    }));
+    setFormData(prev => {
+      const updatedEducations = prev.educations.map((edu, i) => {
+        if (i !== index) return edu;
+
+        const updated = { ...edu, [field]: value };
+
+        // 날짜 필드가 변경되면 attendancePeriod 자동 생성
+        if (field === 'startDate' || field === 'endDate') {
+          const start = field === 'startDate' ? value : edu.startDate;
+          const end = field === 'endDate' ? value : edu.endDate;
+
+          if (start && end) {
+            updated.attendancePeriod = `${formatDateToYearMonth(start)} ~ ${formatDateToYearMonth(end)}`;
+          } else if (start) {
+            updated.attendancePeriod = `${formatDateToYearMonth(start)} ~`;
+          }
+        }
+
+        return updated;
+      });
+
+      return { ...prev, educations: updatedEducations };
+    });
   };
 
   // 경력 추가
@@ -97,6 +127,8 @@ function RaonResume() {
       careers: [...prev.careers, {
         companyName: '',
         position: '',
+        startDate: '',
+        endDate: '',
         employmentPeriod: '',
         isCurrent: false,
         responsibilities: '',
@@ -116,12 +148,39 @@ function RaonResume() {
 
   // 경력 변경
   const handleCareerChange = (index, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      careers: prev.careers.map((career, i) =>
-        i === index ? { ...career, [field]: value } : career
-      )
-    }));
+    setFormData(prev => {
+      const updatedCareers = prev.careers.map((career, i) => {
+        if (i !== index) return career;
+
+        const updated = { ...career, [field]: value };
+
+        // 현재 재직중 체크 시 endDate 초기화
+        if (field === 'isCurrent' && value === true) {
+          updated.endDate = '';
+          if (updated.startDate) {
+            updated.employmentPeriod = `${formatDateToYearMonth(updated.startDate)} ~ 현재`;
+          }
+        }
+
+        // 날짜 필드가 변경되면 employmentPeriod 자동 생성
+        if (field === 'startDate' || field === 'endDate') {
+          const start = field === 'startDate' ? value : career.startDate;
+          const end = field === 'endDate' ? value : career.endDate;
+
+          if (career.isCurrent && start) {
+            updated.employmentPeriod = `${formatDateToYearMonth(start)} ~ 현재`;
+          } else if (start && end) {
+            updated.employmentPeriod = `${formatDateToYearMonth(start)} ~ ${formatDateToYearMonth(end)}`;
+          } else if (start) {
+            updated.employmentPeriod = `${formatDateToYearMonth(start)} ~`;
+          }
+        }
+
+        return updated;
+      });
+
+      return { ...prev, careers: updatedCareers };
+    });
   };
 
   // 이력서 생성
@@ -414,12 +473,42 @@ function RaonResume() {
                   </div>
 
                   <div className="form-group">
-                    <label>재학기간</label>
+                    <label>시작일</label>
+                    <DatePicker
+                      selected={edu.startDate}
+                      onChange={(date) => handleEducationChange(index, 'startDate', date)}
+                      dateFormat="yyyy.MM"
+                      showMonthYearPicker
+                      locale={ko}
+                      placeholderText="시작일 선택"
+                      className="date-picker-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>종료일</label>
+                    <DatePicker
+                      selected={edu.endDate}
+                      onChange={(date) => handleEducationChange(index, 'endDate', date)}
+                      dateFormat="yyyy.MM"
+                      showMonthYearPicker
+                      locale={ko}
+                      placeholderText="종료일 선택"
+                      minDate={edu.startDate}
+                      className="date-picker-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>재학기간 (자동생성)</label>
                     <input
                       type="text"
                       value={edu.attendancePeriod}
-                      onChange={(e) => handleEducationChange(index, 'attendancePeriod', e.target.value)}
-                      placeholder="예: 2018.03 ~ 2022.02"
+                      readOnly
+                      placeholder="시작일과 종료일을 선택하세요"
+                      className="readonly-field"
                     />
                   </div>
                 </div>
@@ -491,12 +580,43 @@ function RaonResume() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label>근무기간</label>
+                    <label>시작일</label>
+                    <DatePicker
+                      selected={career.startDate}
+                      onChange={(date) => handleCareerChange(index, 'startDate', date)}
+                      dateFormat="yyyy.MM"
+                      showMonthYearPicker
+                      locale={ko}
+                      placeholderText="시작일 선택"
+                      className="date-picker-input"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>종료일</label>
+                    <DatePicker
+                      selected={career.endDate}
+                      onChange={(date) => handleCareerChange(index, 'endDate', date)}
+                      dateFormat="yyyy.MM"
+                      showMonthYearPicker
+                      locale={ko}
+                      placeholderText="종료일 선택"
+                      minDate={career.startDate}
+                      disabled={career.isCurrent}
+                      className="date-picker-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>근무기간 (자동생성)</label>
                     <input
                       type="text"
                       value={career.employmentPeriod}
-                      onChange={(e) => handleCareerChange(index, 'employmentPeriod', e.target.value)}
-                      placeholder="예: 2020.03 ~ 2022.12"
+                      readOnly
+                      placeholder="시작일과 종료일을 선택하세요"
+                      className="readonly-field"
                     />
                   </div>
 
