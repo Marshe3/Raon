@@ -19,6 +19,7 @@ function RaonResume() {
     email: '',
     desiredPosition: '',
     skills: '',
+    coverLetter: '', // 자소서 추가
     isDefault: false,
     educations: [],
     careers: []
@@ -39,7 +40,6 @@ function RaonResume() {
         const data = await response.json();
         setResumes(data);
       } else if (response.status === 401) {
-        // 로그인 필요
         navigate('/login');
       }
     } catch (error) {
@@ -56,6 +56,74 @@ function RaonResume() {
     }));
   };
 
+  // 학력 추가
+  const handleAddEducation = () => {
+    setFormData(prev => ({
+      ...prev,
+      educations: [...prev.educations, {
+        educationType: '',
+        schoolName: '',
+        major: '',
+        attendancePeriod: '',
+        status: '',
+        gpa: '',
+        orderIndex: prev.educations.length
+      }]
+    }));
+  };
+
+  // 학력 삭제
+  const handleRemoveEducation = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      educations: prev.educations.filter((_, i) => i !== index)
+    }));
+  };
+
+  // 학력 변경
+  const handleEducationChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      educations: prev.educations.map((edu, i) =>
+        i === index ? { ...edu, [field]: value } : edu
+      )
+    }));
+  };
+
+  // 경력 추가
+  const handleAddCareer = () => {
+    setFormData(prev => ({
+      ...prev,
+      careers: [...prev.careers, {
+        companyName: '',
+        position: '',
+        employmentPeriod: '',
+        isCurrent: false,
+        responsibilities: '',
+        achievements: '',
+        orderIndex: prev.careers.length
+      }]
+    }));
+  };
+
+  // 경력 삭제
+  const handleRemoveCareer = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      careers: prev.careers.filter((_, i) => i !== index)
+    }));
+  };
+
+  // 경력 변경
+  const handleCareerChange = (index, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      careers: prev.careers.map((career, i) =>
+        i === index ? { ...career, [field]: value } : career
+      )
+    }));
+  };
+
   // 이력서 생성
   const handleCreate = () => {
     setEditingResume(null);
@@ -66,6 +134,7 @@ function RaonResume() {
       email: '',
       desiredPosition: '',
       skills: '',
+      coverLetter: '',
       isDefault: false,
       educations: [],
       careers: []
@@ -83,6 +152,7 @@ function RaonResume() {
       email: resume.email || '',
       desiredPosition: resume.desiredPosition || '',
       skills: resume.skills || '',
+      coverLetter: resume.coverLetter || '',
       isDefault: resume.isDefault || false,
       educations: resume.educations || [],
       careers: resume.careers || []
@@ -195,6 +265,12 @@ function RaonResume() {
                     <p><strong>연락처:</strong> {resume.phone}</p>
                     <p><strong>이메일:</strong> {resume.email}</p>
                     {resume.skills && <p><strong>기술/역량:</strong> {resume.skills}</p>}
+                    {resume.educations && resume.educations.length > 0 && (
+                      <p><strong>학력:</strong> {resume.educations.length}개</p>
+                    )}
+                    {resume.careers && resume.careers.length > 0 && (
+                      <p><strong>경력:</strong> {resume.careers.length}개</p>
+                    )}
                   </div>
                   <div className="card-actions">
                     <button onClick={() => handleEdit(resume)} className="btn-edit">수정</button>
@@ -214,72 +290,267 @@ function RaonResume() {
         <div className="resume-form">
           <h2>{editingResume ? '이력서 수정' : '새 이력서 작성'}</h2>
 
-          <div className="form-group">
-            <label>제목 *</label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              placeholder="예: 네이버 지원용"
-              required
-            />
+          {/* 기본 정보 */}
+          <div className="form-section">
+            <h3>기본 정보</h3>
+
+            <div className="form-group">
+              <label>제목 *</label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                placeholder="예: 네이버 지원용"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>이름 *</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>연락처</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="010-1234-5678"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>이메일</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>희망 직무</label>
+              <input
+                type="text"
+                name="desiredPosition"
+                value={formData.desiredPosition}
+                onChange={handleInputChange}
+                placeholder="예: 백엔드 개발자"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>기술/역량</label>
+              <textarea
+                name="skills"
+                value={formData.skills}
+                onChange={handleInputChange}
+                placeholder="예: Java, Spring Boot, MySQL, Git"
+                rows="3"
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>이름 *</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-            />
+          {/* 학력 */}
+          <div className="form-section">
+            <div className="section-header">
+              <h3>학력</h3>
+              <button type="button" onClick={handleAddEducation} className="btn-add">+ 추가</button>
+            </div>
+
+            {formData.educations.map((edu, index) => (
+              <div key={index} className="item-box">
+                <div className="item-header">
+                  <span>학력 {index + 1}</span>
+                  <button type="button" onClick={() => handleRemoveEducation(index)} className="btn-remove">삭제</button>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>학력 구분</label>
+                    <select
+                      value={edu.educationType}
+                      onChange={(e) => handleEducationChange(index, 'educationType', e.target.value)}
+                    >
+                      <option value="">선택</option>
+                      <option value="고등학교">고등학교</option>
+                      <option value="대학교(학사)">대학교(학사)</option>
+                      <option value="대학원(석사)">대학원(석사)</option>
+                      <option value="대학원(박사)">대학원(박사)</option>
+                      <option value="기타">기타</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>학교명</label>
+                    <input
+                      type="text"
+                      value={edu.schoolName}
+                      onChange={(e) => handleEducationChange(index, 'schoolName', e.target.value)}
+                      placeholder="예: 한국대학교"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>전공</label>
+                    <input
+                      type="text"
+                      value={edu.major}
+                      onChange={(e) => handleEducationChange(index, 'major', e.target.value)}
+                      placeholder="고졸인 경우 비워두셔도 됩니다"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>재학기간</label>
+                    <input
+                      type="text"
+                      value={edu.attendancePeriod}
+                      onChange={(e) => handleEducationChange(index, 'attendancePeriod', e.target.value)}
+                      placeholder="예: 2018.03 ~ 2022.02"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>상태</label>
+                    <select
+                      value={edu.status}
+                      onChange={(e) => handleEducationChange(index, 'status', e.target.value)}
+                    >
+                      <option value="">선택</option>
+                      <option value="졸업">졸업</option>
+                      <option value="재학중">재학중</option>
+                      <option value="중퇴">중퇴</option>
+                      <option value="수료">수료</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>학점 (선택)</label>
+                    <input
+                      type="text"
+                      value={edu.gpa}
+                      onChange={(e) => handleEducationChange(index, 'gpa', e.target.value)}
+                      placeholder="예: 4.0/4.5"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="form-group">
-            <label>연락처</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="010-1234-5678"
-            />
+          {/* 경력 */}
+          <div className="form-section">
+            <div className="section-header">
+              <h3>경력</h3>
+              <button type="button" onClick={handleAddCareer} className="btn-add">+ 추가</button>
+            </div>
+
+            {formData.careers.map((career, index) => (
+              <div key={index} className="item-box">
+                <div className="item-header">
+                  <span>경력 {index + 1}</span>
+                  <button type="button" onClick={() => handleRemoveCareer(index)} className="btn-remove">삭제</button>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>회사명</label>
+                    <input
+                      type="text"
+                      value={career.companyName}
+                      onChange={(e) => handleCareerChange(index, 'companyName', e.target.value)}
+                      placeholder="예: (주)테크컴퍼니"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>직무/직책</label>
+                    <input
+                      type="text"
+                      value={career.position}
+                      onChange={(e) => handleCareerChange(index, 'position', e.target.value)}
+                      placeholder="예: 백엔드 개발자"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>근무기간</label>
+                    <input
+                      type="text"
+                      value={career.employmentPeriod}
+                      onChange={(e) => handleCareerChange(index, 'employmentPeriod', e.target.value)}
+                      placeholder="예: 2020.03 ~ 2022.12"
+                    />
+                  </div>
+
+                  <div className="form-group-checkbox">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={career.isCurrent}
+                        onChange={(e) => handleCareerChange(index, 'isCurrent', e.target.checked)}
+                      />
+                      현재 재직중
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>담당업무</label>
+                  <textarea
+                    value={career.responsibilities}
+                    onChange={(e) => handleCareerChange(index, 'responsibilities', e.target.value)}
+                    placeholder="담당했던 업무를 자유롭게 작성해주세요"
+                    rows="3"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>성과 (선택)</label>
+                  <textarea
+                    value={career.achievements}
+                    onChange={(e) => handleCareerChange(index, 'achievements', e.target.value)}
+                    placeholder="업무 성과를 자유롭게 작성해주세요"
+                    rows="2"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="form-group">
-            <label>이메일</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-            />
+          {/* 자소서 */}
+          <div className="form-section">
+            <h3>자기소개서</h3>
+            <div className="form-group">
+              <label>자소서 내용</label>
+              <textarea
+                name="coverLetter"
+                value={formData.coverLetter}
+                onChange={handleInputChange}
+                placeholder="자기소개서를 자유롭게 작성해주세요. 지원동기, 성장과정, 강점, 입사 후 포부 등을 포함할 수 있습니다."
+                rows="10"
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>희망 직무</label>
-            <input
-              type="text"
-              name="desiredPosition"
-              value={formData.desiredPosition}
-              onChange={handleInputChange}
-              placeholder="예: 백엔드 개발자"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>기술/역량</label>
-            <textarea
-              name="skills"
-              value={formData.skills}
-              onChange={handleInputChange}
-              placeholder="예: Java, Spring Boot, MySQL, Git"
-              rows="4"
-            />
-          </div>
-
+          {/* 기본 설정 */}
           <div className="form-group-checkbox">
             <label>
               <input
@@ -288,7 +559,7 @@ function RaonResume() {
                 checked={formData.isDefault}
                 onChange={handleInputChange}
               />
-              기본 이력서로 설정
+              기본 이력서로 설정 (면접 챗봇이 이 이력서를 참고합니다)
             </label>
           </div>
 
