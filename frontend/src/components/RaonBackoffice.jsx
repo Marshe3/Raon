@@ -6,8 +6,21 @@ import ReactDOM from "react-dom";
 import "./RaonBackoffice.css";
 import { logger } from "../utils/logger";
 
-function RaonBackoffice() {
+function RaonBackoffice({ user, isLoggedIn }) {
   const navigate = useNavigate();
+
+  // 로그인 체크 - 로그인하지 않은 경우 3초 후 홈으로 리다이렉트
+  useEffect(() => {
+    if (!isLoggedIn) {
+      logger.warn('⚠️ 로그인이 필요한 서비스입니다');
+      const timer = setTimeout(() => {
+        logger.log('🔄 홈페이지로 이동합니다');
+        navigate('/');
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, navigate]);
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState(null);
@@ -138,6 +151,62 @@ function RaonBackoffice() {
     exit: { opacity: 0, y: -5, scale: 0.98 },
     transition: { duration: 0.15 },
   };
+
+  // 로그인하지 않은 경우 안내 화면 표시
+  if (!isLoggedIn) {
+    return (
+      <div className="backoffice-container">
+        <header className="backoffice-header">
+          <div className="header-content">
+            <h1 onClick={() => navigate("/")}>RAON 백오피스</h1>
+          </div>
+        </header>
+
+        {/* 로그인 안내 */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: 'calc(100vh - 80px)',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        }}>
+          <div style={{
+            textAlign: 'center',
+            padding: '40px',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            maxWidth: '500px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
+            <h2 style={{ marginBottom: '16px', color: '#333' }}>로그인이 필요합니다</h2>
+            <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
+              백오피스 서비스를 이용하시려면 로그인이 필요합니다.<br/>
+              3초 후 홈페이지로 이동합니다.
+            </p>
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                padding: '12px 32px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'transform 0.2s',
+              }}
+              onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+            >
+              홈페이지로 이동
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="backoffice-container" style={{ overflow: "visible", position: "relative", zIndex: 0 }}>

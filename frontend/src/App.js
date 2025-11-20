@@ -9,6 +9,7 @@ import RaonBackoffice from "./components/RaonBackoffice.jsx";
 import AccountEdit from "./components/AccountEdit.jsx";
 import TopBar from "./components/TopBar.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
+import RaonResume from "./components/RaonResume.jsx";
 import { logger } from "./utils/logger";
 
 export default function App() {
@@ -193,6 +194,8 @@ function AppInner() {
           element={
             isLoggedIn ? (
               <AccountEdit
+                user={user}
+                isLoggedIn={isLoggedIn}
                 onSaved={(newNickname) => {
                   // 닉네임 저장 직후 TopBar에 즉시 반영
                   setUser((prev) => ({ ...(prev || {}), nickname: newNickname }));
@@ -208,8 +211,9 @@ function AppInner() {
         <Route path="/chatrooms" element={<RaonChatList />} />
         <Route path="/chatlist" element={<RaonChatList />} />
         <Route path="/chat/:id" element={<RaonChatPerso user={user} isLoggedIn={isLoggedIn} />} />
-        <Route path="/avatar" element={<RaonAvatar />} />
-        <Route path="/backoffice" element={<RaonBackoffice />} />
+        <Route path="/avatar" element={<RaonAvatar user={user} isLoggedIn={isLoggedIn} />} />
+        <Route path="/backoffice" element={<RaonBackoffice user={user} isLoggedIn={isLoggedIn} />} />
+        <Route path="/resume" element={isLoggedIn ? <RaonResume /> : <Navigate to="/login" replace />} />
 
         {/* 항상 마지막 */}
         <Route path="*" element={<Navigate to="/" replace />} />

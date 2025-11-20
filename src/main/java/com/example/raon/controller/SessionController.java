@@ -6,17 +6,22 @@ import com.example.raon.dto.MessageDto;
 import com.example.raon.dto.MessageSaveRequest;
 import com.example.raon.dto.SessionCreateRequest;
 import com.example.raon.dto.SessionResponse;
+import com.example.raon.dto.ResumeResponse;
+import com.example.raon.security.UserPrincipal;
 import com.example.raon.service.ChatRoomService;
 import com.example.raon.service.PersoAISessionService;
+import com.example.raon.service.ResumeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -26,15 +31,46 @@ public class SessionController {
 
     private final PersoAISessionService sessionService;
     private final ChatRoomService chatRoomService;
+    private final ResumeService resumeService;
 
     @PostMapping(
         value = "/create",
         consumes = MediaType.APPLICATION_JSON_VALUE,
         produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<?> createSession(@RequestBody SessionCreateRequest request) {
+    public ResponseEntity<?> createSession(
+            @RequestBody SessionCreateRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
         try {
             log.info("🚀 세션 생성 요청: {}", request);
+
+            // 사용자의 기본 이력서 조회 및 컨텍스트 추가
+            if (principal != null) {
+                Long userId = principal.getUserId();
+                try {
+                    // 기본 이력서가 있으면 가져오기
+                    List<ResumeResponse> resumes = resumeService.getAllResumes(userId);
+                    Optional<ResumeResponse> defaultResume = resumes.stream()
+                            .filter(ResumeResponse::getIsDefault)
+                            .findFirst();
+
+                    if (defaultResume.isPresent()) {
+                        String resumeContext = buildResumeContext(defaultResume.get());
+
+                        Map<String, Object> extraData = request.getExtraData();
+                        if (extraData == null) {
+                            extraData = new HashMap<>();
+                            request.setExtraData(extraData);
+                        }
+                        extraData.put("resume_context", resumeContext);
+                        log.info("📄 이력서 컨텍스트 추가: userId={}", userId);
+                    } else {
+                        log.info("ℹ️ 사용자 {}의 기본 이력서가 없습니다", userId);
+                    }
+                } catch (Exception e) {
+                    log.warn("⚠️ 이력서 조회 중 오류 (무시하고 계속): {}", e.getMessage());
+                }
+            }
 
             // 이전 채팅방 ID가 있으면 컨텍스트 생성
             if (request.getPreviousChatRoomId() != null) {
@@ -178,5 +214,85 @@ public class SessionController {
             error.put("message", e.getMessage());
             return ResponseEntity.status(500).body(error);
         }
+    }
+
+    /**
+     * 이력서 정보를 AI가 이해할 수 있는 컨텍스트 문자열로 변환
+     */
+    private String buildResumeContext(ResumeResponse resume) {
+        StringBuilder context = new StringBuilder();
+
+        context.append("=== 지원자 이력서 정보 ===\n\n");
+
+        // 기본 정보
+        context.append("📋 기본 정보\n");
+        context.append("- 이름: ").append(resume.getName()).append("\n");
+        if (resume.getEmail() != null) {
+            context.append("- 이메일: ").append(resume.getEmail()).append("\n");
+        }
+        if (resume.getPhone() != null) {
+            context.append("- 연락처: ").append(resume.getPhone()).append("\n");
+        }
+        if (resume.getDesiredPosition() != null) {
+            context.append("- 희망직무: ").append(resume.getDesiredPosition()).append("\n");
+        }
+        context.append("\n");
+
+        // 학력
+        if (resume.getEducations() != null && !resume.getEducations().isEmpty()) {
+            context.append("🎓 학력\n");
+            for (var edu : resume.getEducations()) {
+                context.append("- ").append(edu.getSchoolName());
+                if (edu.getMajor() != null && !edu.getMajor().isEmpty()) {
+                    context.append(" (").append(edu.getMajor()).append(")");
+                }
+                if (edu.getAttendancePeriod() != null) {
+                    context.append(" [").append(edu.getAttendancePeriod()).append("]");
+                }
+                if (edu.getStatus() != null) {
+                    context.append(" - ").append(edu.getStatus());
+                }
+                if (edu.getGpa() != null) {
+                    context.append(" (학점: ").append(edu.getGpa()).append(")");
+                }
+                context.append("\n");
+            }
+            context.append("\n");
+        }
+
+        // 경력
+        if (resume.getCareers() != null && !resume.getCareers().isEmpty()) {
+            context.append("💼 경력\n");
+            for (var career : resume.getCareers()) {
+                context.append("- ").append(career.getCompanyName());
+                if (career.getPosition() != null) {
+                    context.append(" / ").append(career.getPosition());
+                }
+                if (career.getEmploymentPeriod() != null) {
+                    context.append(" [").append(career.getEmploymentPeriod()).append("]");
+                }
+                if (Boolean.TRUE.equals(career.getIsCurrent())) {
+                    context.append(" (현재 재직중)");
+                }
+                context.append("\n");
+                if (career.getResponsibilities() != null && !career.getResponsibilities().isEmpty()) {
+                    context.append("  담당업무: ").append(career.getResponsibilities()).append("\n");
+                }
+                if (career.getAchievements() != null && !career.getAchievements().isEmpty()) {
+                    context.append("  주요성과: ").append(career.getAchievements()).append("\n");
+                }
+            }
+            context.append("\n");
+        }
+
+        // 기술 및 역량
+        if (resume.getSkills() != null && !resume.getSkills().isEmpty()) {
+            context.append("🛠️ 기술 및 역량\n");
+            context.append(resume.getSkills()).append("\n\n");
+        }
+
+        context.append("=== 이력서 정보 끝 ===\n");
+
+        return context.toString();
     }
 }
