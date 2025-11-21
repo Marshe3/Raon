@@ -44,9 +44,9 @@ public class SecurityConfig {
             // ✅ CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            // 세션을 사용하지 않음 (JWT 기반 인증)
+            // OAuth2 로그인 시에만 세션 사용, 일반 API는 JWT 기반 (세션 불필요)
             .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
             .authorizeHttpRequests(auth -> auth
                 // 정적 리소스 및 로그인 엔드포인트
