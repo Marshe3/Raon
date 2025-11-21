@@ -117,7 +117,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
-        return new HttpSessionOAuth2AuthorizationRequestRepository();
+        // 세션 대신 쿠키 기반 repository 사용 (세션 문제 우회)
+        return new CookieOAuth2AuthorizationRequestRepository();
     }
 
     @Bean
