@@ -19,7 +19,7 @@ public class CustomAuthorizationRequestResolver implements OAuth2AuthorizationRe
 
     public CustomAuthorizationRequestResolver(ClientRegistrationRepository clientRegistrationRepository) {
         this.defaultResolver = new DefaultOAuth2AuthorizationRequestResolver(
-                clientRegistrationRepository, "/oauth2/authorization");
+                clientRegistrationRepository, "/raon/oauth2/authorization");
     }
 
     @Override
