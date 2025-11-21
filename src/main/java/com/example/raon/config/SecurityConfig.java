@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.client.web.HttpSessionOAuth2Authoriza
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -88,6 +89,14 @@ public class SecurityConfig {
             )
             // JWT 인증 필터 추가 (UsernamePasswordAuthenticationFilter 이전에 실행)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // 인증되지 않은 요청 처리 (redirect 대신 401 응답)
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+                })
+            )
             // OAuth2 로그인 설정 (로그인 플로우에서만 사용)
             .oauth2Login(oauth2 -> oauth2
                 // 커스텀 Authorization Request Resolver 사용 (prompt=login 파라미터 추가)
