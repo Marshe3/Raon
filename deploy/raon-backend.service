@@ -1,0 +1,32 @@
+[Unit]
+Description=Raon Backend Spring Boot Application
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/Raon
+
+# 환경 변수 파일 로드
+EnvironmentFile=/opt/Raon/.env
+
+# Spring Boot 프로파일 설정
+Environment="SPRING_PROFILES_ACTIVE=prod"
+
+# Java 실행 경로
+ExecStart=/usr/bin/java -jar /opt/Raon/build/libs/Raon-0.0.1-SNAPSHOT.jar
+
+# 재시작 정책
+Restart=on-failure
+RestartSec=10
+
+# 로그 설정
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=raon-backend
+
+# 리소스 제한
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
