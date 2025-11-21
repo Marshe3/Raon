@@ -277,24 +277,26 @@
   line-height: 1.5;
 }
 
-/* CTA 섹션 */
+/* CTA 섹션 - 검은색 테마 */
 .cta-section {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-radius: 1rem;
   padding: 3rem;
   text-align: center;
   color: white;
+  margin-bottom: 2rem;
 }
 
 .cta-title {
   font-size: 2rem;
   font-weight: bold;
   margin-bottom: 1rem;
+  color: white;
 }
 
 .cta-description {
   font-size: 1.125rem;
-  color: #cbd5e1;
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 2rem;
 }
 

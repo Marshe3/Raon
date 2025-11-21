@@ -25,7 +25,6 @@ function GoogleIcon({ className = "" }) {
 function RaonSocialLogin() {
   return (
     <div className="min-h-screen bg-[#eef3ff] flex flex-col">
-      <div className="h-6 w-full bg-[#9C86F7]" />
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-[520px]">
           <div className="mx-auto bg-white rounded-2xl shadow-lg p-8 sm:p-10">

@@ -8,6 +8,7 @@ import RaonAvatar from "./components/RaonAvatar.jsx";
 import RaonBackoffice from "./components/RaonBackoffice.jsx";
 import AccountEdit from "./components/AccountEdit.jsx";
 import TopBar from "./components/TopBar.jsx";
+import Footer from "./components/Footer.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
 import RaonResume from "./components/RaonResume.jsx";
 import { logger } from "./utils/logger";
@@ -170,7 +171,7 @@ function AppInner() {
 
   return (
     <>
-      {/* 전역 네비게이션 */}
+      {/* 전역 네비게이션 - 모든 페이지에 항상 표시 */}
       <TopBar isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
 
       <Routes>
@@ -218,6 +219,9 @@ function AppInner() {
         {/* 항상 마지막 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
+      {/* 전역 Footer - 모든 페이지에 항상 표시 */}
+      <Footer />
     </>
   );
 }

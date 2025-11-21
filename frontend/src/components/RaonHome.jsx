@@ -44,11 +44,11 @@ function RaonHome() {
         />
         <ServiceCard
           icon={<FileText className="service-icon" />}
-          title="서류 첨삭"
+          title="이력서/자소서 작성"
           description="AI가 분석하는 이력서 & 자소서"
           features={["강점 분석", "개선 제안", "추천 문구"]}
           color="indigo"
-          onClick={() => navigate('/document-review')}
+          onClick={() => navigate('/resume')}
         />
         <ServiceCard
           icon={<History className="service-icon" />}
@@ -89,17 +89,17 @@ function RaonHome() {
         </div>
       </div>
 
-      {/* CTA 섹션 */}
+      {/* CTA 섹션 - 이력서/자소서로 변경 */}
       <div className="cta-section">
-        <h2 className="cta-title">지금 바로 면접 준비를 시작하세요</h2>
+        <h2 className="cta-title">완벽한 이력서와 자소서를 준비하세요</h2>
         <p className="cta-description">
-          무료로 시작하고, 당신의 면접 실력을 한 단계 업그레이드하세요
+          AI가 당신의 강점을 분석하고, 합격을 위한 최적의 문구를 제안합니다
         </p>
         <button 
           className="cta-button"
-          onClick={() => navigate('/avatar')}
+          onClick={() => navigate('/resume')}
         >
-          첫 면접 연습 시작하기
+          이력서/자소서 작성하기
         </button>
       </div>
     </div>
