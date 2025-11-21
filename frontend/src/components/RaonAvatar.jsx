@@ -49,7 +49,7 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
   useEffect(() => {
     const loadChatbots = async () => {
       try {
-        const response = await fetch('http://localhost:8086/raon/api/chatbots/public');
+        const response = await fetch('/raon/api/chatbots/public');
         if (!response.ok) {
           throw new Error('챗봇 목록을 불러오는데 실패했습니다');
         }
