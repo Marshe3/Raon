@@ -35,7 +35,7 @@ function RaonSocialLogin() {
             <div className="mt-8 space-y-3">
               <button
                 type="button"
-                onClick={() => window.location.href = 'http://localhost:8086/raon/oauth2/authorization/kakao'}
+                onClick={() => window.location.href = '/raon/oauth2/authorization/kakao'}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-[#e5d900] bg-[#FEE500] px-4 py-3 text-sm font-semibold text-gray-900 transition active:scale-[0.99] hover:bg-[#fee929] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9C86F7]"
                 aria-label="카카오로 시작하기"
               >
@@ -45,7 +45,7 @@ function RaonSocialLogin() {
 
               <button
                 type="button"
-                onClick={() => window.location.href = 'http://localhost:8086/raon/oauth2/authorization/google'}
+                onClick={() => window.location.href = '/raon/oauth2/authorization/google'}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-800 transition active:scale-[0.99] hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9C86F7]"
                 aria-label="구글로 시작하기"
               >
