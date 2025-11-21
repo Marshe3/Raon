@@ -144,14 +144,11 @@ function AppInner() {
 
   // 소셜 로그인
   const onKakao = () => {
-    window.Kakao?.Auth?.authorize({
-      redirectUri: `${window.location.origin}/login/oauth2/code/kakao`,
-      prompt: 'login', // 항상 로그인 화면 표시
-    });
+    window.location.href = "/raon/oauth2/authorization/kakao";
   };
   const onGoogle = () => {
     // CustomAuthorizationRequestResolver가 prompt=login 파라미터를 자동으로 추가
-    window.location.href = "/oauth2/authorization/google";
+    window.location.href = "/raon/oauth2/authorization/google";
   };
 
   const handleOpenChat = (id) => {
