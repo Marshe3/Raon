@@ -54,6 +54,7 @@ public class SecurityConfig {
                     "/", "/index.html", "/favicon.ico",
                     "/assets/**", "/static/**",
                     "/login/**", "/oauth2/**",
+                    "/raon/login/**", "/raon/oauth2/**",
                     "/api/auth/**", "/raon/api/auth/**",
                     "/loginSuccess", "/loginFailure"
                 ).permitAll()
