@@ -53,7 +53,8 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/", "/index.html", "/favicon.ico",
                     "/assets/**", "/static/**",
-                    "/login/**", "/oauth2/**", "/api/auth/**",
+                    "/login/**", "/oauth2/**",
+                    "/api/auth/**", "/raon/api/auth/**",
                     "/loginSuccess", "/loginFailure"
                 ).permitAll()
 
