@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * 채팅 입력 컴포넌트 (텍스트 입력 + 음성 입력 + 전송)
+ * 채팅 입력 컴포넌트 (텍스트 입력 + 음성 입력 + 전송 + 검색)
  */
 const ChatInput = ({
   inputText,
@@ -10,7 +10,14 @@ const ChatInput = ({
   onToggleVoiceInput,
   isSessionActive,
   isListening,
-  sttType
+  sttType,
+  // 검색 기능 추가
+  isSearchMode,
+  onToggleSearchMode,
+  searchResults,
+  currentSearchIndex,
+  onNextResult,
+  onPrevResult
 }) => {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -24,15 +31,35 @@ const ChatInput = ({
         <input
           type="text"
           className="input-field"
-          placeholder="메시지를 입력하세요..."
+          placeholder={isSearchMode ? "대화 내용 검색..." : "메시지를 입력하세요..."}
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyPress={handleKeyPress}
-          disabled={!isSessionActive}
+          disabled={!isSearchMode && !isSessionActive}
         />
-        <span className="edit-icon">✏️</span>
+        
+        {/* 검색/수정 아이콘 - 클릭 시 검색 모드 토글 */}
+        <span 
+          className="edit-icon" 
+          onClick={onToggleSearchMode}
+          style={{ cursor: 'pointer' }}
+          title={isSearchMode ? "메시지 전송 모드로 전환" : "대화 내용 검색"}
+        >
+          {isSearchMode ? '💬' : '🔍'}
+        </span>
+
+        {/* 검색 모드일 때 검색 결과 네비게이션 */}
+        {isSearchMode && searchResults && searchResults.length > 0 && (
+          <div className="search-results-info">
+            <button onClick={onPrevResult} className="search-nav-btn" title="이전 결과">▲</button>
+            <span className="search-count">{currentSearchIndex + 1}/{searchResults.length}</span>
+            <button onClick={onNextResult} className="search-nav-btn" title="다음 결과">▼</button>
+          </div>
+        )}
       </div>
-      {sttType && (
+
+      {/* 음성 입력 버튼 (검색 모드가 아닐 때만 표시) */}
+      {!isSearchMode && sttType && (
         <button
           className="mic-btn"
           onClick={onToggleVoiceInput}
@@ -55,12 +82,15 @@ const ChatInput = ({
           🎤
         </button>
       )}
+
+      {/* 전송/검색 버튼 */}
       <button
-        className="send-btn"
+        className={`send-btn ${isSearchMode ? 'search-mode' : ''}`}
         onClick={onSendMessage}
-        disabled={!isSessionActive || !inputText.trim()}
+        disabled={!isSearchMode && (!isSessionActive || !inputText.trim())}
+        title={isSearchMode ? "검색" : "전송"}
       >
-        ➤
+        {isSearchMode ? '🔍' : '➤'}
       </button>
     </div>
   );
