@@ -30,17 +30,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   const sdkConfig = stateSdkConfig || restoredSdkConfig;
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      logger.warn('⚠️ 로그인이 필요한 서비스입니다');
-      const timer = setTimeout(() => {
-        logger.log('🔄 홈페이지로 이동합니다');
-        navigate('/');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoggedIn, navigate]);
-
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [persoSession, setPersoSession] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -70,6 +59,52 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const audioContextRef = useRef(null);
   const restoredMessagesRef = useRef(null);
   const prevChatLogLengthRef = useRef(0);
+
+  // 로그인 체크
+  useEffect(() => {
+    if (!isLoggedIn) {
+      logger.warn('⚠️ 로그인이 필요한 서비스입니다');
+      const timer = setTimeout(() => {
+        logger.log('🔄 홈페이지로 이동합니다');
+        navigate('/');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, navigate]);
+
+  // 컴포넌트 언마운트 시 세션 종료
+  useEffect(() => {
+    return () => {
+      // 페이지를 떠날 때 세션 종료
+      if (persoSession && isSessionActive) {
+        logger.log('🚪 페이지를 떠납니다 - 세션 자동 종료');
+
+        // 녹음 중이면 중지
+        if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          mediaRecorderRef.current.stop();
+        }
+
+        // 음성 인식 중이면 중지
+        if (isListening && recognitionRef.current) {
+          recognitionRef.current.abort();
+        }
+
+        // 세션 종료
+        persoSession.close();
+
+        // 리소스 정리
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
+
+        logger.log('✅ 세션 및 리소스 정리 완료');
+      }
+    };
+  }, [persoSession, isSessionActive, isRecording, isListening]);
 
   const toggleBar = () => {
     setIsBarOpen(!isBarOpen);
@@ -995,29 +1030,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
           </button>
 
           <div style={{ flex: 1 }}></div>
-
-          {/* 복원 버튼 */}
-          {hasRestorableHistory && (
-            <button
-              className="sidebar-action-btn restore-btn"
-              onClick={restoreChatHistory}
-              title="이전 대화 복원"
-            >
-              <span>📋</span>
-              <span>복원</span>
-            </button>
-          )}
-
-          {/* 세션 종료 버튼 */}
-          <button
-            className="sidebar-action-btn end-btn"
-            onClick={endSession}
-            disabled={!isSessionActive}
-            title="세션 종료"
-          >
-            <span style={{ fontSize: '9px' }}>세션</span>
-            <span style={{ fontSize: '9px' }}>종료</span>
-          </button>
         </div>
 
         {/* AI 모델 섹션 */}
