@@ -1,15 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './RaonResume.css';
+import { logger } from '../utils/logger';
 
 const RaonResume = () => {
     // 페이지: 리스트/작성폼만 사용 (empty 페이지 제거)
-    const [currentPage, setCurrentPage] = useState('form'); // 'form', 'list'
+    const [currentPage, setCurrentPage] = useState('list'); // 'form', 'list'
     const [currentTab, setCurrentTab] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const totalTabs = 5;
 
-    // 나중에 실제 이력서 데이터를 넣을 자리
-    const [resumes, setResumes] = useState([]); // 지금은 빈 배열이라 카드 안 보임
+    // 이력서 목록
+    const [resumes, setResumes] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // 폼 데이터
+    const [formData, setFormData] = useState({
+        title: '',
+        name: '',
+        phone: '',
+        email: '',
+        desiredPosition: '',
+        skills: '',
+        isDefault: false,
+        schoolName: '',
+        major: '',
+        educationStatus: '',
+        educationType: '',
+        gpa: '',
+        companyName: '',
+        position: '',
+        responsibilities: '',
+        achievements: ''
+    });
 
     // 학력 날짜
     const [educationStartDate, setEducationStartDate] = useState('');
@@ -67,11 +89,131 @@ const RaonResume = () => {
         return result.trim();
     };
 
-    // 저장 버튼 (지금은 단순히 리스트 페이지로만 이동)
-    const handleSaveResume = () => {
-        // TODO: 나중에 실제 이력서 저장 로직 추가
-        navigateToList();
-        setCurrentTab(0);
+    // 이력서 목록 불러오기
+    const fetchResumes = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/raon/api/resumes', {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                logger.log('✅ 이력서 목록 불러오기 성공:', data);
+                setResumes(data);
+            } else {
+                logger.error('이력서 목록 불러오기 실패:', response.status);
+            }
+        } catch (error) {
+            logger.error('이력서 목록 불러오기 오류:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // 컴포넌트 마운트 시 이력서 목록 불러오기
+    useEffect(() => {
+        if (currentPage === 'list') {
+            fetchResumes();
+        }
+    }, [currentPage]);
+
+    // 저장 버튼
+    const handleSaveResume = async () => {
+        try {
+            setIsLoading(true);
+
+            // 학력 기간 계산
+            const attendancePeriod = calculatePeriod(educationStartDate, educationEndDate);
+
+            // 경력 기간 계산
+            const employmentPeriod = isCurrentJob
+                ? calculatePeriod(careerStartDate, new Date().toISOString().split('T')[0])
+                : calculatePeriod(careerStartDate, careerEndDate);
+
+            const requestData = {
+                title: formData.title,
+                name: formData.name,
+                phone: formData.phone,
+                email: formData.email,
+                desiredPosition: formData.desiredPosition,
+                skills: formData.skills,
+                isDefault: formData.isDefault,
+                educations: formData.schoolName ? [{
+                    educationType: formData.educationType,
+                    schoolName: formData.schoolName,
+                    major: formData.major,
+                    attendancePeriod: attendancePeriod,
+                    status: formData.educationStatus,
+                    gpa: formData.gpa,
+                    orderIndex: 0
+                }] : [],
+                careers: formData.companyName ? [{
+                    companyName: formData.companyName,
+                    position: formData.position,
+                    employmentPeriod: employmentPeriod,
+                    isCurrent: isCurrentJob,
+                    responsibilities: formData.responsibilities,
+                    achievements: formData.achievements,
+                    orderIndex: 0
+                }] : []
+            };
+
+            logger.log('📤 이력서 저장 요청:', requestData);
+
+            const response = await fetch('/raon/api/resumes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify(requestData)
+            });
+
+            if (response.ok) {
+                const savedResume = await response.json();
+                logger.log('✅ 이력서 저장 성공:', savedResume);
+                alert('이력서가 저장되었습니다!');
+
+                // 폼 초기화
+                setFormData({
+                    title: '',
+                    name: '',
+                    phone: '',
+                    email: '',
+                    desiredPosition: '',
+                    skills: '',
+                    isDefault: false,
+                    schoolName: '',
+                    major: '',
+                    educationStatus: '',
+                    educationType: '',
+                    gpa: '',
+                    companyName: '',
+                    position: '',
+                    responsibilities: '',
+                    achievements: ''
+                });
+                setEducationStartDate('');
+                setEducationEndDate('');
+                setCareerStartDate('');
+                setCareerEndDate('');
+                setIsCurrentJob(false);
+                setCurrentTab(0);
+
+                // 목록 페이지로 이동
+                navigateToList();
+            } else {
+                const errorText = await response.text();
+                logger.error('이력서 저장 실패:', response.status, errorText);
+                alert('이력서 저장에 실패했습니다. 필수 항목을 확인해주세요.');
+            }
+        } catch (error) {
+            logger.error('이력서 저장 오류:', error);
+            alert('이력서 저장 중 오류가 발생했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleDeleteResume = () => {
@@ -115,29 +257,59 @@ const RaonResume = () => {
                             <label className="field-label">
                                 이력서 제목<span className="required-mark">*</span>
                             </label>
-                            <input type="text" className="field-input" placeholder="예: 네이버 지원용" />
+                            <input
+                                type="text"
+                                className="field-input"
+                                placeholder="예: 네이버 지원용"
+                                value={formData.title}
+                                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                            />
                         </div>
 
                         <div className="form-field">
                             <label className="field-label">
                                 이름<span className="required-mark">*</span>
                             </label>
-                            <input type="text" className="field-input" placeholder="홍길동" />
+                            <input
+                                type="text"
+                                className="field-input"
+                                placeholder="홍길동"
+                                value={formData.name}
+                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            />
                         </div>
 
                         <div className="form-field">
                             <label className="field-label">연락처</label>
-                            <input type="tel" className="field-input" placeholder="010-1234-5678" />
+                            <input
+                                type="tel"
+                                className="field-input"
+                                placeholder="010-1234-5678"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                            />
                         </div>
 
                         <div className="form-field">
                             <label className="field-label">이메일</label>
-                            <input type="email" className="field-input" placeholder="example@email.com" />
+                            <input
+                                type="email"
+                                className="field-input"
+                                placeholder="example@email.com"
+                                value={formData.email}
+                                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            />
                         </div>
 
                         <div className="form-field">
                             <label className="field-label">희망 직무</label>
-                            <input type="text" className="field-input" placeholder="예: 백엔드 개발자" />
+                            <input
+                                type="text"
+                                className="field-input"
+                                placeholder="예: 백엔드 개발자"
+                                value={formData.desiredPosition}
+                                onChange={(e) => setFormData({...formData, desiredPosition: e.target.value})}
+                            />
                         </div>
                     </div>
 
@@ -149,10 +321,12 @@ const RaonResume = () => {
                         </div>
 
                         <div className="form-field">
-                            <textarea 
-                                className="field-textarea" 
-                                placeholder="예: Java, Spring Boot, MySQL, Redis, Docker" 
+                            <textarea
+                                className="field-textarea"
+                                placeholder="예: Java, Spring Boot, MySQL, Redis, Docker"
                                 rows="8"
+                                value={formData.skills}
+                                onChange={(e) => setFormData({...formData, skills: e.target.value})}
                             ></textarea>
                         </div>
 
@@ -179,11 +353,23 @@ const RaonResume = () => {
                         <div className="form-row">
                             <div className="form-field">
                                 <label className="field-label">학교명</label>
-                                <input type="text" className="field-input" placeholder="예: 한국대학교" />
+                                <input
+                                    type="text"
+                                    className="field-input"
+                                    placeholder="예: 한국대학교"
+                                    value={formData.schoolName}
+                                    onChange={(e) => setFormData({...formData, schoolName: e.target.value})}
+                                />
                             </div>
                             <div className="form-field">
                                 <label className="field-label">전공</label>
-                                <input type="text" className="field-input" placeholder="고졸인 경우 비워두셔도 됩니다" />
+                                <input
+                                    type="text"
+                                    className="field-input"
+                                    placeholder="고졸인 경우 비워두셔도 됩니다"
+                                    value={formData.major}
+                                    onChange={(e) => setFormData({...formData, major: e.target.value})}
+                                />
                             </div>
                         </div>
 
@@ -191,22 +377,30 @@ const RaonResume = () => {
                         <div className="form-row">
                             <div className="form-field select-field">
                                 <label className="field-label">상태</label>
-                                <select className="field-select">
-                                    <option>선택</option>
-                                    <option>졸업</option>
-                                    <option>재학 중</option>
-                                    <option>휴학 중</option>
-                                    <option>중퇴</option>
+                                <select
+                                    className="field-select"
+                                    value={formData.educationStatus}
+                                    onChange={(e) => setFormData({...formData, educationStatus: e.target.value})}
+                                >
+                                    <option value="">선택</option>
+                                    <option value="졸업">졸업</option>
+                                    <option value="재학 중">재학 중</option>
+                                    <option value="휴학 중">휴학 중</option>
+                                    <option value="중퇴">중퇴</option>
                                 </select>
                             </div>
                             <div className="form-field select-field">
                                 <label className="field-label">학력 구분</label>
-                                <select className="field-select">
-                                    <option>선택</option>
-                                    <option>고등학교</option>
-                                    <option>전문대학교</option>
-                                    <option>대학교</option>
-                                    <option>대학원</option>
+                                <select
+                                    className="field-select"
+                                    value={formData.educationType}
+                                    onChange={(e) => setFormData({...formData, educationType: e.target.value})}
+                                >
+                                    <option value="">선택</option>
+                                    <option value="고등학교">고등학교</option>
+                                    <option value="전문대학교">전문대학교</option>
+                                    <option value="대학교">대학교</option>
+                                    <option value="대학원">대학원</option>
                                 </select>
                             </div>
                         </div>
@@ -247,7 +441,13 @@ const RaonResume = () => {
                             </div>
                             <div className="form-field">
                                 <label className="field-label">학점 (선택)</label>
-                                <input type="text" className="field-input" placeholder="예: 4.0/4.5" />
+                                <input
+                                    type="text"
+                                    className="field-input"
+                                    placeholder="예: 4.0/4.5"
+                                    value={formData.gpa}
+                                    onChange={(e) => setFormData({...formData, gpa: e.target.value})}
+                                />
                             </div>
                         </div>
 
@@ -259,11 +459,23 @@ const RaonResume = () => {
                         <div className="form-row">
                             <div className="form-field">
                                 <label className="field-label">회사명</label>
-                                <input type="text" className="field-input" placeholder="예: (주)테크컴퍼니" />
+                                <input
+                                    type="text"
+                                    className="field-input"
+                                    placeholder="예: (주)테크컴퍼니"
+                                    value={formData.companyName}
+                                    onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                                />
                             </div>
                             <div className="form-field">
                                 <label className="field-label">직무/직책</label>
-                                <input type="text" className="field-input" placeholder="예: 백엔드 개발자" />
+                                <input
+                                    type="text"
+                                    className="field-input"
+                                    placeholder="예: 백엔드 개발자"
+                                    value={formData.position}
+                                    onChange={(e) => setFormData({...formData, position: e.target.value})}
+                                />
                             </div>
                         </div>
 
@@ -320,12 +532,24 @@ const RaonResume = () => {
 
                         <div className="form-field">
                             <label className="field-label">담당업무</label>
-                            <textarea className="field-textarea" placeholder="담당했던 업무를 자유롭게 작성해주세요" rows="4"></textarea>
+                            <textarea
+                                className="field-textarea"
+                                placeholder="담당했던 업무를 자유롭게 작성해주세요"
+                                rows="4"
+                                value={formData.responsibilities}
+                                onChange={(e) => setFormData({...formData, responsibilities: e.target.value})}
+                            ></textarea>
                         </div>
 
                         <div className="form-field">
                             <label className="field-label">성과 (선택)</label>
-                            <textarea className="field-textarea" placeholder="업무 성과를 자유롭게 작성해주세요" rows="4"></textarea>
+                            <textarea
+                                className="field-textarea"
+                                placeholder="업무 성과를 자유롭게 작성해주세요"
+                                rows="4"
+                                value={formData.achievements}
+                                onChange={(e) => setFormData({...formData, achievements: e.target.value})}
+                            ></textarea>
                         </div>
                     </div>
 
@@ -361,7 +585,13 @@ const RaonResume = () => {
 
                             <div className="checkbox-box">
                                 <div className="checkbox-container">
-                                    <input type="checkbox" className="checkbox-input" id="defaultResume" />
+                                    <input
+                                        type="checkbox"
+                                        className="checkbox-input"
+                                        id="defaultResume"
+                                        checked={formData.isDefault}
+                                        onChange={(e) => setFormData({...formData, isDefault: e.target.checked})}
+                                    />
                                     <label htmlFor="defaultResume" className="checkbox-label">이 이력서를 기본 이력서로 설정</label>
                                 </div>
                                 <p className="checkbox-desc">AI 면접 연습 시 이 이력서를 참고합니다</p>
@@ -414,15 +644,16 @@ const RaonResume = () => {
                             </button>
                         )}
                         {currentTab === totalTabs - 1 && (
-                            <button 
-                                className="btn btn-save" 
+                            <button
+                                className="btn btn-save"
                                 onClick={handleSaveResume}
+                                disabled={isLoading}
                                 style={{
                                     opacity: '1',
                                     visibility: 'visible'
                                 }}
                             >
-                                저장하기
+                                {isLoading ? '저장 중...' : '저장하기'}
                             </button>
                         )}
                     </div>
@@ -446,14 +677,14 @@ const RaonResume = () => {
                     </button>
                 </div>
 
-                {/* 상단 통계 카드 (항상 표시, 지금은 0으로 고정) */}
+                {/* 상단 통계 카드 */}
                 <div className="stats-container">
                     <div className="stat-card">
-                        <div className="stat-number">0</div>
+                        <div className="stat-number">{resumes.length}</div>
                         <div className="stat-label">작성된 이력서</div>
                     </div>
                     <div className="stat-card">
-                        <div className="stat-number">0</div>
+                        <div className="stat-number">{resumes.filter(r => r.isDefault).length}</div>
                         <div className="stat-label">기본 이력서</div>
                     </div>
                     <div className="stat-card">
