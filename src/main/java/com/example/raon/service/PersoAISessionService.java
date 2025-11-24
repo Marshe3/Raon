@@ -15,9 +15,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -174,8 +172,11 @@ public class PersoAISessionService {
         requestBody.put("padding_top", request.getPaddingTop());
         requestBody.put("padding_height", request.getPaddingHeight());
 
-        // WebRTC capability 추가 (프롬프트가 요구하는 경우 필수)
-        requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
+        // capability 설정 (기본값: ["text", "audio"])
+        List<String> capability = request.getCapability() != null && !request.getCapability().isEmpty()
+            ? request.getCapability()
+            : Arrays.asList("text", "audio");
+        requestBody.put("capability", capability);
 
         if (request.getExtraData() != null) {
             requestBody.put("extra_data", request.getExtraData());
