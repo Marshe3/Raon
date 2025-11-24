@@ -26,27 +26,27 @@ const TopBar = ({ isLoggedIn, user, onLogout }) => {
 
         {/* 중앙 메뉴 */}
         <nav className="topbar-nav">
-          <button 
+          <button
             onClick={() => navigate('/')}
             className={isActive('/') && !isActive('/avatar') && !isActive('/resume') && !isActive('/chatlist') ? 'active' : ''}
           >
             홈
           </button>
-          <button 
+          <button
             onClick={() => navigate('/avatar')}
             className={isActive('/avatar') ? 'active' : ''}
           >
             면접 연습
           </button>
-          <button 
+          <button
             onClick={() => navigate('/resume')}
             className={isActive('/resume') ? 'active' : ''}
           >
             이력서/자소서
           </button>
-          <button 
-            onClick={() => navigate('/chatlist')}
-            className={isActive('/chatlist') ? 'active' : ''}
+          <button
+            onClick={() => navigate('/Dashboard')}
+            className={isActive('/Dashboard') ? 'active' : ''}
           >
             학습 기록
           </button>
