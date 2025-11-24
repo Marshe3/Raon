@@ -172,12 +172,8 @@ public class PersoAISessionService {
         requestBody.put("padding_top", request.getPaddingTop());
         requestBody.put("padding_height", request.getPaddingHeight());
 
-        // capability 설정 (기본값: ["text", "audio", "STF_WEBRTC"])
-        // PersoAI API가 STF_WEBRTC를 함께 요구하는 것으로 보임
-        List<String> capability = request.getCapability() != null && !request.getCapability().isEmpty()
-            ? request.getCapability()
-            : Arrays.asList("text", "audio", "STF_WEBRTC");
-        requestBody.put("capability", capability);
+        // WebRTC capability 추가 (프롬프트가 요구하는 경우 필수)
+        requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
 
         if (request.getExtraData() != null) {
             requestBody.put("extra_data", request.getExtraData());
