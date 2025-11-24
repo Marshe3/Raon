@@ -6,7 +6,7 @@ import { logger } from '../utils/logger';
 const RaonAvatar = ({ user, isLoggedIn }) => {
   const navigate = useNavigate();
 
-  // 로그인 체크 - 로그인하지 않은 경우 3초 후 홈으로 리다이렉트
+  // 로그인 체크
   useEffect(() => {
     if (!isLoggedIn) {
       logger.warn('⚠️ 로그인이 필요한 서비스입니다');
@@ -14,75 +14,92 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
         logger.log('🔄 홈페이지로 이동합니다');
         navigate('/');
       }, 3000);
-
       return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
 
-  // 백오피스 설정 정보
   const [configurations, setConfigurations] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // 모드/선택 상태
-  const [selectedMode, setSelectedMode] = useState('preset'); // 'preset' | 'custom'
+  const [selectedMode, setSelectedMode] = useState('preset');
   const [selectedPreset, setSelectedPreset] = useState(null);
-
-  // 프리셋 모드 단계
-  const [presetStep, setPresetStep] = useState(1); // 1: 아바타 선택, 2: 배경 선택
-  const [presetBackgroundImage, setPresetBackgroundImage] = useState(null);
-  const [presetBackgroundPreview, setPresetBackgroundPreview] = useState(null);
-
-  // 커스텀 모드 단계
-  const [customStep, setCustomStep] = useState(1); // 1: 이름, 2: LLM, 3: TTS, 4: 배경
-  const [customConfig, setCustomConfig] = useState({
-    name: '',
-    llm: '',
-    tts: '',
-    backgroundImage: null, // 파일 객체 또는 null
-  });
-  const [backgroundPreview, setBackgroundPreview] = useState(null);
-
-  // DB에서 가져온 챗봇 목록
   const [presetAvatars, setPresetAvatars] = useState([]);
 
   // 챗봇 목록 DB에서 가져오기
   useEffect(() => {
     const loadChatbots = async () => {
       try {
-        const response = await fetch('/raon/api/chatbots/public');
-        if (!response.ok) {
-          throw new Error('챗봇 목록을 불러오는데 실패했습니다');
-        }
+        const response = await fetch('http://localhost:8086/raon/api/chatbots/public');
+        if (!response.ok) throw new Error('챗봇 목록을 불러오는데 실패했습니다');
         const data = await response.json();
 
-        // DB 데이터를 프리셋 아바타 형식으로 변환
-        const avatars = data.map(chatbot => ({
-          id: chatbot.id,
-          name: chatbot.chatbotName,
-          personality: chatbot.description || '친근한 대화 상대',
-          description: chatbot.description || 'AI 챗봇',
-          image: '/avatars/default.png', // 기본 이미지
-          // DB에서 가져온 설정
-          llmType: chatbot.llmType,
-          ttsType: chatbot.ttsType,
-          sttType: chatbot.sttType,
-          modelStyle: chatbot.modelStyle,
-          promptId: chatbot.promptId,
-          documentId: chatbot.documentId,
-        }));
+        // 직종별 이모지 매핑 (여러 버전의 이름 대응)
+        const getIconForChatbot = (name) => {
+          const nameLower = name.toLowerCase().replace(/\s/g, '');
+          
+          if (nameLower.includes('백엔드') || nameLower.includes('backend')) return '💻';
+          if (nameLower.includes('게임') || nameLower.includes('game')) return '🎮';
+          if (nameLower.includes('경찰') || nameLower.includes('police')) return '👮';
+          if (nameLower.includes('치위생') || nameLower.includes('dental')) return '🦷';
+          if (nameLower.includes('공기업') || nameLower.includes('public')) return '🏢';
+          if (nameLower.includes('은행') || nameLower.includes('bank')) return '🏦';
+          
+          return '🤖'; // 기본값
+        };
+
+        // 직종별 설명 매핑
+        const getDescriptionForChatbot = (name) => {
+          const nameLower = name.toLowerCase().replace(/\s/g, '');
+          
+          if (nameLower.includes('백엔드') || nameLower.includes('backend')) {
+            return '서버 개발 · API 설계\n데이터베이스 관리';
+          }
+          if (nameLower.includes('게임') || nameLower.includes('game')) {
+            return '게임 엔진 · 그래픽스\n게임 로직 설계';
+          }
+          if (nameLower.includes('경찰') || nameLower.includes('police')) {
+            return '인성 평가 · 상황 대처\n공직 가치관';
+          }
+          if (nameLower.includes('치위생') || nameLower.includes('dental')) {
+            return '환자 관리 · 구강 보건\n실무 능력';
+          }
+          if (nameLower.includes('공기업') || nameLower.includes('public')) {
+            return '공기업 적성 · 인성 면접\n직무 역량 평가';
+          }
+          if (nameLower.includes('은행') || nameLower.includes('bank')) {
+            return '금융 지식 · 고객 서비스\n상황 대응 능력';
+          }
+          
+          return 'AI 면접관과 함께\n실전 면접 연습';
+        };
+
+        const avatars = data.map(chatbot => {
+          const chatbotName = chatbot.chatbotName || chatbot.name || '면접관';
+          
+          return {
+            id: chatbot.id,
+            name: chatbotName,
+            personality: chatbot.description || '친근한 대화 상대',
+            description: getDescriptionForChatbot(chatbotName),
+            icon: getIconForChatbot(chatbotName),
+            llmType: chatbot.llmType,
+            ttsType: chatbot.ttsType,
+            sttType: chatbot.sttType,
+            modelStyle: chatbot.modelStyle,
+            promptId: chatbot.promptId,
+            documentId: chatbot.documentId,
+          };
+        });
 
         setPresetAvatars(avatars);
         logger.log('✅ 챗봇 목록 로드 완료:', avatars);
       } catch (error) {
         logger.error('❌ 챗봇 목록 로드 실패:', error);
-        alert('챗봇 목록을 불러오는데 실패했습니다.');
       }
     };
-
     loadChatbots();
   }, []);
 
-  // 백오피스 API에서 설정 정보 가져오기
+  // 백오피스 설정 로드
   useEffect(() => {
     const loadConfigurations = async () => {
       try {
@@ -91,77 +108,30 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
           credentials: 'include',
           cache: 'no-cache',
         });
-
-        if (!response.ok) {
-          throw new Error(`설정 로드 실패: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`설정 로드 실패: ${response.status}`);
         const data = await response.json();
         setConfigurations(data);
       } catch (error) {
         logger.error('설정 로드 실패:', error);
-        alert('설정 정보를 불러오는데 실패했습니다. 기본 설정을 사용합니다.');
       } finally {
         setLoading(false);
       }
     };
-
     loadConfigurations();
   }, []);
 
-  // SDK 연동용 옵션 - 백오피스 API에서 가져온 데이터 사용
-  const llmModels = configurations?.llmModels?.map(model => ({
-    id: model.name,
-    name: model.name,
-  })) || [
-    { id: 'azure-gpt-4o', name: 'GPT-4' },
-    { id: 'claude', name: 'Claude' },
-    { id: 'gemini', name: 'Gemini' },
-  ];
-
-  const ttsOptions = configurations?.ttsModels?.map(model => ({
-    id: model.name,
-    name: model.name,
-  })) || [
-    { id: 'yuri', name: '여성 음성 1' },
-    { id: 'chaehee', name: '여성 음성 2' },
-    { id: 'male1', name: '남성 음성 1' },
-    { id: 'male2', name: '남성 음성 2' },
-  ];
-
-  // ✅ 모드 전환(중복 제거, 초기화 포함)
-  const handleModeSwitch = (mode) => {
-    setSelectedMode(mode);
-    if (mode === 'preset') {
-      setPresetStep(1);
-      setSelectedPreset(null);
-      setPresetBackgroundImage(null);
-      setPresetBackgroundPreview(null);
-    } else {
-      setCustomStep(1);
-      setCustomConfig({ name: '', llm: '', tts: '', backgroundImage: null });
-      setBackgroundPreview(null);
-    }
-  };
-
-  // ✅ 프리셋 선택 - 바로 채팅방으로 이동
+  // 프리셋 선택 - 바로 채팅방으로 이동
   const handlePresetSelect = (avatar) => {
-    // 선택한 아바타의 promptId에 맞는 프롬프트 찾기
     const selectedPrompt = configurations?.prompts?.find(p => p.promptId === avatar.promptId) || configurations?.prompts?.[0];
-
-    logger.log('🔍 Selected Chatbot from DB:', avatar);
-    logger.log('🔍 Selected Prompt:', selectedPrompt);
-    logger.log('🔍 Intro Message:', selectedPrompt?.introMessage);
-
+    
     navigate(`/chat/${avatar.id}`, {
       state: {
         avatarId: avatar.id,
         avatarName: avatar.name,
         personality: avatar.personality,
-        avatarImage: avatar.image,
-        backgroundImage: null, // 배경 이미지 없이 바로 시작
+        avatarIcon: avatar.icon,
+        backgroundImage: null,
         mode: 'preset',
-        // DB에서 가져온 챗봇 설정을 SDK 세션 생성에 사용
         sdkConfig: {
           promptId: avatar.promptId,
           documentId: avatar.documentId,
@@ -175,163 +145,19 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
     });
   };
 
-  // 커스텀 입력 변경
-  const handleCustomChange = (field, value) => {
-    setCustomConfig((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // 커스텀 배경 업로드
-  const handleBackgroundImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      setCustomConfig((prev) => ({ ...prev, backgroundImage: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => setBackgroundPreview(reader.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveBackground = () => {
-    setCustomConfig((prev) => ({ ...prev, backgroundImage: null }));
-    setBackgroundPreview(null);
-    const fileInput = document.getElementById('backgroundUpload');
-    if (fileInput) fileInput.value = '';
-  };
-
-  const handleNextStep = () => {
-    if (customStep < 4) setCustomStep(customStep + 1);
-  };
-  const handlePrevStep = () => {
-    if (customStep > 1) setCustomStep(customStep - 1);
-  };
-
-  const canProceedToNextStep = () => {
-    switch (customStep) {
-      case 1:
-        return customConfig.name.trim() !== '';
-      case 2:
-        return customConfig.llm !== '';
-      case 3:
-        return customConfig.tts !== '';
-      case 4:
-        return customConfig.backgroundImage !== null;
-      default:
-        return false;
-    }
-  };
-
-  // 프리셋 배경 업로드/삭제
-  const handlePresetBackgroundChange = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      setPresetBackgroundImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPresetBackgroundPreview(reader.result);
-      reader.readAsDataURL(file);
-    }
-  };
-  const handleRemovePresetBackground = () => {
-    setPresetBackgroundImage(null);
-    setPresetBackgroundPreview(null);
-    const fileInput = document.getElementById('presetBackgroundUpload');
-    if (fileInput) fileInput.value = '';
-  };
-  const handlePresetPrevStep = () => {
-    setPresetStep(1);
-    setPresetBackgroundImage(null);
-    setPresetBackgroundPreview(null);
-  };
-
-  // 시작/취소 - DB에 저장된 챗봇 정보로 세션 생성
-  const handleStart = () => {
-    if (selectedMode === 'preset' && selectedPreset) {
-      // 프리셋 모드: DB에서 가져온 챗봇 설정 사용
-      // 선택한 아바타의 promptId에 맞는 프롬프트 찾기
-      const selectedPrompt = configurations?.prompts?.find(p => p.promptId === selectedPreset.promptId) || configurations?.prompts?.[0];
-
-      logger.log('🔍 Selected Chatbot from DB:', selectedPreset);
-      logger.log('🔍 Selected Prompt:', selectedPrompt);
-      logger.log('🔍 Intro Message:', selectedPrompt?.introMessage);
-
-      navigate(`/chat/${selectedPreset.id}`, {
-        state: {
-          avatarId: selectedPreset.id,
-          avatarName: selectedPreset.name,
-          personality: selectedPreset.personality,
-          avatarImage: selectedPreset.image,
-          backgroundImage: presetBackgroundPreview,
-          mode: 'preset',
-          // DB에서 가져온 챗봇 설정을 SDK 세션 생성에 사용
-          sdkConfig: {
-            promptId: selectedPreset.promptId,
-            documentId: selectedPreset.documentId,
-            llmType: selectedPreset.llmType,
-            ttsType: selectedPreset.ttsType,
-            sttType: selectedPreset.sttType || null,
-            modelStyle: selectedPreset.modelStyle,
-            introMessage: selectedPrompt?.introMessage || '안녕하세요!',
-          },
-        },
-      });
-    } else if (selectedMode === 'custom') {
-      // 커스텀 모드: 사용자 선택 설정
-      const firstPrompt = configurations?.prompts?.[0];
-      logger.log('🔍 Custom Config:', customConfig);
-      logger.log('🔍 Intro Message:', firstPrompt?.introMessage);
-
-      navigate('/chat/new', {
-        state: {
-          avatarName: customConfig.name,
-          backgroundImage: backgroundPreview,
-          mode: 'custom',
-          // SDK가 세션 생성 시 사용할 설정
-          sdkConfig: {
-            promptId: firstPrompt?.promptId || 'plp-275c194ca6b8d746d6c25a0dec3c3fdb',
-            introMessage: firstPrompt?.introMessage || '안녕하세요!',
-            llmType: customConfig.llm,
-            ttsType: customConfig.tts,
-            sttType: configurations?.sttModels?.[0]?.name || null,
-            modelStyle: configurations?.modelStyles?.[0]?.name || 'chaehee_livechat-front-white_suit-natural_loop',
-            documentId: configurations?.documents?.[0]?.documentId || null,
-          },
-        },
-      });
-    }
-  };
-  const handleCancel = () => navigate(-1);
-
-  // 로딩 중 표시
   if (loading && !configurations) {
     return (
       <div className="avatar-selection-container">
-        <div className="raon-header">
-          <div className="raon-logo">RAON</div>
-          <div className="raon-nav-menu">
-            <button onClick={() => navigate('/chat-list')}>내 채팅방</button>
-            <button className="active">새 채팅방</button>
-            <button onClick={() => navigate('/summary')}>요약</button>
-            <button onClick={() => navigate('/notes')}>노트</button>
-            <button onClick={() => navigate('/menu')}>메뉴</button>
-          </div>
-        </div>
         <div className="avatar-selection-content" style={{ textAlign: 'center', paddingTop: '100px' }}>
           <h2>설정 정보를 불러오는 중...</h2>
-          <p>잠시만 기다려주세요.</p>
         </div>
       </div>
     );
   }
 
-  // 로그인하지 않은 경우 안내 화면 표시
   if (!isLoggedIn) {
     return (
       <div className="avatar-selection-container">
-        {/* 헤더 */}
-        <div className="raon-header">
-          <div className="raon-logo" onClick={() => navigate('/')}>RAON</div>
-        </div>
-
-        {/* 로그인 안내 */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -350,8 +176,7 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
             <h2 style={{ marginBottom: '16px', color: '#333' }}>로그인이 필요합니다</h2>
             <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
-              아바타 선택 서비스를 이용하시려면 로그인이 필요합니다.<br/>
-              3초 후 홈페이지로 이동합니다.
+              아바타 선택 서비스를 이용하시려면 로그인이 필요합니다.
             </p>
             <button
               onClick={() => navigate('/')}
@@ -364,10 +189,7 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
                 fontSize: '16px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                transition: 'transform 0.2s',
               }}
-              onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-              onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
             >
               홈페이지로 이동
             </button>
@@ -379,345 +201,34 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
 
   return (
     <div className="avatar-selection-container">
-      {/* 헤더 */}
-      <div className="raon-header">
-        <div className="raon-logo">RAON</div>
-        <div className="raon-nav-menu">
-          <button onClick={() => navigate('/chat-list')}>내 채팅방</button>
-          <button className="active">새 채팅방</button>
-          <button onClick={() => navigate('/summary')}>요약</button>
-          <button onClick={() => navigate('/notes')}>노트</button>
-          <button onClick={() => navigate('/menu')}>메뉴</button>
-        </div>
-      </div>
-
-      {/* 본문 */}
       <div className="avatar-selection-content">
-        <h1 className="page-title">아바타 선택</h1>
+        <h1 className="page-title">
+          <span className="raon-highlight">RAON</span> 면접관 선택
+        </h1>
+        <p className="page-subtitle">각 분야의 전문 면접관이 당신의 면접을 도와드립니다</p>
 
-        {/* 모드 탭 */}
-        <div className="mode-tabs">
-          <button
-            className={`mode-tab ${selectedMode === 'preset' ? 'active' : ''}`}
-            onClick={() => handleModeSwitch('preset')}
-          >
-            ⭐ 프리셋 선택
-          </button>
-          <button
-            className={`mode-tab ${selectedMode === 'custom' ? 'active' : ''}`}
-            onClick={() => handleModeSwitch('custom')}
-          >
-            🎨 직접 선택하기
-          </button>
+        <div className="preset-grid">
+          {presetAvatars.map((avatar) => (
+            <div
+              key={avatar.id}
+              className="preset-card"
+              onClick={() => handlePresetSelect(avatar)}
+            >
+              <div className="avatar-icon-circle">
+                <span className="avatar-icon-emoji">{avatar.icon}</span>
+              </div>
+              <h3 className="preset-name">{avatar.name}</h3>
+              <p className="preset-description">
+                {avatar.description.split('\n').map((line, index) => (
+                  <span key={index}>
+                    {line}
+                    {index < avatar.description.split('\n').length - 1 && <br />}
+                  </span>
+                ))}
+              </p>
+            </div>
+          ))}
         </div>
-
-        {/* 프리셋 모드 */}
-        {selectedMode === 'preset' && (
-          <div className="preset-mode active">
-            {/* 1단계: 아바타 선택 */}
-            {presetStep === 1 && (
-              <>
-                <p className="mode-description">
-                  미리 설정된 아바타 중에서 선택하세요. 각 아바타는 최적화된 대화 스타일을 제공합니다.
-                </p>
-
-                <div className="preset-grid">
-                  {presetAvatars.map((avatar) => (
-                    <div
-                      key={avatar.id}
-                      className={`preset-card ${selectedPreset?.id === avatar.id ? 'selected' : ''}`}
-                      onClick={() => handlePresetSelect(avatar)}
-                    >
-                      <div className="avatar-display">
-                        <img
-                          src={avatar.image}
-                          alt={avatar.name}
-                          onError={(e) => {
-                            // 이미지 로드 실패 시 텍스트 표시
-                            e.target.style.display = 'none';
-                            if (e.target.nextSibling) e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
-                        <span className="avatar-fallback">AI</span>
-                      </div>
-                      <h3 className="preset-name">{avatar.name}</h3>
-                      <p className="preset-description">{avatar.personality}</p>
-                      <p className="preset-detail">{avatar.description}</p>
-                      {selectedPreset?.id === avatar.id && (
-                        <div className="check-mark-container">
-                          <span className="check-mark">✓ 선택됨</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* 2단계: 배경 선택 */}
-            {presetStep === 2 && selectedPreset && (
-              <>
-                <p className="mode-description">
-                  <strong>{selectedPreset.name}</strong>와(과) 대화할 배경을 선택하세요.
-                </p>
-
-                <div className="step-section">
-                  <h3 className="step-title">대화 배경을 선택하세요</h3>
-
-                  <div className="background-section-wrapper">
-                    {/* 왼쪽 업로드 영역 */}
-                    <div className="left-upload-section">
-                      <div className="upload-icon-header">🖼️</div>
-                      <h4 className="upload-section-title">배경 이미지</h4>
-
-                      <label htmlFor="presetBackgroundUpload" className="upload-label">
-                        <div className="upload-box-new">
-                          {presetBackgroundPreview ? (
-                            <div
-                              className="upload-box-preview"
-                              style={{ backgroundImage: `url(${presetBackgroundPreview})` }}
-                            >
-                              <div className="upload-box-overlay">
-                                <div className="folder-icon-small">📁</div>
-                                <p className="upload-text-small">파일 변경</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="folder-icon-new">📁</div>
-                              <p className="upload-text-new">파일 선택</p>
-                              <p className="upload-subtext-new">선택된 파일 없음</p>
-                            </>
-                          )}
-                        </div>
-                      </label>
-
-                      <input
-                        type="file"
-                        id="presetBackgroundUpload"
-                        accept="image/*"
-                        onChange={handlePresetBackgroundChange}
-                        style={{ display: 'none' }}
-                      />
-
-                      {presetBackgroundImage && (
-                        <div className="file-info-section">
-                          <p className="file-name-new">{presetBackgroundImage.name}</p>
-                          <button className="remove-file-btn" onClick={handleRemovePresetBackground} type="button">
-                            삭제
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 오른쪽 미리보기 */}
-                    <div className="right-preview-section">
-                      <h4 className="preview-section-title">미리보기</h4>
-                      <div className="large-preview-container">
-                        {presetBackgroundPreview ? (
-                          <div
-                            className="background-preview-large"
-                            style={{ backgroundImage: `url(${presetBackgroundPreview})` }}
-                          ></div>
-                        ) : (
-                          <div className="preview-placeholder">
-                            <p>이미지를 선택하면 여기에 미리보기가 표시됩니다</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="action-buttons">
-                  <button className="btn btn-secondary" onClick={handlePresetPrevStep}>
-                    ← 이전
-                  </button>
-                  <button className="btn btn-primary" onClick={handleStart} disabled={!presetBackgroundImage}>
-                    채팅 시작
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 커스텀 모드 */}
-        {selectedMode === 'custom' && (
-          <div className="custom-mode active">
-            <p className="mode-description">단계별로 나만의 AI 친구를 만들어보세요.</p>
-
-            {/* 단계 표시 */}
-            <div className="step-indicator">
-              <div className={`step ${customStep >= 1 ? 'active' : ''} ${customStep === 1 ? 'current' : ''}`}>
-                <div className="step-number">1</div>
-                <div className="step-label">친구 이름</div>
-              </div>
-              <div className={`step ${customStep >= 2 ? 'active' : ''} ${customStep === 2 ? 'current' : ''}`}>
-                <div className="step-number">2</div>
-                <div className="step-label">LLM 모델</div>
-              </div>
-              <div className={`step ${customStep >= 3 ? 'active' : ''} ${customStep === 3 ? 'current' : ''}`}>
-                <div className="step-number">3</div>
-                <div className="step-label">TTS 음성</div>
-              </div>
-              <div className={`step ${customStep >= 4 ? 'active' : ''} ${customStep === 4 ? 'current' : ''}`}>
-                <div className="step-number">4</div>
-                <div className="step-label">배경 이미지</div>
-              </div>
-            </div>
-
-            {/* 단계별 컨텐츠 */}
-            <div className="step-content">
-              {customStep === 1 && (
-                <div className="step-section">
-                  <h3 className="step-title">AI 친구의 이름을 지어주세요</h3>
-                  <div className="form-section-large">
-                    <input
-                      type="text"
-                      className="input-large"
-                      placeholder="예: 라온이, 친구야, 버디 등"
-                      value={customConfig.name}
-                      onChange={(e) => handleCustomChange('name', e.target.value)}
-                      autoFocus
-                    />
-                  </div>
-                </div>
-              )}
-
-              {customStep === 2 && (
-                <div className="step-section">
-                  <h3 className="step-title">사용할 LLM 모델을 선택하세요</h3>
-                  <div className="selection-grid">
-                    {llmModels.map((model) => (
-                      <div
-                        key={model.id}
-                        className={`selection-card ${customConfig.llm === model.id ? 'selected' : ''}`}
-                        onClick={() => handleCustomChange('llm', model.id)}
-                      >
-                        <div className="selection-icon">🤖</div>
-                        <h4>{model.name}</h4>
-                        {customConfig.llm === model.id && <div className="check-mark">✓</div>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {customStep === 3 && (
-                <div className="step-section">
-                  <h3 className="step-title">AI 친구의 음성을 선택하세요</h3>
-                  <div className="selection-grid">
-                    {ttsOptions.map((tts) => (
-                      <div
-                        key={tts.id}
-                        className={`selection-card ${customConfig.tts === tts.id ? 'selected' : ''}`}
-                        onClick={() => handleCustomChange('tts', tts.id)}
-                      >
-                        <div className="selection-icon">🎤</div>
-                        <h4>{tts.name}</h4>
-                        {customConfig.tts === tts.id && <div className="check-mark">✓</div>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {customStep === 4 && (
-                <div className="step-section">
-                  <h3 className="step-title">대화 배경을 선택하세요</h3>
-
-                  <div className="background-section-wrapper">
-                    {/* 왼쪽 업로드 */}
-                    <div className="left-upload-section">
-                      <div className="upload-icon-header">🖼️</div>
-                      <h4 className="upload-section-title">배경 이미지</h4>
-
-                      <label htmlFor="backgroundUpload" className="upload-label">
-                        <div className="upload-box-new">
-                          {backgroundPreview ? (
-                            <div className="upload-box-preview" style={{ backgroundImage: `url(${backgroundPreview})` }}>
-                              <div className="upload-box-overlay">
-                                <div className="folder-icon-small">📁</div>
-                                <p className="upload-text-small">파일 변경</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="folder-icon-new">📁</div>
-                              <p className="upload-text-new">파일 선택</p>
-                              <p className="upload-subtext-new">선택된 파일 없음</p>
-                            </>
-                          )}
-                        </div>
-                      </label>
-
-                      <input
-                        type="file"
-                        id="backgroundUpload"
-                        accept="image/*"
-                        onChange={handleBackgroundImageChange}
-                        style={{ display: 'none' }}
-                      />
-
-                      {customConfig.backgroundImage && (
-                        <div className="file-info-section">
-                          <p className="file-name-new">{customConfig.backgroundImage.name}</p>
-                          <button className="remove-file-btn" onClick={handleRemoveBackground} type="button">
-                            삭제
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 오른쪽 미리보기 */}
-                    <div className="right-preview-section">
-                      <h4 className="preview-section-title">미리보기</h4>
-                      <div className="large-preview-container">
-                        {backgroundPreview ? (
-                          <div className="background-preview-large" style={{ backgroundImage: `url(${backgroundPreview})` }}></div>
-                        ) : (
-                          <div className="preview-placeholder">
-                            <p>이미지를 선택하면 여기에 미리보기가 표시됩니다</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 커스텀 단계 네비게이션 */}
-            <div className="step-navigation">
-              <button className="btn btn-secondary" onClick={handlePrevStep} disabled={customStep === 1}>
-                ← 이전
-              </button>
-
-              {customStep < 4 ? (
-                <button className="btn btn-primary" onClick={handleNextStep} disabled={!canProceedToNextStep()}>
-                  다음 →
-                </button>
-              ) : (
-                <button className="btn btn-primary" onClick={handleStart} disabled={!canProceedToNextStep()}>
-                  채팅 시작
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ✅ 프리셋 모드 하단 버튼: 1단계일 때만 표시, '다음'으로 2단계 이동 */}
-        {selectedMode === 'preset' && presetStep === 1 && (
-          <div className="action-buttons">
-            <button className="btn btn-secondary" onClick={handleCancel}>
-              취소
-            </button>
-            <button className="btn btn-primary" onClick={() => setPresetStep(2)} disabled={!selectedPreset}>
-              다음 →
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
