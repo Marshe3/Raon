@@ -31,7 +31,7 @@ public class PersoAISessionService {
     private final ObjectMapper objectMapper;
 
     // 재시도 설정
-    private static final int MAX_RETRY_ATTEMPTS = 5;
+    private static final int MAX_RETRY_ATTEMPTS = 10;
     private static final long RETRY_DELAY_MS = 2000; // 2초 (PersoAI API rate limiting 대응)
 
     public PersoAISessionService(RestTemplateBuilder restTemplateBuilder) {
