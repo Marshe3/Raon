@@ -104,49 +104,48 @@ export default function AccountEdit({ user, isLoggedIn, onSaved = () => {} }) {
   // 로그인하지 않은 경우 안내 화면 표시
   if (!isLoggedIn) {
     return (
-      <div className="min-h-[calc(100vh-0px)] bg-[#F5F2FF]">
-        <main className="mx-auto max-w-6xl px-4 py-12">
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '60vh'
-          }}>
-            <div style={{
-              textAlign: 'center',
-              padding: '40px',
-              background: 'white',
-              borderRadius: '16px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              maxWidth: '500px'
-            }}>
-              <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
-              <h2 style={{ marginBottom: '16px', color: '#333' }}>로그인이 필요합니다</h2>
-              <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
-                회원정보 수정을 하시려면 로그인이 필요합니다.<br/>
-                3초 후 홈페이지로 이동합니다.
-              </p>
-              <button
-                onClick={() => navigate('/')}
-                style={{
-                  padding: '12px 32px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
-                }}
-                onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-                onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
-              >
-                홈페이지로 이동
-              </button>
-            </div>
-          </div>
-        </main>
+      <div style={{
+        minHeight: '100vh',
+        background: '#F5F2FF',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '40px',
+          background: 'white',
+          borderRadius: '16px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          maxWidth: '500px',
+          width: '100%'
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
+          <h2 style={{ marginBottom: '16px', color: '#333' }}>로그인이 필요합니다</h2>
+          <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
+            회원정보 수정을 하시려면 로그인이 필요합니다.<br/>
+            3초 후 홈페이지로 이동합니다.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              padding: '12px 32px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+            }}
+            onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+            onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+          >
+            홈페이지로 이동
+          </button>
+        </div>
       </div>
     );
   }

@@ -56,7 +56,7 @@ function RaonHome() {
           description="나의 면접 연습 히스토리"
           features={["점수 확인", "다시보기", "성장 추적"]}
           color="purple"
-          onClick={() => navigate('/history')}
+          onClick={() => navigate('/Dashboard')}
         />
       </div>
 
@@ -109,7 +109,13 @@ function RaonHome() {
 // 서비스 카드 컴포넌트
 function ServiceCard({ icon, title, description, features, color, badge, onClick }) {
   return (
-    <div className={`service-card service-card-${color}`} onClick={onClick}>
+    <div
+      className={`service-card service-card-${color}`}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
+    >
       {badge && (
         <div className="service-badge">{badge}</div>
       )}
@@ -130,7 +136,12 @@ function ServiceCard({ icon, title, description, features, color, badge, onClick
         ))}
       </ul>
       
-      <button className={`service-button service-button-${color}`}>
+      {/* ⬇️ 버튼에도 직접 연결(핵심 수정) */}
+      <button
+        type="button"
+        className={`service-button service-button-${color}`}
+        onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+      >
         시작하기
       </button>
     </div>
