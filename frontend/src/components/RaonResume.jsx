@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './RaonResume.css';
+import CustomSelect from './CustomSelect';
 
 const RaonResume = () => {
     // 페이지: 리스트/작성폼만 사용 (empty 페이지 제거)
@@ -19,6 +20,14 @@ const RaonResume = () => {
     const [careerStartDate, setCareerStartDate] = useState('');
     const [careerEndDate, setCareerEndDate] = useState('');
     const [isCurrentJob, setIsCurrentJob] = useState(false);
+
+    // 학력 select 상태
+    const [educationStatus, setEducationStatus] = useState('');
+    const [educationType, setEducationType] = useState('');
+
+    // 자기소개서 관련 상태
+    const [showFeedback, setShowFeedback] = useState(false); // AI 첨삭 표시 상태
+    const [coverLetter, setCoverLetter] = useState(''); // 자소서 내용
 
     // 페이지 전환
     const navigateToForm = () => setCurrentPage('form');
@@ -67,6 +76,15 @@ const RaonResume = () => {
         return result.trim();
     };
 
+    // AI 첨삭 요청 함수
+    const handleAIFeedback = () => {
+        if (!coverLetter.trim()) {
+            alert('자기소개서 내용을 먼저 작성해주세요.');
+            return;
+        }
+        setShowFeedback(true);
+    };
+
     // 저장 버튼 (지금은 단순히 리스트 페이지로만 이동)
     const handleSaveResume = () => {
         // TODO: 나중에 실제 이력서 저장 로직 추가
@@ -83,7 +101,7 @@ const RaonResume = () => {
 
     const handleApplyFeedback = () => {
         window.alert('첨삭 내용이 반영되었습니다!');
-        closeModal();
+        setShowFeedback(false);
     };
 
     // ==================== 이력서 작성 폼 페이지 ====================
@@ -191,23 +209,33 @@ const RaonResume = () => {
                         <div className="form-row">
                             <div className="form-field select-field">
                                 <label className="field-label">상태</label>
-                                <select className="field-select">
-                                    <option>선택</option>
-                                    <option>졸업</option>
-                                    <option>재학 중</option>
-                                    <option>휴학 중</option>
-                                    <option>중퇴</option>
-                                </select>
+                                <CustomSelect
+                                    value={educationStatus}
+                                    onChange={(e) => setEducationStatus(e.target.value)}
+                                    options={[
+                                        { value: '', label: '선택' },
+                                        { value: '졸업', label: '졸업' },
+                                        { value: '재학 중', label: '재학 중' },
+                                        { value: '휴학 중', label: '휴학 중' },
+                                        { value: '중퇴', label: '중퇴' }
+                                    ]}
+                                    placeholder="선택"
+                                />
                             </div>
                             <div className="form-field select-field">
                                 <label className="field-label">학력 구분</label>
-                                <select className="field-select">
-                                    <option>선택</option>
-                                    <option>고등학교</option>
-                                    <option>전문대학교</option>
-                                    <option>대학교</option>
-                                    <option>대학원</option>
-                                </select>
+                                <CustomSelect
+                                    value={educationType}
+                                    onChange={(e) => setEducationType(e.target.value)}
+                                    options={[
+                                        { value: '', label: '선택' },
+                                        { value: '고등학교', label: '고등학교' },
+                                        { value: '전문대학교', label: '전문대학교' },
+                                        { value: '대학교', label: '대학교' },
+                                        { value: '대학원', label: '대학원' }
+                                    ]}
+                                    placeholder="선택"
+                                />
                             </div>
                         </div>
 
@@ -329,26 +357,87 @@ const RaonResume = () => {
                         </div>
                     </div>
 
-                    {/* 탭 4: 자기소개서 */}
+                    {/* 탭 4: 자기소개서 - 2단 레이아웃 */}
                     <div className={`tab-content ${currentTab === 3 ? 'active' : ''}`}>
                         <div className="tab-header">
                             <h2 className="tab-title">자기소개서</h2>
                             <p className="tab-description">지원 동기와 포부를 자유롭게 작성해주세요</p>
                         </div>
 
-                        <div className="form-field">
-                            <textarea 
-                                className="field-textarea" 
-                                placeholder="지원 동기, 성장 과정, 강점, 입사 후 포부 등을 자유롭게 작성해주세요." 
-                                rows="15"
-                            ></textarea>
-                        </div>
+                        <div className="coverletter-container">
+                            {/* 왼쪽: 자소서 작성 영역 */}
+                            <div className="coverletter-write">
+                                <textarea 
+                                    className="field-textarea coverletter-textarea" 
+                                    placeholder="지원 동기, 성장 과정, 강점, 입사 후 포부 등을 자유롭게 작성해주세요."
+                                    value={coverLetter}
+                                    onChange={(e) => setCoverLetter(e.target.value)}
+                                    rows="15"
+                                ></textarea>
 
-                        <div className="tip-box">
-                            <div className="tip-title">✨ AI 첨삭 안내</div>
-                            <div className="tip-text">
-                                이력서를 저장하면 작성하신 자기소개서에 대한 AI 첨삭을 받을 수 있습니다. 구체적인 개선 방안과 추천 수정안을 제공해드립니다.
+                                <button 
+                                    className="btn-ai-feedback"
+                                    onClick={handleAIFeedback}
+                                >
+                                    ✨ AI 첨삭 받기
+                                </button>
+
+                                {!showFeedback && (
+                                    <div className="tip-box">
+                                        <div className="tip-title">✨ AI 첨삭 안내</div>
+                                        <div className="tip-text">
+                                            이력서를 저장하면 작성하신 자기소개서에 대한 AI 첨삭을 받을 수 있습니다. 구체적인 개선 방안과 추천 수정안을 제공해드립니다.
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
+                            {/* 오른쪽: AI 첨삭 결과 */}
+                            {showFeedback && (
+                                <div className="coverletter-feedback">
+                                    <div className="feedback-header">
+                                        <h3 className="feedback-title-main">🤖 AI 첨삭 결과</h3>
+                                        <button 
+                                            className="btn-close-feedback"
+                                            onClick={() => setShowFeedback(false)}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+
+                                    <div className="feedback-scroll">
+                                        <div className="feedback-block">
+                                            <div className="feedback-subtitle">👍 좋은 점</div>
+                                            <ul className="feedback-list">
+                                                <li>본인의 전공과 관심사가 명확하게 드러나 있습니다.</li>
+                                                <li>팀 프로젝트 경험을 통한 협업 능력을 언급한 것이 좋습니다.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="feedback-block">
+                                            <div className="feedback-subtitle">💡 개선 제안</div>
+                                            <ul className="feedback-list">
+                                                <li>구체적인 프로젝트 성과나 수치를 추가하면 더 설득력이 있을 것입니다.</li>
+                                                <li>"사용자 경험 개선"에 대한 구체적인 사례를 추가해보세요.</li>
+                                                <li>마지막 문단에 회사에 대한 관심과 기여 방안을 추가하면 좋습니다.</li>
+                                            </ul>
+                                        </div>
+
+                                        <div className="feedback-block">
+                                            <div className="feedback-subtitle">✍️ 추천 수정안</div>
+                                            <div className="suggestion-box">
+                                                "저는 4년간 컴퓨터공학을 전공하며 사용자 중심의 웹 개발 역량을 키워왔습니다. 
+                                                특히 '입양하냥 키워주개' 프로젝트에서 프론트엔드 개발을 담당하며 
+                                                사용자 경험을 15% 개선한 경험이 있습니다..."
+                                            </div>
+                                        </div>
+
+                                        <button className="btn-apply-inline" onClick={handleApplyFeedback}>
+                                            이 첨삭 내용을 자소서에 반영하기
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
