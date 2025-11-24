@@ -61,11 +61,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const [isTTSOn, setIsTTSOn] = useState(true);
   const [hasRestorableHistory, setHasRestorableHistory] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
+  const audioContextRef = useRef(null);
   const restoredMessagesRef = useRef(null);
   const prevChatLogLengthRef = useRef(0);
 
@@ -646,10 +648,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
     recognition.onend = () => {
       logger.log('🎤 음성 인식 종료');
 
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-
       const fullText = transcriptRef.current.trim();
       if (persoSession && fullText) {
         logger.log('📤 최종 전송할 텍스트:', fullText);
@@ -663,10 +661,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
     recognition.onerror = (event) => {
       logger.error('🎤 음성 인식 오류:', event.error);
       let errorMessage = '음성 인식 오류가 발생했습니다';
-
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
 
       switch (event.error) {
         case 'no-speech':
@@ -709,55 +703,97 @@ function RaonChatPerso({ user, isLoggedIn }) {
     };
   }, [sdkConfig?.sttType, persoSession]);
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+  const toggleRecording = async () => {
+    if (!isRecording) {
+      // 녹음 시작
+      try {
+        // 마이크 스트림 가져오기
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
+        // AudioContext 생성
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        audioContextRef.current = audioContext;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
+        // 마이크 소스 생성
+        const micSource = audioContext.createMediaStreamSource(micStream);
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
+        // 목적지(destination) 생성 - 녹음할 오디오를 합치는 곳
+        const destination = audioContext.createMediaStreamDestination();
 
-        const link = document.createElement('a');
-        link.href = audioUrl;
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        link.download = `raon-voice-${timestamp}.webm`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 마이크를 destination에 연결
+        micSource.connect(destination);
 
-        logger.log('🎙️ 녹음 파일 저장 완료:', link.download);
-
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
-          streamRef.current = null;
+        // 비디오 요소에서 챗봇 TTS 오디오 가져오기
+        if (videoRef.current && videoRef.current.srcObject) {
+          try {
+            const videoSource = audioContext.createMediaStreamSource(videoRef.current.srcObject);
+            // 챗봇 음성도 destination에 연결
+            videoSource.connect(destination);
+            logger.log('🔊 챗봇 TTS 음성도 녹음에 포함됩니다');
+          } catch (err) {
+            logger.warn('⚠️ 챗봇 음성 녹음 실패, 마이크만 녹음됩니다:', err);
+          }
         }
 
-        URL.revokeObjectURL(audioUrl);
-      };
+        // 합쳐진 스트림으로 MediaRecorder 생성
+        const mediaRecorder = new MediaRecorder(destination.stream);
+        mediaRecorderRef.current = mediaRecorder;
+        streamRef.current = micStream; // 마이크 스트림 저장 (나중에 정리용)
+        audioChunksRef.current = [];
 
-      mediaRecorder.start();
-      logger.log('🎙️ 녹음 시작');
-    } catch (err) {
-      logger.error('🎙️ 녹음 시작 실패:', err);
-      setError('녹음을 시작할 수 없습니다: ' + err.message);
-    }
-  };
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      logger.log('🎙️ 녹음 종료');
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioUrl = URL.createObjectURL(audioBlob);
+
+          const link = document.createElement('a');
+          link.href = audioUrl;
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          link.download = `raon-interview-${timestamp}.webm`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          logger.log('🎙️ 녹음 파일 저장 완료:', link.download);
+
+          // 리소스 정리
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+          }
+
+          if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+          }
+
+          URL.revokeObjectURL(audioUrl);
+          setIsRecording(false);
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        logger.log('🎙️ 연속 녹음 시작 - 마이크 + 챗봇 음성 녹음');
+        setError('🎙️ 녹음이 시작되었습니다 (마이크 + 챗봇 음성)');
+        setTimeout(() => setError(null), 2000);
+      } catch (err) {
+        logger.error('🎙️ 녹음 시작 실패:', err);
+        setError('녹음을 시작할 수 없습니다: ' + err.message);
+        setIsRecording(false);
+      }
+    } else {
+      // 녹음 종료
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+        logger.log('🎙️ 연속 녹음 종료');
+        setError('🎙️ 녹음이 종료되고 파일이 저장됩니다');
+        setTimeout(() => setError(null), 2000);
+      }
     }
   };
 
@@ -782,20 +818,16 @@ function RaonChatPerso({ user, isLoggedIn }) {
         logger.log('🎤 음성 입력 시작 - 다시 클릭하면 종료됩니다');
         transcriptRef.current = '';
         setIsListening(true);
-
-        await startRecording();
         recognitionRef.current.start();
       } else {
         logger.log('🎤 음성 입력 중지 (사용자 클릭)');
         recognitionRef.current.stop();
-        stopRecording();
       }
     } catch (err) {
       logger.error('음성 입력 오류:', err);
       setError('음성 입력 중 오류가 발생했습니다: ' + err.message);
       setIsListening(false);
       transcriptRef.current = '';
-      stopRecording();
     }
   };
 
@@ -921,7 +953,22 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
           <div className="sidebar-divider"></div>
 
-          {/* 음성 녹음 버튼 - 이모지 변경 */}
+          {/* 연속 녹음 버튼 */}
+          <button
+            className="sidebar-icon-btn recording-btn"
+            onClick={toggleRecording}
+            disabled={!isSessionActive}
+            style={{
+              background: isRecording ? '#dc2626' : '#f3f4f6',
+              color: isRecording ? 'white' : '#374151',
+              animation: isRecording ? 'pulse-recording 1s infinite' : 'none'
+            }}
+            title={isRecording ? '녹음 중지 및 저장' : '면접 녹음 시작'}
+          >
+            ⏺️
+          </button>
+
+          {/* 음성 입력 버튼 (STT) */}
           {sdkConfig?.sttType && (
             <button
               className="sidebar-icon-btn mic-btn"
