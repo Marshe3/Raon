@@ -32,7 +32,7 @@ public class PersoAISessionService {
 
     // 재시도 설정
     private static final int MAX_RETRY_ATTEMPTS = 10;
-    private static final long RETRY_DELAY_MS = 2000; // 2초 (PersoAI API rate limiting 대응)
+    private static final long RETRY_DELAY_MS = 500; // 500ms (빠른 재시도로 사용자 경험 개선)
 
     public PersoAISessionService(RestTemplateBuilder restTemplateBuilder) {
         // 타임아웃 설정: 연결 타임아웃 10초, 읽기 타임아웃 30초
