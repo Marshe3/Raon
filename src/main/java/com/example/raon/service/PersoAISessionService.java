@@ -172,14 +172,9 @@ public class PersoAISessionService {
         requestBody.put("padding_top", request.getPaddingTop());
         requestBody.put("padding_height", request.getPaddingHeight());
 
-        // capability 명시적으로 LLM, TTS, STT 사용 (STF_WEBRTC 제외)
-        List<String> capabilities = new ArrayList<>();
-        capabilities.add("LLM");
-        capabilities.add("TTS");
-        if (request.getSttType() != null) {
-            capabilities.add("STT");
-        }
-        requestBody.put("capability", capabilities);
+        // capability 필드를 아예 보내지 않음 (PersoAI API가 자동으로 처리하도록)
+        // 재시도 로직으로 간헐적 에러 우회
+        // requestBody.put("capability", Collections.emptyList());
 
         if (request.getExtraData() != null) {
             requestBody.put("extra_data", request.getExtraData());
