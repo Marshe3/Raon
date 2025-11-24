@@ -61,7 +61,7 @@ public class PersoAISessionService {
         HttpEntity<Map<String, Object>> httpRequest = new HttpEntity<>(requestBody, headers);
 
         log.info("📤 PersoAI 세션 생성 요청: {}", url);
-        log.debug("📦 요청 본문: {}", requestBody);
+        log.info("📦 요청 본문 (capability 디버깅): {}", requestBody);
 
         // 재시도 로직
         Exception lastException = null;
