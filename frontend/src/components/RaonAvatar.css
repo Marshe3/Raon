@@ -10,67 +10,39 @@ body {
   background-color: #f5f5f5;
 }
 
+/* 컨테이너 - 화면 전체를 사용하되 중앙 정렬 */
 .avatar-selection-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100vw;
   min-height: 100vh;
-}
-
-/* 공통 헤더 */
-.raon-header {
-  background-color: #8b7fd8;
-  padding: 20px 30px;
-  border-radius: 10px;
-  margin-bottom: 30px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.raon-logo {
-  font-size: 28px;
-  font-weight: bold;
-  color: #fff;
-  cursor: pointer;
-}
-
-.raon-nav-menu {
-  display: flex;
-  gap: 20px;
-}
-
-.raon-nav-menu button {
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 8px 16px;
-  border-radius: 5px;
-  transition: background-color 0.3s;
-}
-
-.raon-nav-menu button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-
-.raon-nav-menu button.active {
-  background-color: rgba(255, 255, 255, 0.3);
-  font-weight: bold;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  position: relative;
 }
 
 /* 본문 컨테이너 */
 .avatar-selection-content {
+  width: 100%;
+  max-width: 1400px;
   background: #fff;
   border-radius: 15px;
   padding: 60px 40px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* 타이틀 */
-.page-title {
+/* 타이틀 섹션 */
+.title-section {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+/* 타이틀 (이 페이지 전용) */
+.avatar-page-title {
   font-size: 42px;
   font-weight: 300;
   color: #333;
@@ -84,11 +56,10 @@ body {
   font-weight: 700;
 }
 
-.page-subtitle {
+.avatar-page-subtitle {
   text-align: center;
   font-size: 18px;
   color: #888;
-  margin-bottom: 60px;
 }
 
 /* 프리셋 그리드 - 3열 레이아웃 */
@@ -97,7 +68,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 30px;
   max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
@@ -199,17 +170,24 @@ body {
 
 /* 반응형 디자인 */
 @media (max-width: 768px) {
+  .avatar-selection-container {
+    padding: 20px 10px;
+  }
+
   .avatar-selection-content {
     padding: 40px 20px;
   }
 
-  .page-title {
+  .title-section {
+    margin-bottom: 40px;
+  }
+
+  .avatar-page-title {
     font-size: 32px;
   }
 
-  .page-subtitle {
+  .avatar-page-subtitle {
     font-size: 16px;
-    margin-bottom: 40px;
   }
 
   .preset-card {
@@ -231,23 +209,5 @@ body {
 
   .preset-description {
     font-size: 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .raon-header {
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  .raon-nav-menu {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-  }
-
-  .raon-nav-menu button {
-    font-size: 14px;
-    padding: 6px 12px;
   }
 }

@@ -72,40 +72,37 @@ public class SessionController {
                 }
             }
 
-            // 이전 채팅방 ID가 있으면 컨텍스트 생성
-            if (request.getPreviousChatRoomId() != null) {
-                String previousContext = chatRoomService.buildContextFromPreviousChatRoom(
-                        request.getPreviousChatRoomId(), 10); // 최근 10개 메시지
+            // 프론트엔드에서 전달한 이전 세션 ID가 있으면 컨텍스트 생성
+            Map<String, Object> extraDataCheck = request.getExtraData();
+            String previousSessionId = extraDataCheck != null ? (String) extraDataCheck.get("previousSessionId") : null;
+
+            if (previousSessionId != null && !previousSessionId.isEmpty()) {
+                log.info("🔍 이전 세션 복원 요청: previousSessionId={}", previousSessionId);
+                String previousContext = buildContextFromPreviousSession(previousSessionId, 10);
 
                 if (previousContext != null) {
-                    // extraData에 컨텍스트 추가
                     Map<String, Object> extraData = request.getExtraData();
                     if (extraData == null) {
                         extraData = new HashMap<>();
                         request.setExtraData(extraData);
                     }
                     extraData.put("previous_context", previousContext);
-                    log.info("📝 이전 대화 컨텍스트 추가: chatRoomId={}", request.getPreviousChatRoomId());
+                    log.info("✅ 이전 세션 대화 컨텍스트 추가 완료");
+                    log.info("📝 컨텍스트 내용 (처음 100자):\n{}",
+                            previousContext.length() > 100 ? previousContext.substring(0, 100) + "..." : previousContext);
+                } else {
+                    log.warn("⚠️ 이전 세션의 메시지가 없어 컨텍스트를 생성하지 못했습니다");
                 }
+            } else {
+                log.info("ℹ️ 이전 세션 없음 - 새로운 대화 시작");
             }
 
             SessionResponse response = sessionService.createSession(request);
             log.info("✅ 세션 생성 성공: {}", response.getSessionId());
 
-            // 채팅방 생성 또는 재사용
-            ChatRoom chatRoom;
-            if (request.getPreviousChatRoomId() != null) {
-                // 자동 재연결: 기존 채팅방 재사용
-                chatRoom = chatRoomService.getChatRoomById(request.getPreviousChatRoomId());
-                chatRoom.updateSessionId(response.getSessionId());
-                chatRoomService.saveChatRoom(chatRoom);
-                log.info("✅ 기존 채팅방 재사용: chatRoomId={}, newSessionId={}",
-                        chatRoom.getId(), response.getSessionId());
-            } else {
-                // 최초 세션 생성: 새 채팅방 생성
-                chatRoom = chatRoomService.getOrCreateChatRoom(response.getSessionId());
-                log.info("✅ 새 채팅방 생성: chatRoomId={}", chatRoom.getId());
-            }
+            // 각 세션마다 독립적인 채팅방 생성
+            ChatRoom chatRoom = chatRoomService.getOrCreateChatRoom(response.getSessionId());
+            log.info("✅ 새 채팅방 생성: sessionId={}, chatRoomId={}", response.getSessionId(), chatRoom.getId());
 
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("sessionId", response.getSessionId());
@@ -213,6 +210,44 @@ public class SessionController {
             error.put("error", "세션 정리 실패");
             error.put("message", e.getMessage());
             return ResponseEntity.status(500).body(error);
+        }
+    }
+
+    /**
+     * 이전 세션의 대화 내역을 컨텍스트로 생성
+     */
+    private String buildContextFromPreviousSession(String previousSessionId, int maxMessages) {
+        try {
+            List<MessageDto> messages = chatRoomService.getMessages(previousSessionId);
+
+            if (messages.isEmpty()) {
+                return null;
+            }
+
+            // 최근 N개 메시지만 사용 (토큰 제한 고려)
+            int startIndex = Math.max(0, messages.size() - maxMessages);
+            List<MessageDto> recentMessages = messages.subList(startIndex, messages.size());
+
+            StringBuilder context = new StringBuilder();
+            context.append("=== 이전 대화 내역 ===\n\n");
+
+            for (MessageDto msg : recentMessages) {
+                String roleLabel = "user".equals(msg.getRole()) ? "사용자" : "AI";
+                context.append(roleLabel)
+                       .append(": ")
+                       .append(msg.getContent())
+                       .append("\n");
+            }
+
+            context.append("\n위 대화 내역을 참고하여 사용자와 자연스럽게 대화를 이어가세요.");
+
+            log.info("이전 세션 컨텍스트 생성: sessionId={}, messageCount={}",
+                    previousSessionId, recentMessages.size());
+
+            return context.toString();
+        } catch (Exception e) {
+            log.warn("⚠️ 이전 세션 컨텍스트 생성 실패: {}", e.getMessage());
+            return null;
         }
     }
 

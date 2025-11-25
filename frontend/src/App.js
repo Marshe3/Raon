@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import RaonHome from "./components/RaonHome.jsx";
 import RaonSocialLogin from "./components/RaonSocialLogin.jsx";
-import RaonChatList from "./components/RaonChatList.jsx";
+// import RaonChatList from "./components/RaonChatList.jsx";
 import RaonAvatar from "./components/RaonAvatar.jsx";
 import RaonBackoffice from "./components/RaonBackoffice.jsx";
 import AccountEdit from "./components/AccountEdit.jsx";
@@ -12,6 +12,7 @@ import Footer from "./components/Footer.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
 import RaonResume from "./components/RaonResume.jsx";
 import { logger } from "./utils/logger";
+import RaonDashboard from "./components/RaonDashboard.jsx";
 
 export default function App() {
   return <AppInner />;
@@ -22,7 +23,6 @@ function AppInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
-  // 토큰 자동 갱신
   const refreshAccessToken = useCallback(async () => {
     try {
       logger.log("Access Token 갱신 시도...");
@@ -46,7 +46,6 @@ function AppInner() {
     }
   }, []);
 
-  // 로그인 상태 확인
   const checkLoginStatus = useCallback(async () => {
     try {
       logger.log("로그인 상태 확인 시작...");
@@ -61,12 +60,10 @@ function AppInner() {
         setUser(userData);
         setIsLoggedIn(true);
       } else if (response.status === 401) {
-        // Access Token이 만료된 경우 자동 갱신 시도
         logger.log("Access Token 만료 - 갱신 시도");
         const refreshed = await refreshAccessToken();
 
         if (refreshed) {
-          // 갱신 성공 시 다시 사용자 정보 조회
           const retryResponse = await fetch("/raon/api/users/me", {
             credentials: "include"
           });
@@ -92,12 +89,7 @@ function AppInner() {
 
     let focusTimeout = null;
     const handleFocus = () => {
-      // Debounce: 이전 타이머가 있으면 취소
-      if (focusTimeout) {
-        clearTimeout(focusTimeout);
-      }
-
-      // 5초 후에만 로그인 상태 확인 (과도한 API 호출 방지)
+      if (focusTimeout) clearTimeout(focusTimeout);
       focusTimeout = setTimeout(() => {
         logger.log("페이지 포커스 감지 - 로그인 상태 재확인");
         checkLoginStatus();
@@ -107,9 +99,7 @@ function AppInner() {
     window.addEventListener("focus", handleFocus);
     return () => {
       window.removeEventListener("focus", handleFocus);
-      if (focusTimeout) {
-        clearTimeout(focusTimeout);
-      }
+      if (focusTimeout) clearTimeout(focusTimeout);
     };
   }, [checkLoginStatus]);
 
@@ -120,30 +110,24 @@ function AppInner() {
         credentials: "include"
       });
 
-      // 상태 초기화
       setIsLoggedIn(false);
       setUser(null);
 
-      // 로그아웃 시 채팅 내역, SDK 설정, 세션 ID 삭제
       sessionStorage.removeItem('raon_chat_messages');
       sessionStorage.removeItem('raon_sdk_config');
       sessionStorage.removeItem('raon_session_id');
       logger.log('🗑️ Logout: Chat history, SDK config, and session ID cleared');
 
-      // 로그아웃 후 페이지 새로고침하여 쿠키 삭제 확실히 반영
       window.location.href = "/";
     } catch (e) {
       logger.error("Logout failed:", e);
-      // 에러가 발생해도 sessionStorage 삭제
       sessionStorage.removeItem('raon_chat_messages');
       sessionStorage.removeItem('raon_sdk_config');
       sessionStorage.removeItem('raon_session_id');
-      // 에러가 발생해도 페이지 새로고침
       window.location.href = "/";
     }
   };
 
-  // 소셜 로그인
   const onKakao = () => {
     window.location.href = "/raon/oauth2/authorization/kakao";
   };
@@ -158,17 +142,11 @@ function AppInner() {
   };
 
   const chats = [
-    {
-      id: 1, // 실제 chatbot_id (data.sql 참조)
-      title: "기본 챗봇",
-      lastMessage: "PersoAI 기본 챗봇과 대화하기",
-      updatedAt: "지금 시작하기",
-    },
+    { id: 1, title: "기본 챗봇", lastMessage: "PersoAI 기본 챗봇과 대화하기", updatedAt: "지금 시작하기" },
   ];
 
   return (
     <>
-      {/* 전역 네비게이션 - 모든 페이지에 항상 표시 */}
       <TopBar isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
 
       <Routes>
@@ -195,7 +173,6 @@ function AppInner() {
                 user={user}
                 isLoggedIn={isLoggedIn}
                 onSaved={(newNickname) => {
-                  // 닉네임 저장 직후 TopBar에 즉시 반영
                   setUser((prev) => ({ ...(prev || {}), nickname: newNickname }));
                 }}
               />
@@ -206,18 +183,26 @@ function AppInner() {
         />
 
         <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
-        <Route path="/chatrooms" element={<RaonChatList />} />
-        <Route path="/chatlist" element={<RaonChatList />} />
+
+        {/* RaonChatList 삭제 → 홈으로 */}
+        <Route path="/chatrooms" element={<Navigate to="/" replace />} />
+        <Route path="/chatlist" element={<Navigate to="/" replace />} />
+
         <Route path="/chat/:id" element={<RaonChatPerso user={user} isLoggedIn={isLoggedIn} />} />
         <Route path="/avatar" element={<RaonAvatar user={user} isLoggedIn={isLoggedIn} />} />
         <Route path="/backoffice" element={<RaonBackoffice user={user} isLoggedIn={isLoggedIn} />} />
         <Route path="/resume" element={isLoggedIn ? <RaonResume /> : <Navigate to="/login" replace />} />
 
+        {/* ✅ 학습 기록(대시보드) */}
+        <Route path="/dashboard" element={<RaonDashboard />} />
+
+        {/* ✅ 추가: 레거시 경로 호환 */}
+        <Route path="/history" element={<Navigate to="/dashboard" replace />} />
+
         {/* 항상 마지막 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* 전역 Footer - 모든 페이지에 항상 표시 */}
       <Footer />
     </>
   );

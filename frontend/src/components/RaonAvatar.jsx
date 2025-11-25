@@ -32,24 +32,22 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
         if (!response.ok) throw new Error('챗봇 목록을 불러오는데 실패했습니다');
         const data = await response.json();
 
-        // 직종별 이모지 매핑 (여러 버전의 이름 대응)
         const getIconForChatbot = (name) => {
           const nameLower = name.toLowerCase().replace(/\s/g, '');
-          
+
           if (nameLower.includes('백엔드') || nameLower.includes('backend')) return '💻';
           if (nameLower.includes('게임') || nameLower.includes('game')) return '🎮';
           if (nameLower.includes('경찰') || nameLower.includes('police')) return '👮';
           if (nameLower.includes('치위생') || nameLower.includes('dental')) return '🦷';
           if (nameLower.includes('공기업') || nameLower.includes('public')) return '🏢';
           if (nameLower.includes('은행') || nameLower.includes('bank')) return '🏦';
-          
-          return '🤖'; // 기본값
+
+          return '🤖';
         };
 
-        // 직종별 설명 매핑
         const getDescriptionForChatbot = (name) => {
           const nameLower = name.toLowerCase().replace(/\s/g, '');
-          
+
           if (nameLower.includes('백엔드') || nameLower.includes('backend')) {
             return '서버 개발 · API 설계\n데이터베이스 관리';
           }
@@ -68,13 +66,13 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
           if (nameLower.includes('은행') || nameLower.includes('bank')) {
             return '금융 지식 · 고객 서비스\n상황 대응 능력';
           }
-          
+
           return 'AI 면접관과 함께\n실전 면접 연습';
         };
 
-        const avatars = data.map(chatbot => {
+        const avatars = data.map((chatbot) => {
           const chatbotName = chatbot.chatbotName || chatbot.name || '면접관';
-          
+
           return {
             id: chatbot.id,
             name: chatbotName,
@@ -122,8 +120,10 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
 
   // 프리셋 선택 - 바로 채팅방으로 이동
   const handlePresetSelect = (avatar) => {
-    const selectedPrompt = configurations?.prompts?.find(p => p.promptId === avatar.promptId) || configurations?.prompts?.[0];
-    
+    const selectedPrompt =
+      configurations?.prompts?.find((p) => p.promptId === avatar.promptId) ||
+      configurations?.prompts?.[0];
+
     navigate(`/chat/${avatar.id}`, {
       state: {
         avatarId: avatar.id,
@@ -148,7 +148,10 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
   if (loading && !configurations) {
     return (
       <div className="avatar-selection-container">
-        <div className="avatar-selection-content" style={{ textAlign: 'center', paddingTop: '100px' }}>
+        <div
+          className="avatar-selection-content"
+          style={{ textAlign: 'center', paddingTop: '100px' }}
+        >
           <h2>설정 정보를 불러오는 중...</h2>
         </div>
       </div>
@@ -158,21 +161,25 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
   if (!isLoggedIn) {
     return (
       <div className="avatar-selection-container">
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: 'calc(100vh - 80px)',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-        }}>
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            background: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            maxWidth: '500px'
-          }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: 'calc(100vh - 80px)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          }}
+        >
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px',
+              background: 'white',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              maxWidth: '500px',
+            }}
+          >
             <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
             <h2 style={{ marginBottom: '16px', color: '#333' }}>로그인이 필요합니다</h2>
             <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
@@ -202,10 +209,14 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
   return (
     <div className="avatar-selection-container">
       <div className="avatar-selection-content">
-        <h1 className="page-title">
-          <span className="raon-highlight">RAON</span> 면접관 선택
-        </h1>
-        <p className="page-subtitle">각 분야의 전문 면접관이 당신의 면접을 도와드립니다</p>
+        <div className="title-section">
+          <h1 className="avatar-page-title">
+            <span className="raon-highlight">RAON</span> 면접관 선택
+          </h1>
+          <p className="avatar-page-subtitle">
+            각 분야의 전문 면접관이 당신의 면접을 도와드립니다
+          </p>
+        </div>
 
         <div className="preset-grid">
           {presetAvatars.map((avatar) => (

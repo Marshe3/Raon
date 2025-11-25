@@ -24,7 +24,7 @@ function Footer() {
             <ul className="footer-links">
               <li><button onClick={() => navigate('/avatar')} className="footer-link">AI 면접 연습</button></li>
               <li><button onClick={() => navigate('/resume')} className="footer-link">이력서/자소서 작성</button></li>
-              <li><button onClick={() => navigate('/history')} className="footer-link">학습 기록</button></li>
+              <li><button onClick={() => navigate('/Dashboard')} className="footer-link">학습 기록</button></li>
             </ul>
           </div>
 
@@ -45,8 +45,8 @@ function Footer() {
               <li><span className="footer-text"> 밍</span></li>
               <li><span className="footer-text"> 푹신한마시멜로</span></li>
               <li><span className="footer-text"> 오공</span></li>
-			  <li><span className="footer-text"> 미용실말티즈</span></li>
-			  <li><span className="footer-text"> 유녕</span></li>
+              <li><span className="footer-text"> 미용실고양이</span></li>
+              <li><span className="footer-text"> 유녕</span></li>
             </ul>
           </div>
         </div>
