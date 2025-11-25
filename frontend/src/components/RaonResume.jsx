@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RaonResume.css';
 import { logger } from '../utils/logger';
 import CustomSelect from './CustomSelect';
+import { getResumeFeedback } from '../services/geminiService';
 
 const RaonResume = () => {
     // 페이지: 리스트/작성폼만 사용 (empty 페이지 제거)
@@ -46,6 +47,8 @@ const RaonResume = () => {
     // 자기소개서 관련 상태
     const [showFeedback, setShowFeedback] = useState(false); // AI 첨삭 표시 상태
     const [coverLetter, setCoverLetter] = useState(''); // 자소서 내용
+    const [aiFeedback, setAiFeedback] = useState(null); // AI 첨삭 결과
+    const [isAILoading, setIsAILoading] = useState(false); // AI 첨삭 로딩 상태
 
     // 페이지 전환
     const navigateToForm = () => setCurrentPage('form');
@@ -106,11 +109,16 @@ const RaonResume = () => {
                 const data = await response.json();
                 logger.log('✅ 이력서 목록 불러오기 성공:', data);
                 setResumes(data);
+            } else if (response.status === 401) {
+                logger.warn('⚠️ 로그인이 필요합니다');
+                setResumes([]);
             } else {
                 logger.error('이력서 목록 불러오기 실패:', response.status);
+                setResumes([]);
             }
         } catch (error) {
             logger.error('이력서 목록 불러오기 오류:', error);
+            setResumes([]);
         } finally {
             setIsLoading(false);
         }
@@ -124,12 +132,27 @@ const RaonResume = () => {
     }, [currentPage]);
 
     // AI 첨삭 요청 함수
-    const handleAIFeedback = () => {
+    const handleAIFeedback = async () => {
         if (!coverLetter.trim()) {
             alert('자기소개서 내용을 먼저 작성해주세요.');
             return;
         }
-        setShowFeedback(true);
+
+        try {
+            setIsAILoading(true);
+            logger.log('🤖 AI 첨삭 요청 시작...');
+
+            const feedback = await getResumeFeedback(coverLetter, formData);
+
+            logger.log('✅ AI 첨삭 완료:', feedback);
+            setAiFeedback(feedback);
+            setShowFeedback(true);
+        } catch (error) {
+            logger.error('❌ AI 첨삭 실패:', error);
+            alert('AI 첨삭 요청 중 오류가 발생했습니다: ' + error.message);
+        } finally {
+            setIsAILoading(false);
+        }
     };
 
     // 저장 버튼
@@ -230,10 +253,97 @@ const RaonResume = () => {
         }
     };
 
-    const handleDeleteResume = () => {
-        if (window.confirm('정말 삭제하시겠습니까?')) {
-            window.alert('삭제되었습니다');
-            // TODO: 실제 삭제 로직 추가
+    // 이력서 보기
+    const handleViewResume = async (id) => {
+        try {
+            const response = await fetch(`/raon/api/resumes/${id}`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const resume = await response.json();
+                logger.log('✅ 이력서 조회 성공:', resume);
+                // TODO: 이력서 상세보기 모달 또는 페이지로 이동
+                alert(`이력서 "${resume.title}" 상세보기 기능은 준비 중입니다.`);
+            } else {
+                logger.error('이력서 조회 실패:', response.status);
+                alert('이력서 조회에 실패했습니다.');
+            }
+        } catch (error) {
+            logger.error('이력서 조회 오류:', error);
+            alert('이력서 조회 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 이력서 수정
+    const handleEditResume = async (id) => {
+        try {
+            const response = await fetch(`/raon/api/resumes/${id}`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const resume = await response.json();
+                logger.log('✅ 이력서 조회 성공 (수정용):', resume);
+
+                // 폼 데이터 설정
+                setFormData({
+                    title: resume.title || '',
+                    name: resume.name || '',
+                    phone: resume.phone || '',
+                    email: resume.email || '',
+                    desiredPosition: resume.desiredPosition || '',
+                    skills: resume.skills || '',
+                    isDefault: resume.isDefault || false,
+                    schoolName: resume.educations?.[0]?.schoolName || '',
+                    major: resume.educations?.[0]?.major || '',
+                    educationStatus: resume.educations?.[0]?.status || '',
+                    educationType: resume.educations?.[0]?.educationType || '',
+                    gpa: resume.educations?.[0]?.gpa || '',
+                    companyName: resume.careers?.[0]?.companyName || '',
+                    position: resume.careers?.[0]?.position || '',
+                    responsibilities: resume.careers?.[0]?.responsibilities || '',
+                    achievements: resume.careers?.[0]?.achievements || ''
+                });
+
+                // TODO: 날짜 파싱 및 설정 필요
+
+                // 폼 페이지로 이동
+                navigateToForm();
+            } else {
+                logger.error('이력서 조회 실패:', response.status);
+                alert('이력서 조회에 실패했습니다.');
+            }
+        } catch (error) {
+            logger.error('이력서 조회 오류:', error);
+            alert('이력서 조회 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 이력서 삭제
+    const handleDeleteResume = async (id) => {
+        if (!window.confirm('정말 삭제하시겠습니까?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/raon/api/resumes/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                logger.log('✅ 이력서 삭제 성공');
+                alert('이력서가 삭제되었습니다.');
+                // 목록 새로고침
+                fetchResumes();
+            } else {
+                logger.error('이력서 삭제 실패:', response.status);
+                alert('이력서 삭제에 실패했습니다.');
+            }
+        } catch (error) {
+            logger.error('이력서 삭제 오류:', error);
+            alert('이력서 삭제 중 오류가 발생했습니다.');
         }
     };
 
@@ -587,11 +697,12 @@ const RaonResume = () => {
                                     rows="15"
                                 ></textarea>
 
-                                <button 
+                                <button
                                     className="btn-ai-feedback"
                                     onClick={handleAIFeedback}
+                                    disabled={isAILoading}
                                 >
-                                    ✨ AI 첨삭 받기
+                                    {isAILoading ? '⏳ AI 분석 중...' : '✨ AI 첨삭 받기'}
                                 </button>
 
                                 {!showFeedback && (
@@ -605,11 +716,11 @@ const RaonResume = () => {
                             </div>
 
                             {/* 오른쪽: AI 첨삭 결과 */}
-                            {showFeedback && (
+                            {showFeedback && aiFeedback && (
                                 <div className="coverletter-feedback">
                                     <div className="feedback-header">
                                         <h3 className="feedback-title-main">🤖 AI 첨삭 결과</h3>
-                                        <button 
+                                        <button
                                             className="btn-close-feedback"
                                             onClick={() => setShowFeedback(false)}
                                         >
@@ -618,35 +729,69 @@ const RaonResume = () => {
                                     </div>
 
                                     <div className="feedback-scroll">
-                                        <div className="feedback-block">
-                                            <div className="feedback-subtitle">👍 좋은 점</div>
-                                            <ul className="feedback-list">
-                                                <li>본인의 전공과 관심사가 명확하게 드러나 있습니다.</li>
-                                                <li>팀 프로젝트 경험을 통한 협업 능력을 언급한 것이 좋습니다.</li>
-                                            </ul>
-                                        </div>
-
-                                        <div className="feedback-block">
-                                            <div className="feedback-subtitle">💡 개선 제안</div>
-                                            <ul className="feedback-list">
-                                                <li>구체적인 프로젝트 성과나 수치를 추가하면 더 설득력이 있을 것입니다.</li>
-                                                <li>"사용자 경험 개선"에 대한 구체적인 사례를 추가해보세요.</li>
-                                                <li>마지막 문단에 회사에 대한 관심과 기여 방안을 추가하면 좋습니다.</li>
-                                            </ul>
-                                        </div>
-
-                                        <div className="feedback-block">
-                                            <div className="feedback-subtitle">✍️ 추천 수정안</div>
-                                            <div className="suggestion-box">
-                                                "저는 4년간 컴퓨터공학을 전공하며 사용자 중심의 웹 개발 역량을 키워왔습니다. 
-                                                특히 '입양하냥 키워주개' 프로젝트에서 프론트엔드 개발을 담당하며 
-                                                사용자 경험을 15% 개선한 경험이 있습니다..."
+                                        {/* 전체 점수 표시 */}
+                                        {aiFeedback.overallScore > 0 && (
+                                            <div className="feedback-block" style={{background: '#f0f9ff', border: '1px solid #bfdbfe'}}>
+                                                <div className="feedback-subtitle">📊 전체 평가 점수</div>
+                                                <div style={{fontSize: '24px', fontWeight: 'bold', color: '#0ea5e9', margin: '10px 0'}}>
+                                                    {aiFeedback.overallScore} / 5.0
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
 
-                                        <button className="btn-apply-inline" onClick={handleApplyFeedback}>
-                                            이 첨삭 내용을 자소서에 반영하기
-                                        </button>
+                                        {/* 섹션별 피드백 */}
+                                        {aiFeedback.sections && aiFeedback.sections.map((section, index) => (
+                                            <div key={index}>
+                                                {section.title && (
+                                                    <div className="feedback-block">
+                                                        <div className="feedback-subtitle" style={{fontSize: '16px', fontWeight: 'bold'}}>
+                                                            {section.title} {section.score > 0 && `(${section.score}/5)`}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {section.strengths && section.strengths.length > 0 && (
+                                                    <div className="feedback-block">
+                                                        <div className="feedback-subtitle">👍 좋은 점</div>
+                                                        <ul className="feedback-list">
+                                                            {section.strengths.map((item, i) => (
+                                                                <li key={i}>{item}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+
+                                                {section.improvements && section.improvements.length > 0 && (
+                                                    <div className="feedback-block">
+                                                        <div className="feedback-subtitle">💡 개선 제안</div>
+                                                        <ul className="feedback-list">
+                                                            {section.improvements.map((item, i) => (
+                                                                <li key={i}>{item}</li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+
+                                                {section.suggestions && (
+                                                    <div className="feedback-block">
+                                                        <div className="feedback-subtitle">✍️ 추천 수정안</div>
+                                                        <div className="suggestion-box" style={{whiteSpace: 'pre-wrap'}}>
+                                                            {section.suggestions}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {/* 요약 */}
+                                        {aiFeedback.summary && (
+                                            <div className="feedback-block" style={{background: '#fefce8', border: '1px solid #fde047'}}>
+                                                <div className="feedback-subtitle">📝 종합 의견</div>
+                                                <div style={{whiteSpace: 'pre-wrap', lineHeight: '1.6'}}>
+                                                    {aiFeedback.summary}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -786,7 +931,56 @@ const RaonResume = () => {
                     </div>
                 ) : (
                     <div className="resume-grid">
-                        {/* 예시 카드 렌더링 자리 */}
+                        {resumes.map((resume) => (
+                            <div key={resume.id} className="resume-card">
+                                <div className="resume-card-header">
+                                    <h3 className="resume-title">{resume.title}</h3>
+                                    {resume.isDefault && (
+                                        <span className="badge-default">기본</span>
+                                    )}
+                                </div>
+                                <div className="resume-card-body">
+                                    <div className="resume-info">
+                                        <span className="info-label">이름</span>
+                                        <span className="info-value">{resume.name}</span>
+                                    </div>
+                                    <div className="resume-info">
+                                        <span className="info-label">희망 직무</span>
+                                        <span className="info-value">{resume.desiredPosition || '-'}</span>
+                                    </div>
+                                    <div className="resume-info">
+                                        <span className="info-label">기술 스택</span>
+                                        <span className="info-value">{resume.skills || '-'}</span>
+                                    </div>
+                                    <div className="resume-info">
+                                        <span className="info-label">작성일</span>
+                                        <span className="info-value">
+                                            {new Date(resume.createdAt).toLocaleDateString('ko-KR')}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="resume-card-actions">
+                                    <button
+                                        className="btn-card-action btn-view"
+                                        onClick={() => handleViewResume(resume.id)}
+                                    >
+                                        보기
+                                    </button>
+                                    <button
+                                        className="btn-card-action btn-edit"
+                                        onClick={() => handleEditResume(resume.id)}
+                                    >
+                                        수정
+                                    </button>
+                                    <button
+                                        className="btn-card-action btn-delete"
+                                        onClick={() => handleDeleteResume(resume.id)}
+                                    >
+                                        삭제
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>

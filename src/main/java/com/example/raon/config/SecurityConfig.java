@@ -59,7 +59,7 @@ public class SecurityConfig {
                     "/loginSuccess", "/loginFailure"
                 ).permitAll()
 
-                // 백오피스/디버그/채팅/챗봇 API (개발 중 편의상 오픈)
+                // 백오피스/디버그/채팅/챗봇/Gemini API (개발 중 편의상 오픈)
                 .requestMatchers(
                     "/api/backoffice/**",
                     "/api/persoai/**",
@@ -67,12 +67,14 @@ public class SecurityConfig {
                     "/api/chat/**",
                     "/api/chatbots/**",
                     "/api/debug/**",
+                    "/api/gemini/**",
                     "/raon/api/backoffice/**",
                     "/raon/api/persoai/**",
                     "/raon/api/sessions/**",
                     "/raon/api/chat/**",
                     "/raon/api/chatbots/**",
-                    "/raon/api/debug/**"
+                    "/raon/api/debug/**",
+                    "/raon/api/gemini/**"
                 ).permitAll()
 
                 // 사용자 정보 조회/수정/삭제는 인증 필요
