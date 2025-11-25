@@ -163,9 +163,15 @@ public class PersoAISessionService {
         if (request.getModelStyle() != null) {
             requestBody.put("model_style", request.getModelStyle());
         }
-        if (request.getBackgroundImageId() != null) {
-            requestBody.put("background_image", request.getBackgroundImageId());
+
+        // background_image는 필수 필드이므로, null이어도 빈 문자열로 전송
+        // PersoAI API가 기본값을 사용하도록 함
+        String backgroundImage = request.getBackgroundImageId();
+        if (backgroundImage == null) {
+            backgroundImage = ""; // 빈 문자열로 기본값 사용
+            log.info("⚠️ backgroundImageId가 null이므로 빈 문자열 사용");
         }
+        requestBody.put("background_image", backgroundImage);
 
         requestBody.put("agent", request.getAgent());
         requestBody.put("padding_left", request.getPaddingLeft());
