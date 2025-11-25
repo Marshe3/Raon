@@ -186,6 +186,11 @@ public class PersoAISessionService {
             requestBody.put("extra_data", request.getExtraData());
         }
 
+        // MCP servers (optional)
+        if (request.getMcpServers() != null && !request.getMcpServers().isEmpty()) {
+            requestBody.put("mcp_servers", request.getMcpServers());
+        }
+
         return requestBody;
     }
 
