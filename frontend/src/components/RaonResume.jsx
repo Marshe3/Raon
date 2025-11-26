@@ -109,7 +109,15 @@ const RaonResume = () => {
             if (response.ok) {
                 const data = await response.json();
                 logger.log('✅ 이력서 목록 불러오기 성공:', data);
-                setResumes(data);
+
+                // 기본 이력서를 제일 앞으로 정렬
+                const sortedData = data.sort((a, b) => {
+                    if (a.isDefault && !b.isDefault) return -1;
+                    if (!a.isDefault && b.isDefault) return 1;
+                    return 0;
+                });
+
+                setResumes(sortedData);
             } else if (response.status === 401) {
                 logger.warn('⚠️ 로그인이 필요합니다');
                 setResumes([]);
