@@ -1,5 +1,5 @@
 // src/App.js
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import RaonHome from "./components/RaonHome.jsx";
 import RaonSocialLogin from "./components/RaonSocialLogin.jsx";
@@ -13,6 +13,17 @@ import RaonChatPerso from "./components/RaonChatPerso.jsx";
 import RaonResume from "./components/RaonResume.jsx";
 import { logger } from "./utils/logger";
 import RaonDashboard from "./components/RaonDashboard.jsx";
+
+// ✅ ScrollToTop 컴포넌트 추가
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 export default function App() {
   return <AppInner />;
@@ -150,6 +161,9 @@ function AppInner() {
   return (
     <>
       <TopBar isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
+      
+      {/* ✅ ScrollToTop 컴포넌트 추가 */}
+      <ScrollToTop />
 
       <Routes>
         <Route
@@ -184,22 +198,47 @@ function AppInner() {
           }
         />
 
-        <Route path="/login" element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />} />
+        <Route
+          path="/login"
+          element={<RaonSocialLogin onKakao={onKakao} onGoogle={onGoogle} />}
+        />
 
         {/* RaonChatList 삭제 → 홈으로 */}
         <Route path="/chatrooms" element={<Navigate to="/" replace />} />
         <Route path="/chatlist" element={<Navigate to="/" replace />} />
 
-        <Route path="/chat/:id" element={<RaonChatPerso user={user} isLoggedIn={isLoggedIn} />} />
-        <Route path="/avatar" element={<RaonAvatar user={user} isLoggedIn={isLoggedIn} />} />
-        <Route path="/backoffice" element={<RaonBackoffice user={user} isLoggedIn={isLoggedIn} />} />
-        <Route path="/resume" element={isLoggedIn ? <RaonResume /> : <Navigate to="/login" replace />} />
+        <Route
+          path="/chat/:id"
+          element={<RaonChatPerso user={user} isLoggedIn={isLoggedIn} />}
+        />
+        <Route
+          path="/avatar"
+          element={<RaonAvatar user={user} isLoggedIn={isLoggedIn} />}
+        />
+        <Route
+          path="/backoffice"
+          element={<RaonBackoffice user={user} isLoggedIn={isLoggedIn} />}
+        />
+        <Route
+          path="/resume"
+          element={
+            isLoggedIn ? <RaonResume /> : <Navigate to="/login" replace />
+          }
+        />
 
-        {/* ✅ 학습 기록(대시보드) */}
-        <Route path="/dashboard" element={<RaonDashboard />} />
+        {/* ✅ 학습 기록(대시보드) - 로그인 필요 + user prop 추가 */}
+        <Route
+          path="/Dashboard"
+          element={
+            isLoggedIn ? <RaonDashboard user={user} /> : <Navigate to="/login" replace />
+          }
+        />
 
         {/* ✅ 추가: 레거시 경로 호환 */}
-        <Route path="/history" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/history"
+          element={<Navigate to="/Dashboard" replace />}
+        />
 
         {/* 항상 마지막 */}
         <Route path="*" element={<Navigate to="/" replace />} />

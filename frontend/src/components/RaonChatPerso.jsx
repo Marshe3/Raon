@@ -32,12 +32,12 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
-  /** ✅ 추가: 상단 글로벌 헤더의 ‘면접 연습’ 탭 활성화 표시만 부여 */
+  /** ✅ 추가: 상단 글로벌 헤더의 '면접 연습' 탭 활성화 표시만 부여 */
   const headerActiveRef = useRef(null);
   useEffect(() => {
     const activate = () => {
       try {
-        // 보통 ‘면접 연습’은 /avatar 라우트로 연결되어 있으므로 우선 href로 탐색
+        // 보통 '면접 연습'은 /avatar 라우트로 연결되어 있으므로 우선 href로 탐색
         const byHref = document.querySelector('a[href="/avatar"], a[href^="/avatar"]');
         // 혹시 href가 다를 수 있어 텍스트로 보조 탐색 (공백 제거 후 비교)
         const byText = Array.from(document.querySelectorAll('a,button,span,div'))
@@ -1006,8 +1006,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
             isSessionActive={isSessionActive}
             isLoading={isLoading}
             backgroundImage={backgroundImage}
-            avatarName={avatarName}
-            personality={personality}
             isTTSOn={isTTSOn}
             setIsTTSOn={setIsTTSOn}
             onStartSession={createSession}

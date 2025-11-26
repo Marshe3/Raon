@@ -54,7 +54,7 @@ function RaonHome() {
           icon={<History className="service-icon" />}
           title="학습 기록"
           description="나의 면접 연습 히스토리"
-          features={["점수 확인", "다시보기", "성장 추적"]}
+          features={["", "", ""]}
           color="purple"
           onClick={() => navigate('/Dashboard')}
         />

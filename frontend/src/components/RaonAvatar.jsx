@@ -13,7 +13,7 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
       const timer = setTimeout(() => {
         logger.log('🔄 홈페이지로 이동합니다');
         navigate('/');
-      }, 3000);
+      }, 5000); // ⬅️ 3초 → 5초로 변경
       return () => clearTimeout(timer);
     }
   }, [isLoggedIn, navigate]);
@@ -158,49 +158,22 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
     );
   }
 
+  // ✅ 로그인 안 된 상태 화면 (보라 배경 전체 너비)
   if (!isLoggedIn) {
     return (
-      <div className="avatar-selection-container">
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: 'calc(100vh - 80px)',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          }}
-        >
-          <div
-            style={{
-              textAlign: 'center',
-              padding: '40px',
-              background: 'white',
-              borderRadius: '16px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              maxWidth: '500px',
-            }}
+      <div className="avatar-login-required">
+        <div className="avatar-login-card">
+          <div className="avatar-login-icon">🔒</div>
+          <h2 className="avatar-login-title">로그인이 필요합니다</h2>
+          <p className="avatar-login-text">
+            아바타 선택 서비스를 이용하시려면 로그인이 필요합니다.
+          </p>
+          <button
+            className="avatar-login-button"
+            onClick={() => navigate('/')}
           >
-            <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
-            <h2 style={{ marginBottom: '16px', color: '#333' }}>로그인이 필요합니다</h2>
-            <p style={{ color: '#666', marginBottom: '24px', lineHeight: '1.6' }}>
-              아바타 선택 서비스를 이용하시려면 로그인이 필요합니다.
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              style={{
-                padding: '12px 32px',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-              }}
-            >
-              홈페이지로 이동
-            </button>
-          </div>
+            홈페이지로 이동
+          </button>
         </div>
       </div>
     );

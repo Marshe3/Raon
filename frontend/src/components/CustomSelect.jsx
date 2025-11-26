@@ -50,12 +50,17 @@ const CustomSelect = ({ value, onChange, options, placeholder = "선택", classN
     };
 
     return (
-        <div className={`custom-select ${className}`} ref={dropdownRef}>
+        <div
+            className={`custom-select ${isOpen ? 'open' : ''} ${className}`}
+            ref={dropdownRef}
+        >
             <div
                 className={`custom-select-trigger ${isOpen ? 'open' : ''}`}
                 onClick={handleToggle}
             >
-                <span className={selectedValue ? '' : 'placeholder'}>{getDisplayValue()}</span>
+                <span className={selectedValue ? '' : 'placeholder'}>
+                    {getDisplayValue()}
+                </span>
                 <span className={`arrow ${isOpen ? 'up' : 'down'}`}>▼</span>
             </div>
 
