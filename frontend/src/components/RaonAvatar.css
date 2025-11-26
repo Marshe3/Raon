@@ -211,3 +211,61 @@ body {
     font-size: 14px;
   }
 }
+
+/* ✅ 로그인 필요 화면용 전체 배경 */
+.avatar-login-required {
+  width: 100%;
+  min-height: calc(100vh - 70px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 로그인 안내 카드 */
+.avatar-login-card {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+}
+
+.avatar-login-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.avatar-login-title {
+  margin-bottom: 16px;
+  color: #333;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.avatar-login-text {
+  color: #666;
+  margin-bottom: 24px;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.avatar-login-button {
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.avatar-login-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}

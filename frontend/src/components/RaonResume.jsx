@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RaonResume.css';
 import { logger } from '../utils/logger';
 import CustomSelect from './CustomSelect';
+import CustomDate from './CustomDate';
 import { getResumeFeedback } from '../services/geminiService';
 
 const RaonResume = () => {

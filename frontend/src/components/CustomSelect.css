@@ -3,6 +3,11 @@
     width: 100%;
 }
 
+/* 드롭다운이 열려 있을 때 다른 요소(달력 아이콘 등) 위로 올라오도록 */
+.custom-select.open {
+    z-index: 9999;
+}
+
 .custom-select-trigger {
     width: 100%;
     padding: 14px 16px;
@@ -55,6 +60,7 @@
     z-index: 100;
     max-height: 240px;
     overflow-y: auto;
+    overflow-x: hidden; /* 가로 스크롤 방지 */
     animation: slideDown 0.2s ease;
 }
 
@@ -76,6 +82,9 @@
     font-size: 15px;
     color: #2d3748;
     border-bottom: 1px solid #f7fafc;
+    overflow: hidden;         /* 내용이 밖으로 나가지 않도록 */
+    text-overflow: ellipsis;  /* 긴 텍스트 처리 */
+    white-space: nowrap;      /* 한 줄로 표시 */
 }
 
 .custom-select-option:last-child {
