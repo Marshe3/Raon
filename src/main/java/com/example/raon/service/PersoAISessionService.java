@@ -164,23 +164,18 @@ public class PersoAISessionService {
             requestBody.put("model_style", request.getModelStyle());
         }
 
-        // background_image는 필수 필드이므로, null이어도 빈 문자열로 전송
-        // PersoAI API가 기본값을 사용하도록 함
-        String backgroundImage = request.getBackgroundImageId();
-        if (backgroundImage == null) {
-            backgroundImage = ""; // 빈 문자열로 기본값 사용
-            log.info("⚠️ backgroundImageId가 null이므로 빈 문자열 사용");
+        // background_image는 선택 필드 - null이면 필드 자체를 보내지 않음
+        if (request.getBackgroundImageId() != null && !request.getBackgroundImageId().isEmpty()) {
+            requestBody.put("background_image", request.getBackgroundImageId());
         }
-        requestBody.put("background_image", backgroundImage);
 
         requestBody.put("agent", request.getAgent());
         requestBody.put("padding_left", request.getPaddingLeft());
         requestBody.put("padding_top", request.getPaddingTop());
         requestBody.put("padding_height", request.getPaddingHeight());
 
-        // capability 필드를 아예 보내지 않음 (PersoAI API가 자동으로 처리하도록)
-        // 재시도 로직으로 간헐적 에러 우회
-        // requestBody.put("capability", Collections.emptyList());
+        // WebRTC capability 추가 (STT 및 녹음 기능에 필수)
+        requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
 
         if (request.getExtraData() != null) {
             requestBody.put("extra_data", request.getExtraData());

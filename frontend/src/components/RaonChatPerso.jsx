@@ -59,6 +59,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const audioContextRef = useRef(null);
   const restoredMessagesRef = useRef(null);
   const prevChatLogLengthRef = useRef(0);
+  const isSessionClosedRef = useRef(false);
 
   // 로그인 체크
   useEffect(() => {
@@ -81,24 +82,50 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
         // 녹음 중이면 중지
         if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-          mediaRecorderRef.current.stop();
+          try {
+            mediaRecorderRef.current.stop();
+          } catch (err) {
+            logger.warn('녹음 중지 중 에러:', err);
+          }
         }
 
         // 음성 인식 중이면 중지
         if (isListening && recognitionRef.current) {
-          recognitionRef.current.abort();
+          try {
+            recognitionRef.current.abort();
+          } catch (err) {
+            logger.warn('음성 인식 중지 중 에러:', err);
+          }
         }
 
         // 세션 종료
-        persoSession.close();
+        try {
+          if (persoSession && typeof persoSession.close === 'function' && !isSessionClosedRef.current) {
+            persoSession.close();
+            isSessionClosedRef.current = true;
+          }
+        } catch (err) {
+          logger.warn('세션 종료 중 에러:', err);
+        }
 
         // 리소스 정리
         if (streamRef.current) {
-          streamRef.current.getTracks().forEach(track => track.stop());
+          try {
+            streamRef.current.getTracks().forEach(track => track.stop());
+          } catch (err) {
+            logger.warn('스트림 정리 중 에러:', err);
+          }
         }
 
         if (audioContextRef.current) {
-          audioContextRef.current.close();
+          try {
+            // AudioContext가 이미 닫혀있지 않은 경우에만 닫기
+            if (audioContextRef.current.state !== 'closed') {
+              audioContextRef.current.close();
+            }
+          } catch (err) {
+            logger.warn('오디오 컨텍스트 정리 중 에러:', err);
+          }
         }
 
         logger.log('✅ 세션 및 리소스 정리 완료');
@@ -559,6 +586,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       session.onClose((manualClosed) => {
         logger.log('🔴 Session closed. Manual:', manualClosed);
+        isSessionClosedRef.current = true;
 
         if (!manualClosed) {
           logger.log('🔄 Attempting auto-reconnect...');
@@ -579,6 +607,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
       setPersoSession(session);
       setIsSessionActive(true);
+      isSessionClosedRef.current = false;
 
       logger.log('=== Session Setup Complete ===');
       logger.log('📝 SDK Config:', sdkConfig);
@@ -727,13 +756,25 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
     return () => {
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch (err) {
+          logger.warn('음성 인식 정리 중 에러:', err);
+        }
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        try {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        } catch (err) {
+          logger.warn('스트림 정리 중 에러:', err);
+        }
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
+        try {
+          mediaRecorderRef.current.stop();
+        } catch (err) {
+          logger.warn('녹음 정리 중 에러:', err);
+        }
       }
     };
   }, [sdkConfig?.sttType, persoSession]);
@@ -803,7 +844,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
           }
 
           if (audioContextRef.current) {
-            audioContextRef.current.close();
+            try {
+              if (audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+              }
+            } catch (err) {
+              logger.warn('⚠️ AudioContext 정리 중 에러:', err);
+            }
             audioContextRef.current = null;
           }
 
@@ -867,10 +914,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
   };
 
   const endSession = async () => {
-    if (persoSession) {
+    if (persoSession && !isSessionClosedRef.current) {
       try {
         const sessionId = sessionStorage.getItem('raon_session_id');
         persoSession.close();
+        isSessionClosedRef.current = true;
         setPersoSession(null);
         setIsSessionActive(false);
         setMessages([]);
