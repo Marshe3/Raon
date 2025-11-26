@@ -80,31 +80,39 @@ function RaonChatPerso({ user, isLoggedIn }) {
         logger.log('🚪 페이지를 떠납니다 - 세션 자동 종료');
 
         // 녹음 중이면 중지
-        if (isRecording && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
           mediaRecorderRef.current.stop();
         }
 
         // 음성 인식 중이면 중지
-        if (isListening && recognitionRef.current) {
+        if (recognitionRef.current) {
           recognitionRef.current.abort();
         }
 
         // 세션 종료
-        persoSession.close();
+        try {
+          persoSession.close();
+        } catch (err) {
+          logger.error('세션 종료 중 오류:', err);
+        }
 
         // 리소스 정리
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
 
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          try {
+            audioContextRef.current.close();
+          } catch (err) {
+            logger.error('AudioContext 종료 중 오류:', err);
+          }
         }
 
         logger.log('✅ 세션 및 리소스 정리 완료');
       }
     };
-  }, [persoSession, isSessionActive, isRecording, isListening]);
+  }, [persoSession, isSessionActive]);
 
   const toggleBar = () => {
     setIsBarOpen(!isBarOpen);
@@ -749,21 +757,25 @@ function RaonChatPerso({ user, isLoggedIn }) {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = audioContext;
 
-        // 마이크 소스 생성
-        const micSource = audioContext.createMediaStreamSource(micStream);
-
         // 목적지(destination) 생성 - 녹음할 오디오를 합치는 곳
         const destination = audioContext.createMediaStreamDestination();
 
-        // 마이크를 destination에 연결
-        micSource.connect(destination);
+        // 마이크 소스 생성 및 연결
+        const micSource = audioContext.createMediaStreamSource(micStream);
+        const micGain = audioContext.createGain();
+        micGain.gain.value = 1.0; // 마이크 볼륨 (1.0 = 100%)
+        micSource.connect(micGain);
+        micGain.connect(destination);
+        logger.log('🎤 마이크 녹음 활성화');
 
         // 비디오 요소에서 챗봇 TTS 오디오 가져오기
         if (videoRef.current && videoRef.current.srcObject) {
           try {
             const videoSource = audioContext.createMediaStreamSource(videoRef.current.srcObject);
-            // 챗봇 음성도 destination에 연결
-            videoSource.connect(destination);
+            const videoGain = audioContext.createGain();
+            videoGain.gain.value = 1.0; // 챗봇 음성 볼륨 (1.0 = 100%)
+            videoSource.connect(videoGain);
+            videoGain.connect(destination);
             logger.log('🔊 챗봇 TTS 음성도 녹음에 포함됩니다');
           } catch (err) {
             logger.warn('⚠️ 챗봇 음성 녹음 실패, 마이크만 녹음됩니다:', err);
@@ -802,7 +814,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
             streamRef.current = null;
           }
 
-          if (audioContextRef.current) {
+          if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close();
             audioContextRef.current = null;
           }
