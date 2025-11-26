@@ -932,51 +932,52 @@ const RaonResume = () => {
                 ) : (
                     <div className="resume-grid">
                         {resumes.map((resume) => (
-                            <div key={resume.id} className="resume-card">
-                                <div className="resume-card-header">
-                                    <h3 className="resume-title">{resume.title}</h3>
-                                    {resume.isDefault && (
-                                        <span className="badge-default">기본</span>
+                            <div key={resume.id} className={`resume-card ${resume.isDefault ? 'is-default' : ''}`}>
+                                {resume.isDefault && <div className="default-indicator"></div>}
+                                <div className="card-content">
+                                    <h3 className="card-title">{resume.title}</h3>
+                                    <div className="info-list">
+                                        <div className="info-item">
+                                            <span className="info-icon">👤</span>
+                                            <span className="info-value">{resume.name}</span>
+                                        </div>
+                                        <div className="info-item">
+                                            <span className="info-icon">💼</span>
+                                            <span className="info-value">{resume.desiredPosition || '직무 미지정'}</span>
+                                        </div>
+                                        <div className="info-item">
+                                            <span className="info-icon">📧</span>
+                                            <span className="info-value">{resume.email || '이메일 미입력'}</span>
+                                        </div>
+                                    </div>
+                                    {resume.skills && (
+                                        <div className="skills-box">
+                                            <span className="skills-label">기술:</span>
+                                            {resume.skills}
+                                        </div>
                                     )}
-                                </div>
-                                <div className="resume-card-body">
-                                    <div className="resume-info">
-                                        <span className="info-label">이름</span>
-                                        <span className="info-value">{resume.name}</span>
-                                    </div>
-                                    <div className="resume-info">
-                                        <span className="info-label">희망 직무</span>
-                                        <span className="info-value">{resume.desiredPosition || '-'}</span>
-                                    </div>
-                                    <div className="resume-info">
-                                        <span className="info-label">기술 스택</span>
-                                        <span className="info-value">{resume.skills || '-'}</span>
-                                    </div>
-                                    <div className="resume-info">
-                                        <span className="info-label">작성일</span>
-                                        <span className="info-value">
-                                            {new Date(resume.createdAt).toLocaleDateString('ko-KR')}
-                                        </span>
+                                    <div className="stats-row">
+                                        <span>📅 {new Date(resume.createdAt).toLocaleDateString('ko-KR')}</span>
                                     </div>
                                 </div>
-                                <div className="resume-card-actions">
+                                <div className="card-actions">
                                     <button
-                                        className="btn-card-action btn-view"
+                                        className="btn-action btn-view"
                                         onClick={() => handleViewResume(resume.id)}
                                     >
-                                        보기
+                                        👁️ 보기
                                     </button>
                                     <button
-                                        className="btn-card-action btn-edit"
+                                        className="btn-action btn-edit"
                                         onClick={() => handleEditResume(resume.id)}
                                     >
-                                        수정
+                                        ✏️ 수정
                                     </button>
                                     <button
-                                        className="btn-card-action btn-delete"
+                                        className="btn-action btn-delete"
                                         onClick={() => handleDeleteResume(resume.id)}
                                     >
-                                        삭제
+                                        🗑️ 삭제
                                     </button>
                                 </div>
                             </div>
