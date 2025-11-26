@@ -1051,19 +1051,20 @@ function RaonChatPerso({ user, isLoggedIn }) {
                   autoFocus
                 />
               ) : (
-                <input
-                  type="text"
+                <textarea
                   className="unified-input"
                   placeholder="메시지를 입력하세요..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
                       handleSendMessage();
                     }
                   }}
                   disabled={!isSessionActive}
                   autoFocus
+                  rows={1}
                 />
               )}
 
