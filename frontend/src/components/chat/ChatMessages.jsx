@@ -21,12 +21,9 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
   const scrollToBottom = () => {
     if (!searchResults || searchResults.length === 0) {
       // 사용자가 최하단에 있을 때만 자동 스크롤
-      if (isAtBottom()) {
-        messagesEndRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',  // 페이지 전체 스크롤 방지
-          inline: 'nearest'
-        });
+      if (isAtBottom() && messagesContainerRef.current) {
+        // scrollTop을 직접 설정하여 페이지 전체 스크롤 방지
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
       }
     }
   };
