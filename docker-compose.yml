@@ -16,7 +16,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./sql:/docker-entrypoint-initdb.d:ro
     ports:
-      - "3306:3306"
+      - "3307:3306"
     networks:
       - raon-network
     healthcheck:
@@ -81,8 +81,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
-      - "443:443"
+      - "3000:80"
     networks:
       - raon-network
     healthcheck:
