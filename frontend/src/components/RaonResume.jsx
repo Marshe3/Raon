@@ -14,7 +14,8 @@ const RaonResume = () => {
 
     // 이력서 목록
     const [resumes, setResumes] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     // 폼 데이터
     const [formData, setFormData] = useState({
@@ -46,10 +47,10 @@ const RaonResume = () => {
     const [isCurrentJob, setIsCurrentJob] = useState(false);
 
     // 자기소개서 관련 상태
-    const [showFeedback, setShowFeedback] = useState(false); // AI 첨삭 표시 상태
-    const [coverLetter, setCoverLetter] = useState(''); // 자소서 내용
-    const [aiFeedback, setAiFeedback] = useState(null); // AI 첨삭 결과
-    const [isAILoading, setIsAILoading] = useState(false); // AI 첨삭 로딩 상태
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [coverLetter, setCoverLetter] = useState('');
+    const [aiFeedback, setAiFeedback] = useState(null);
+    const [isAILoading, setIsAILoading] = useState(false);
 
     // 모달 상태
     const [showSetDefaultModal, setShowSetDefaultModal] = useState(false);
@@ -60,13 +61,13 @@ const RaonResume = () => {
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [showApplyModal, setShowApplyModal] = useState(false);
     const [showEmptyModal, setShowEmptyModal] = useState(false);
+    const [showSaveModal, setShowSaveModal] = useState(false);
 
     // 보기/수정 모드
     const [isViewMode, setIsViewMode] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editingResumeId, setEditingResumeId] = useState(null);
 
-    // ✅ 탭 전환 시 스크롤 맨 위로
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [currentTab]);
@@ -110,11 +111,13 @@ const RaonResume = () => {
         resetForm();
         setCurrentPage('form');
         setCurrentTab(0);
+        window.scrollTo(0, 0);
     };
 
     const navigateToList = () => {
         setCurrentPage('list');
         setCurrentTab(0);
+        window.scrollTo(0, 0);
     };
 
     // 탭 관리
@@ -172,7 +175,6 @@ const RaonResume = () => {
                 const data = await response.json();
                 logger.log('✅ 이력서 목록 불러오기 성공:', data);
 
-                // 기본 이력서를 제일 앞으로 정렬
                 const sortedData = data.sort((a, b) => {
                     if (a.isDefault && !b.isDefault) return -1;
                     if (!a.isDefault && b.isDefault) return 1;
@@ -192,10 +194,10 @@ const RaonResume = () => {
             setResumes([]);
         } finally {
             setIsLoading(false);
+            setIsInitialLoad(false);
         }
     };
 
-    // 컴포넌트 마운트 시 이력서 목록 불러오기
     useEffect(() => {
         if (currentPage === 'list') {
             fetchResumes();
@@ -231,19 +233,22 @@ const RaonResume = () => {
         if (isEditMode) {
             setShowUpdateModal(true);
         } else {
-            await saveResume();
+            setShowSaveModal(true);
         }
     };
 
-    // 실제 저장/수정 로직
+    // ✅ 저장 확인
+    const confirmSave = () => {
+        setShowSaveModal(false);
+        saveResume();
+    };
+
+    // ✅ 실제 저장/수정 로직 - alert 제거
     const saveResume = async () => {
         try {
             setIsLoading(true);
 
-            // 학력 기간 계산
             const attendancePeriod = calculatePeriod(educationStartDate, educationEndDate);
-
-            // 경력 기간 계산
             const employmentPeriod = isCurrentJob
                 ? calculatePeriod(careerStartDate, new Date().toISOString().split('T')[0])
                 : calculatePeriod(careerStartDate, careerEndDate);
@@ -280,7 +285,6 @@ const RaonResume = () => {
 
             let response;
             if (isEditMode && editingResumeId) {
-                // 수정 모드
                 response = await fetch(`/raon/api/resumes/${editingResumeId}`, {
                     method: 'PUT',
                     headers: {
@@ -290,7 +294,6 @@ const RaonResume = () => {
                     body: JSON.stringify(requestData)
                 });
             } else {
-                // 새로 생성
                 response = await fetch('/raon/api/resumes', {
                     method: 'POST',
                     headers: {
@@ -304,8 +307,7 @@ const RaonResume = () => {
             if (response.ok) {
                 const savedResume = await response.json();
                 logger.log('✅ 이력서 저장 성공:', savedResume);
-                alert(isEditMode ? '이력서가 수정되었습니다!' : '이력서가 저장되었습니다!');
-
+                // ✅ alert 제거
                 resetForm();
                 navigateToList();
                 setShowUpdateModal(false);
@@ -322,7 +324,7 @@ const RaonResume = () => {
         }
     };
 
-    // 이력서 보기 - 읽기 전용으로 폼으로 이동
+    // 이력서 보기
     const handleViewResume = async (id) => {
         try {
             const response = await fetch(`/raon/api/resumes/${id}`, {
@@ -358,6 +360,7 @@ const RaonResume = () => {
 
                 setCurrentPage('form');
                 setCurrentTab(0);
+                window.scrollTo(0, 0);
             } else {
                 logger.error('이력서 조회 실패:', response.status);
                 alert('이력서 조회에 실패했습니다.');
@@ -404,6 +407,7 @@ const RaonResume = () => {
 
                 setCurrentPage('form');
                 setCurrentTab(0);
+                window.scrollTo(0, 0);
             } else {
                 logger.error('이력서 조회 실패:', response.status);
                 alert('이력서 조회에 실패했습니다.');
@@ -414,12 +418,13 @@ const RaonResume = () => {
         }
     };
 
-    // 이력서 삭제
+    // ✅ 이력서 삭제 - 모달 띄우기
     const handleDeleteResume = (id) => {
         setResumeToDelete(id);
         setShowDeleteModal(true);
     };
 
+    // ✅ 삭제 확인 - alert 제거
     const confirmDelete = async () => {
         try {
             const response = await fetch(`/raon/api/resumes/${resumeToDelete}`, {
@@ -429,7 +434,7 @@ const RaonResume = () => {
 
             if (response.ok) {
                 logger.log('✅ 이력서 삭제 성공');
-                alert('이력서가 삭제되었습니다.');
+                // ✅ alert 제거
                 fetchResumes();
                 setShowDeleteModal(false);
                 setResumeToDelete(null);
@@ -443,7 +448,7 @@ const RaonResume = () => {
         }
     };
 
-    // AI 자소서 첨삭보기 (이력서 목록에서)
+    // AI 자소서 첨삭보기
     const handleShowAIFeedback = async (id) => {
         try {
             const response = await fetch(`/raon/api/resumes/${id}`, {
@@ -476,6 +481,7 @@ const RaonResume = () => {
                 setCurrentPage('form');
                 setCurrentTab(3);
                 setIsViewMode(false);
+                window.scrollTo(0, 0);
             } else {
                 logger.error('이력서 조회 실패:', response.status);
                 alert('이력서 조회에 실패했습니다.');
@@ -534,10 +540,10 @@ const RaonResume = () => {
         setShowFeedback(false);
     };
 
-    // 수정 확인
-    const confirmUpdate = () => {
+    // ✅ 수정 확인
+    const confirmUpdate = async () => {
         setShowUpdateModal(false);
-        saveResume();
+        await saveResume();
     };
 
     // ==================== 이력서 작성 폼 페이지 ====================
@@ -677,7 +683,6 @@ const RaonResume = () => {
                             <p className="tab-description">학력 및 경력 사항을 입력해주세요</p>
                         </div>
 
-                        {/* ===== 학력 섹션 ===== */}
                         <div className="section-title">학력</div>
 
                         <div className="form-row">
@@ -788,7 +793,6 @@ const RaonResume = () => {
                             </div>
                         </div>
 
-                        {/* ===== 경력 섹션 ===== */}
                         <div className="section-divider">
                             <div className="section-title">경력</div>
                         </div>
@@ -909,7 +913,7 @@ const RaonResume = () => {
                         </div>
                     </div>
 
-                    {/* 탭 4: 자기소개서 - 2단 레이아웃 */}
+                    {/* 탭 4: 자기소개서 */}
                     <div className={`tab-content ${currentTab === 3 ? 'active' : ''}`}>
                         <div className="tab-header">
                             <h2 className="tab-title">자기소개서</h2>
@@ -917,7 +921,6 @@ const RaonResume = () => {
                         </div>
 
                         <div className="coverletter-container">
-                            {/* 왼쪽: 자소서 작성 영역 */}
                             <div className="coverletter-write">
                                 <textarea 
                                     className="field-textarea coverletter-textarea" 
@@ -949,7 +952,6 @@ const RaonResume = () => {
                                 )}
                             </div>
 
-                            {/* 오른쪽: AI 첨삭 결과 */}
                             {showFeedback && aiFeedback && (
                                 <div className="coverletter-feedback">
                                     <div className="feedback-header">
@@ -963,7 +965,6 @@ const RaonResume = () => {
                                     </div>
 
                                     <div className="feedback-scroll">
-                                        {/* 전체 점수 표시 */}
                                         {aiFeedback.overallScore > 0 && (
                                             <div className="feedback-block" style={{background: '#f0f9ff', border: '1px solid #bfdbfe'}}>
                                                 <div className="feedback-subtitle">📊 전체 평가 점수</div>
@@ -973,7 +974,6 @@ const RaonResume = () => {
                                             </div>
                                         )}
 
-                                        {/* 섹션별 피드백 */}
                                         {aiFeedback.sections && aiFeedback.sections.map((section, index) => (
                                             <div key={index}>
                                                 {section.title && (
@@ -1017,7 +1017,6 @@ const RaonResume = () => {
                                             </div>
                                         ))}
 
-                                        {/* 요약 */}
                                         {aiFeedback.summary && (
                                             <div className="feedback-block" style={{background: '#fefce8', border: '1px solid #fde047'}}>
                                                 <div className="feedback-subtitle">📝 종합 의견</div>
@@ -1179,6 +1178,19 @@ const RaonResume = () => {
                 </div>
             )}
 
+            {showSaveModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowSaveModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">이력서를 저장하시겠어요?</h3>
+                        <p className="raon-modal-message">작성된 내용이 저장됩니다.</p>
+                        <div className="raon-modal-actions">
+                            <button className="raon-modal-btn-secondary" onClick={() => setShowSaveModal(false)}>취소</button>
+                            <button className="raon-modal-btn" onClick={confirmSave}>저장하기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showUpdateModal && (
                 <div className="raon-modal-overlay" onClick={() => setShowUpdateModal(false)}>
                     <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1195,238 +1207,239 @@ const RaonResume = () => {
     );
 
     // ==================== 이력서 목록 페이지 ====================
-    const renderListPage = () => (
-        <div className="resume-list-page">
-            <div className="container">
-                <div className="header-section">
-                    <h1 className="page-title">
-                        <span className="title-icon">📋</span>
-                        이력서 관리
-                    </h1>
-                    <button className="btn-new-resume" onClick={navigateToForm}>
-                        <span>+</span>
-                        새 이력서 작성
-                    </button>
-                </div>
+    const renderListPage = () => {
+        if (isInitialLoad) {
+            return null;
+        }
 
-                {/* 상단 통계 카드 */}
-                <div className="stats-container">
-                    <div className="stat-card">
-                        <div className="stat-number">{resumes.length}</div>
-                        <div className="stat-label">작성된 이력서</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-number">{resumes.filter(r => r.isDefault).length}</div>
-                        <div className="stat-label">기본 이력서</div>
-                        <div className="stat-note">※ 기본 이력서는 1개만 지정 가능합니다</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-number">0</div>
-                        <div className="stat-label">AI 첨삭 이력서</div>
-                    </div>
-                </div>
-
-                {/* 이력서가 하나도 없을 때 */}
-                {resumes.length === 0 ? (
-                    <div className="empty-container">
-                        <div className="empty-icon-wrapper">
-                            <span className="empty-icon">📄</span>
-                        </div>
-                        <h2 className="empty-title">작성된 이력서가 없습니다</h2>
-                        <p className="empty-description">
-                            지금 바로 이력서를 작성하고 AI 첨삭을 받아보세요!
-                        </p>
-                        <button className="btn-start" onClick={navigateToForm}>
-                            지금 바로 시작하기
+        return (
+            <div className="resume-list-page">
+                <div className="container">
+                    <div className="header-section">
+                        <h1 className="page-title">
+                            <span className="title-icon">📋</span>
+                            이력서 관리
+                        </h1>
+                        <button className="btn-new-resume" onClick={navigateToForm}>
+                            <span>+</span>
+                            새 이력서 작성
                         </button>
                     </div>
-                ) : (
-                    <div className="resume-grid">
-                        {resumes.map((resume) => (
-                            <div
-                                key={resume.id}
-                                className={`resume-card ${resume.isDefault ? 'is-default' : ''}`}
-                                onClick={() => handleViewResume(resume.id)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                {resume.isDefault && (
-                                    <>
-                                        <div className="default-indicator"></div>
-                                        <div className="default-badge">기본</div>
-                                    </>
-                                )}
 
-                                <div className="card-content">
-                                    <div className="card-title">
-                                        {resume.title || '새 이력서'}
-                                    </div>
+                    <div className="stats-container">
+                        <div className="stat-card">
+                            <div className="stat-number">{resumes.length}</div>
+                            <div className="stat-label">작성된 이력서</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">{resumes.filter(r => r.isDefault).length}</div>
+                            <div className="stat-label">기본 이력서</div>
+                            <div className="stat-note">※ 기본 이력서는 1개만 지정 가능합니다</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-number">0</div>
+                            <div className="stat-label">AI 첨삭 이력서</div>
+                        </div>
+                    </div>
 
-                                    <div className="info-list">
-                                        <div className="info-item">
-                                            <span className="info-icon">👨‍💼</span>
-                                            <span className="info-value">{resume.name || '이름없음'}</span>
+                    {resumes.length === 0 ? (
+                        <div className="empty-container">
+                            <div className="empty-icon-wrapper">
+                                <span className="empty-icon">📄</span>
+                            </div>
+                            <h2 className="empty-title">작성된 이력서가 없습니다</h2>
+                            <p className="empty-description">
+                                지금 바로 이력서를 작성하고 AI 첨삭을 받아보세요!
+                            </p>
+                            <button className="btn-start" onClick={navigateToForm}>
+                                지금 바로 시작하기
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="resume-grid">
+                            {resumes.map((resume) => (
+                                <div
+                                    key={resume.id}
+                                    className={`resume-card ${resume.isDefault ? 'is-default' : ''}`}
+                                    onClick={() => handleViewResume(resume.id)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    {resume.isDefault && (
+                                        <>
+                                            <div className="default-indicator"></div>
+                                            <div className="default-badge">기본</div>
+                                        </>
+                                    )}
+
+                                    <div className="card-content">
+                                        <div className="card-title">
+                                            {resume.title || '새 이력서'}
                                         </div>
-                                        <div className="info-item">
-                                            <span className="info-icon">📅</span>
-                                            <span className="info-value">
-                                                {new Date(resume.createdAt).toLocaleString('ko-KR')}
+
+                                        <div className="info-list">
+                                            <div className="info-item">
+                                                <span className="info-icon">👨‍💼</span>
+                                                <span className="info-value">{resume.name || '이름없음'}</span>
+                                            </div>
+                                            <div className="info-item">
+                                                <span className="info-icon">📅</span>
+                                                <span className="info-value">
+                                                    {new Date(resume.createdAt).toLocaleString('ko-KR')}
+                                                </span>
+                                            </div>
+                                            <div className="info-item">
+                                                <span className="info-icon">💼</span>
+                                                <span className="info-value">
+                                                    {resume.desiredPosition || '직무 미지정'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="skills-box">
+                                            <span className="skills-label">요약</span>
+                                            <span>
+                                                기본정보, 기술/역량, 학력/경력, 자기소개서가 포함된 이력서입니다.
                                             </span>
                                         </div>
-                                        <div className="info-item">
-                                            <span className="info-icon">💼</span>
-                                            <span className="info-value">
-                                                {resume.desiredPosition || '직무 미지정'}
-                                            </span>
-                                        </div>
                                     </div>
 
-                                    <div className="skills-box">
-                                        <span className="skills-label">요약</span>
-                                        <span>
-                                            기본정보, 기술/역량, 학력/경력, 자기소개서가 포함된 이력서입니다.
-                                        </span>
+                                    <div className="card-actions" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            className="btn-review"
+                                            type="button"
+                                            onClick={() => handleShowAIFeedback(resume.id)}
+                                        >
+                                            AI 자소서 첨삭보기
+                                        </button>
+
+                                        <div className="card-set-default-row">
+                                            {!resume.isDefault ? (
+                                                <button
+                                                    className="btn-set-default"
+                                                    type="button"
+                                                    onClick={() => handleSetAsDefault(resume.id)}
+                                                >
+                                                    기본 이력서로 설정
+                                                </button>
+                                            ) : (
+                                                <div
+                                                    className="btn-set-default--placeholder"
+                                                    aria-hidden="true"
+                                                />
+                                            )}
+                                        </div>
+
+                                        <div className="card-action-buttons">
+                                            <button
+                                                className="btn-edit"
+                                                type="button"
+                                                onClick={() => handleEditResume(resume.id)}
+                                            >
+                                                수정
+                                            </button>
+                                            <button
+                                                className="btn-delete"
+                                                type="button"
+                                                onClick={() => handleDeleteResume(resume.id)}
+                                            >
+                                                삭제
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                                <div className="card-actions" onClick={(e) => e.stopPropagation()}>
-                                    <button
-                                        className="btn-review"
-                                        type="button"
-                                        onClick={() => handleShowAIFeedback(resume.id)}
-                                    >
-                                        AI 자소서 첨삭보기
-                                    </button>
+                <div 
+                    className={`modal-overlay ${isModalOpen ? 'active' : ''}`} 
+                    onClick={closeModal}
+                >
+                    <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">AI 자소서 첨삭</h2>
+                        </div>
 
-                                    <div className="card-set-default-row">
-                                        {!resume.isDefault ? (
-                                            <button
-                                                className="btn-set-default"
-                                                type="button"
-                                                onClick={() => handleSetAsDefault(resume.id)}
-                                            >
-                                                기본 이력서로 설정
-                                            </button>
-                                        ) : (
-                                            <div
-                                                className="btn-set-default--placeholder"
-                                                aria-hidden="true"
-                                            />
-                                        )}
-                                    </div>
-
-                                    <div className="card-action-buttons">
-                                        <button
-                                            className="btn-edit"
-                                            type="button"
-                                            onClick={() => handleEditResume(resume.id)}
-                                        >
-                                            수정
-                                        </button>
-                                        <button
-                                            className="btn-delete"
-                                            type="button"
-                                            onClick={() => handleDeleteResume(resume.id)}
-                                        >
-                                            삭제
-                                        </button>
-                                    </div>
+                        <div className="modal-body">
+                            <div className="original-section">
+                                <span className="section-label">📝 작성한 자소서</span>
+                                <div className="original-text">
+                                    저는 컴퓨터공학을 전공하며 웹 개발에 대한 열정을 키워왔습니다. 특히 사용자 경험을 개선하는 것에 큰 관심이 있으며, 프로젝트를 통해 React와 Spring Boot를 활용한 풀스택 개발 경험을 쌓았습니다.
+                                    <br /><br />
+                                    팀 프로젝트에서 리더로서 팀원들과 소통하며 목표를 달성한 경험이 있으며, 이를 통해 협업의 중요성을 배웠습니다. 앞으로도 지속적으로 학습하며 성장하는 개발자가 되고 싶습니다.
                                 </div>
                             </div>
-                        ))}
+
+                            <div className="feedback-container">
+                                <h3 className="feedback-title">🤖 AI 첨삭 결과</h3>
+                                
+                                <div className="feedback-block">
+                                    <div className="feedback-subtitle">👍 좋은 점</div>
+                                    <ul className="feedback-list">
+                                        <li>본인의 전공과 관심사가 명확하게 드러나 있습니다.</li>
+                                        <li>팀 프로젝트 경험을 통한 협업 능력을 언급한 것이 좋습니다.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="feedback-block">
+                                    <div className="feedback-subtitle">💡 개선 제안</div>
+                                    <ul className="feedback-list">
+                                        <li>구체적인 프로젝트 성과나 수치를 추가하면 더 설득력이 있을 것입니다.</li>
+                                        <li>"사용자 경험 개선"에 대한 구체적인 사례를 추가해보세요.</li>
+                                        <li>마지막 문단에 회사에 대한 관심과 기여 방안을 추가하면 좋습니다.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="feedback-block">
+                                    <div className="feedback-subtitle">✍️ 추천 수정안</div>
+                                    <div className="suggestion-box">
+                                        "저는 4년간 컴퓨터공학을 전공하며 사용자 중심의 웹 개발 역량을 키워왔습니다. 
+                                        특히 '입양하냥 키워주개' 프로젝트에서 프론트엔드 개발을 담당하며 
+                                        사용자 경험을 15% 개선한 경험이 있습니다..."
+                                    </div>
+                                </div>
+
+                                <button className="btn-apply" onClick={closeModal}>
+                                    닫기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ✅ 삭제 확인 모달 - 취소/삭제 버튼 */}
+                {showDeleteModal && (
+                    <div className="raon-modal-overlay" onClick={() => setShowDeleteModal(false)}>
+                        <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="raon-modal-title">이력서를 삭제하시겠어요?</h3>
+                            <p className="raon-modal-message">삭제된 이력서는 복구할 수 없습니다.</p>
+                            <div className="raon-modal-actions">
+                                <button className="raon-modal-btn-secondary" onClick={() => setShowDeleteModal(false)}>취소</button>
+                                <button className="raon-modal-btn" onClick={confirmDelete}>삭제</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {showSetDefaultModal && (
+                    <div className="raon-modal-overlay" onClick={() => setShowSetDefaultModal(false)}>
+                        <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="raon-modal-title">기본 이력서로 설정하시겠어요?</h3>
+                            <p className="raon-modal-message">
+                                이 이력서가 기본 이력서로 설정되며, 기존 기본 이력서는 해제됩니다.
+                            </p>
+                            <div className="raon-modal-actions">
+                                <button className="raon-modal-btn-secondary" onClick={() => setShowSetDefaultModal(false)}>취소</button>
+                                <button className="raon-modal-btn" onClick={confirmSetDefault}>설정하기</button>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
+        );
+    };
 
-            {/* 첨삭 모달 */}
-            <div 
-                className={`modal-overlay ${isModalOpen ? 'active' : ''}`} 
-                onClick={closeModal}
-            >
-                <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-                    <div className="modal-header">
-                        <h2 className="modal-title">AI 자소서 첨삭</h2>
-                    </div>
-
-                    <div className="modal-body">
-                        <div className="original-section">
-                            <span className="section-label">📝 작성한 자소서</span>
-                            <div className="original-text">
-                                저는 컴퓨터공학을 전공하며 웹 개발에 대한 열정을 키워왔습니다. 특히 사용자 경험을 개선하는 것에 큰 관심이 있으며, 프로젝트를 통해 React와 Spring Boot를 활용한 풀스택 개발 경험을 쌓았습니다.
-                                <br /><br />
-                                팀 프로젝트에서 리더로서 팀원들과 소통하며 목표를 달성한 경험이 있으며, 이를 통해 협업의 중요성을 배웠습니다. 앞으로도 지속적으로 학습하며 성장하는 개발자가 되고 싶습니다.
-                            </div>
-                        </div>
-
-                        <div className="feedback-container">
-                            <h3 className="feedback-title">🤖 AI 첨삭 결과</h3>
-                            
-                            <div className="feedback-block">
-                                <div className="feedback-subtitle">👍 좋은 점</div>
-                                <ul className="feedback-list">
-                                    <li>본인의 전공과 관심사가 명확하게 드러나 있습니다.</li>
-                                    <li>팀 프로젝트 경험을 통한 협업 능력을 언급한 것이 좋습니다.</li>
-                                </ul>
-                            </div>
-
-                            <div className="feedback-block">
-                                <div className="feedback-subtitle">💡 개선 제안</div>
-                                <ul className="feedback-list">
-                                    <li>구체적인 프로젝트 성과나 수치를 추가하면 더 설득력이 있을 것입니다.</li>
-                                    <li>"사용자 경험 개선"에 대한 구체적인 사례를 추가해보세요.</li>
-                                    <li>마지막 문단에 회사에 대한 관심과 기여 방안을 추가하면 좋습니다.</li>
-                                </ul>
-                            </div>
-
-                            <div className="feedback-block">
-                                <div className="feedback-subtitle">✍️ 추천 수정안</div>
-                                <div className="suggestion-box">
-                                    "저는 4년간 컴퓨터공학을 전공하며 사용자 중심의 웹 개발 역량을 키워왔습니다. 
-                                    특히 '입양하냥 키워주개' 프로젝트에서 프론트엔드 개발을 담당하며 
-                                    사용자 경험을 15% 개선한 경험이 있습니다..."
-                                </div>
-                            </div>
-
-                            <button className="btn-apply" onClick={closeModal}>
-                                닫기
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* 삭제 확인 모달 */}
-            {showDeleteModal && (
-                <div className="raon-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="raon-modal-title">이력서를 삭제하시겠어요?</h3>
-                        <p className="raon-modal-message">삭제된 이력서는 복구할 수 없습니다.</p>
-                        <div className="raon-modal-actions">
-                            <button className="raon-modal-btn-secondary" onClick={() => setShowDeleteModal(false)}>취소</button>
-                            <button className="raon-modal-btn" onClick={confirmDelete}>삭제</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* 기본 이력서 설정 확인 모달 */}
-            {showSetDefaultModal && (
-                <div className="raon-modal-overlay" onClick={() => setShowSetDefaultModal(false)}>
-                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="raon-modal-title">기본 이력서로 설정하시겠어요?</h3>
-                        <p className="raon-modal-message">
-                            이 이력서가 기본 이력서로 설정되며, 기존 기본 이력서는 해제됩니다.
-                        </p>
-                        <div className="raon-modal-actions">
-                            <button className="raon-modal-btn-secondary" onClick={() => setShowSetDefaultModal(false)}>취소</button>
-                            <button className="raon-modal-btn" onClick={confirmSetDefault}>설정하기</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-
-    // ==================== 메인 렌더링 ====================
     return (
         <div className="resume-management">
             {currentPage === 'form' && renderFormPage()}
