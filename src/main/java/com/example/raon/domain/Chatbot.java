@@ -1,15 +1,19 @@
 package com.example.raon.domain;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -55,6 +59,9 @@ public class Chatbot {
     @Column(name = "is_public", nullable = false)
     private Boolean isPublic = true;
 
+    @OneToMany(mappedBy = "chatbot", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChatbotMcpServer> mcpServers = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -63,5 +70,12 @@ public class Chatbot {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    public void addMcpServer(ChatbotMcpServer mcpServer) {
+        mcpServers.add(mcpServer);
+        mcpServer.setChatbot(this);
+    }
 
+    public void clearMcpServers() {
+        mcpServers.clear();
+    }
 }

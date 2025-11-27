@@ -16,8 +16,12 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizationRequestRepository;
+import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -44,9 +48,9 @@ public class SecurityConfig {
             // ✅ CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            // 세션을 사용하지 않음 (JWT 기반 인증)
+            // OAuth2 로그인 시에만 세션 사용, 일반 API는 JWT 기반 (세션 불필요)
             .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
             )
             .authorizeHttpRequests(auth -> auth
                 // 정적 리소스 및 로그인 엔드포인트
@@ -56,7 +60,8 @@ public class SecurityConfig {
                     "/login/**", "/oauth2/**",
                     "/raon/login/**", "/raon/oauth2/**",
                     "/api/auth/**", "/raon/api/auth/**",
-                    "/loginSuccess", "/loginFailure"
+                    "/loginSuccess", "/loginFailure",
+                    "/actuator/health", "/raon/actuator/health"
                 ).permitAll()
 
                 // 백오피스/디버그/채팅/챗봇/Gemini API (개발 중 편의상 오픈)
@@ -87,10 +92,19 @@ public class SecurityConfig {
             )
             // JWT 인증 필터 추가 (UsernamePasswordAuthenticationFilter 이전에 실행)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // 인증되지 않은 요청 처리 (redirect 대신 401 응답)
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+                })
+            )
             // OAuth2 로그인 설정 (로그인 플로우에서만 사용)
             .oauth2Login(oauth2 -> oauth2
                 // 커스텀 Authorization Request Resolver 사용 (prompt=login 파라미터 추가)
                 .authorizationEndpoint(authorization -> authorization
+                    .authorizationRequestRepository(authorizationRequestRepository())
                     .authorizationRequestResolver(
                         new CustomAuthorizationRequestResolver(clientRegistrationRepository)
                     )
@@ -111,6 +125,12 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    @Bean
+    public AuthorizationRequestRepository<OAuth2AuthorizationRequest> authorizationRequestRepository() {
+        // 세션 대신 쿠키 기반 repository 사용 (세션 문제 우회)
+        return new CookieOAuth2AuthorizationRequestRepository();
     }
 
     @Bean

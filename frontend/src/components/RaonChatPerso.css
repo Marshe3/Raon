@@ -462,7 +462,7 @@
 .chat-messages {
   flex: 1;
   padding: 20px;
-  padding-bottom: 120px;
+  padding-bottom: 140px; /* 입력창 높이만큼 하단 여백 추가 */
   overflow-y: auto;
   display: flex;
   flex-direction: column;

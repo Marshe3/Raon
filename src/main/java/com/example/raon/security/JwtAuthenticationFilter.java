@@ -75,18 +75,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // 1. Authorization 헤더에서 추출
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            log.info("[JWT] Token found in Authorization header");
             return bearerToken.substring(7);
         }
 
         // 2. 쿠키에서 추출
         if (request.getCookies() != null) {
+            log.info("[JWT] Checking cookies. Total: {}", request.getCookies().length);
             for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+                log.info("[JWT] Cookie: {} (path: {}, domain: {})", cookie.getName(), cookie.getPath(), cookie.getDomain());
                 if ("accessToken".equals(cookie.getName())) {
+                    log.info("[JWT] ✓ accessToken found in cookie!");
                     return cookie.getValue();
                 }
             }
+            log.info("[JWT] ✗ accessToken NOT found in cookies");
+        } else {
+            log.info("[JWT] ✗ No cookies in request");
         }
 
+        log.info("[JWT] No JWT token found");
         return null;
     }
 }

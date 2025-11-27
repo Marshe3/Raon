@@ -15,9 +15,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -33,8 +31,8 @@ public class PersoAISessionService {
     private final ObjectMapper objectMapper;
 
     // 재시도 설정
-    private static final int MAX_RETRY_ATTEMPTS = 5;
-    private static final long RETRY_DELAY_MS = 1000; // 1초
+    private static final int MAX_RETRY_ATTEMPTS = 10;
+    private static final long RETRY_DELAY_MS = 500; // 500ms (빠른 재시도로 사용자 경험 개선)
 
     public PersoAISessionService(RestTemplateBuilder restTemplateBuilder) {
         // 타임아웃 설정: 연결 타임아웃 10초, 읽기 타임아웃 30초
@@ -63,7 +61,7 @@ public class PersoAISessionService {
         HttpEntity<Map<String, Object>> httpRequest = new HttpEntity<>(requestBody, headers);
 
         log.info("📤 PersoAI 세션 생성 요청: {}", url);
-        log.debug("📦 요청 본문: {}", requestBody);
+        log.info("📦 요청 본문 (capability 디버깅): {}", requestBody);
 
         // 재시도 로직
         Exception lastException = null;
@@ -165,7 +163,9 @@ public class PersoAISessionService {
         if (request.getModelStyle() != null) {
             requestBody.put("model_style", request.getModelStyle());
         }
-        if (request.getBackgroundImageId() != null) {
+
+        // background_image는 선택 필드 - null이면 필드 자체를 보내지 않음
+        if (request.getBackgroundImageId() != null && !request.getBackgroundImageId().isEmpty()) {
             requestBody.put("background_image", request.getBackgroundImageId());
         }
 
@@ -174,11 +174,16 @@ public class PersoAISessionService {
         requestBody.put("padding_top", request.getPaddingTop());
         requestBody.put("padding_height", request.getPaddingHeight());
 
-        // WebRTC capability 추가 (프롬프트가 요구하는 경우 필수)
+        // WebRTC capability 추가 (STT 및 녹음 기능에 필수)
         requestBody.put("capability", Collections.singletonList("STF_WEBRTC"));
 
         if (request.getExtraData() != null) {
             requestBody.put("extra_data", request.getExtraData());
+        }
+
+        // MCP servers (optional)
+        if (request.getMcpServers() != null && !request.getMcpServers().isEmpty()) {
+            requestBody.put("mcp_servers", request.getMcpServers());
         }
 
         return requestBody;

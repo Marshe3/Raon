@@ -48,4 +48,7 @@ public class SessionCreateRequest {
 
     @JsonProperty("previousChatRoomId")
     private Long previousChatRoomId;
+
+    @JsonProperty("mcpServers")
+    private List<String> mcpServers;
 }

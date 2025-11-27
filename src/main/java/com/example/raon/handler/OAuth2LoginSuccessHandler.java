@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
-    @Value("${server.servlet.session.cookie.secure:false}")
+    @Value("${jwt.cookie.secure:false}")
     private boolean cookieSecure;
 
     @Override
@@ -158,14 +159,18 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
     /**
      * JWT 토큰을 쿠키로 추가하는 헬퍼 메서드
+     * ResponseCookie를 사용하여 SameSite 속성을 올바르게 설정
      */
     private void addTokenCookie(HttpServletResponse response, String name, String value, int maxAge) {
-        jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie(name, value);
-        cookie.setHttpOnly(true); // XSS 공격 방지
-        cookie.setSecure(cookieSecure); // 환경별 설정 사용
-        cookie.setPath("/");
-        cookie.setMaxAge(maxAge);
-        cookie.setAttribute("SameSite", "Lax"); // CSRF 방어
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from(name, value)
+                .httpOnly(true)           // XSS 공격 방지
+                .secure(cookieSecure)     // 환경별 설정 사용
+                .path("/")                // 모든 경로에서 접근 가능
+                .maxAge(maxAge)           // 쿠키 만료 시간
+                .sameSite("Lax")          // CSRF 방어
+                .build();
+
+        response.addHeader("Set-Cookie", cookie.toString());
+        log.info("Set cookie: {} (maxAge: {}s, secure: {}, sameSite: Lax)", name, maxAge, cookieSecure);
     }
 }
