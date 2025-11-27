@@ -8,27 +8,14 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
   const highlightedMessageRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const wasAtBottomRef = useRef(true); // 이전 스크롤 위치 저장
 
   // 사용자가 최하단에 있는지 확인
   const isAtBottom = () => {
     if (!messagesContainerRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    // 최하단에서 100px 이내면 true (새 메시지 추가 시에도 감지되도록)
+    // 최하단에서 100px 이내면 true
     return scrollHeight - scrollTop - clientHeight < 100;
-  };
-
-  // 스크롤을 맨 아래로 이동 (검색 중이 아니고, 사용자가 최하단에 있을 때만)
-  const scrollToBottom = () => {
-    if (!searchResults || searchResults.length === 0) {
-      // 사용자가 최하단에 있을 때만 자동 스크롤
-      if (isAtBottom() && messagesContainerRef.current) {
-        // scrollTo를 사용하여 채팅 컨테이너만 스크롤 (페이지 전체 스크롤 방지)
-        messagesContainerRef.current.scrollTo({
-          top: messagesContainerRef.current.scrollHeight,
-          behavior: 'smooth'
-        });
-      }
-    }
   };
 
   // 스크롤 이벤트 핸들러
@@ -36,13 +23,26 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
     if (messagesContainerRef.current) {
       const atBottom = isAtBottom();
       setIsUserScrolling(!atBottom);
+      wasAtBottomRef.current = atBottom; // 현재 스크롤 위치 저장
     }
   };
 
-  // 메시지 변경 시 스크롤 (사용자가 최하단에 있을 때만)
+  // 메시지 변경 시 스크롤 (이전에 최하단에 있었을 때만)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    if (searchResults && searchResults.length > 0) return; // 검색 중이면 스크롤 안함
+
+    // 이전에 최하단에 있었으면 자동 스크롤
+    if (wasAtBottomRef.current) {
+      setTimeout(() => {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 100); // DOM 업데이트 후 스크롤
+    }
+  }, [messages, searchResults]);
 
   // 검색 결과로 스크롤
   useEffect(() => {
