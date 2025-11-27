@@ -22,7 +22,11 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
     if (!searchResults || searchResults.length === 0) {
       // 사용자가 최하단에 있을 때만 자동 스크롤
       if (isAtBottom()) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',  // 페이지 전체 스크롤 방지
+          inline: 'nearest'
+        });
       }
     }
   };
@@ -43,7 +47,11 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
   // 검색 결과로 스크롤
   useEffect(() => {
     if (searchResults && searchResults.length > 0 && highlightedMessageRef.current) {
-      highlightedMessageRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      highlightedMessageRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'  // 페이지 전체 스크롤 방지
+      });
     }
   }, [currentSearchIndex, searchResults]);
 
