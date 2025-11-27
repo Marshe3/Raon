@@ -6,7 +6,7 @@ import CustomDate from './CustomDate';
 import { getResumeFeedback } from '../services/geminiService';
 
 const RaonResume = () => {
-    // 페이지: 리스트/작성폼만 사용 (empty 페이지 제거)
+    // 페이지: 리스트/작성폼만 사용
     const [currentPage, setCurrentPage] = useState('list'); // 'form', 'list'
     const [currentTab, setCurrentTab] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,13 +54,68 @@ const RaonResume = () => {
     // 모달 상태
     const [showSetDefaultModal, setShowSetDefaultModal] = useState(false);
     const [resumeToSetDefault, setResumeToSetDefault] = useState(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [resumeToDelete, setResumeToDelete] = useState(null);
+    const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const [showApplyModal, setShowApplyModal] = useState(false);
+    const [showEmptyModal, setShowEmptyModal] = useState(false);
 
     // 보기/수정 모드
     const [isViewMode, setIsViewMode] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editingResumeId, setEditingResumeId] = useState(null);
+
+    // ✅ 탭 전환 시 스크롤 맨 위로
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [currentTab]);
+
+    // 폼 전체 초기화
+    const resetForm = () => {
+        setCurrentTab(0);
+        setFormData({
+            title: '',
+            name: '',
+            phone: '',
+            email: '',
+            desiredPosition: '',
+            skills: '',
+            isDefault: false,
+            schoolName: '',
+            major: '',
+            educationStatus: '',
+            educationType: '',
+            gpa: '',
+            companyName: '',
+            position: '',
+            responsibilities: '',
+            achievements: ''
+        });
+        setEducationStartDate('');
+        setEducationEndDate('');
+        setCareerStartDate('');
+        setCareerEndDate('');
+        setIsCurrentJob(false);
+        setShowFeedback(false);
+        setCoverLetter('');
+        setAiFeedback(null);
+        setIsEditMode(false);
+        setEditingResumeId(null);
+        setIsViewMode(false);
+    };
 
     // 페이지 전환
-    const navigateToForm = () => setCurrentPage('form');
-    const navigateToList = () => setCurrentPage('list');
+    const navigateToForm = () => {
+        resetForm();
+        setCurrentPage('form');
+        setCurrentTab(0);
+    };
+
+    const navigateToList = () => {
+        setCurrentPage('list');
+        setCurrentTab(0);
+    };
 
     // 탭 관리
     const switchTab = (index) => setCurrentTab(index);
@@ -75,7 +130,7 @@ const RaonResume = () => {
         }
     };
 
-    // 모달 관리 (나중에 카드 생기면 사용)
+    // 모달 관리
     const openModal = () => setIsModalOpen(true);
     const closeModal = () => setIsModalOpen(false);
 
@@ -150,7 +205,7 @@ const RaonResume = () => {
     // AI 첨삭 요청 함수
     const handleAIFeedback = async () => {
         if (!coverLetter.trim()) {
-            alert('자기소개서 내용을 먼저 작성해주세요.');
+            setShowEmptyModal(true);
             return;
         }
 
@@ -173,6 +228,15 @@ const RaonResume = () => {
 
     // 저장 버튼
     const handleSaveResume = async () => {
+        if (isEditMode) {
+            setShowUpdateModal(true);
+        } else {
+            await saveResume();
+        }
+    };
+
+    // 실제 저장/수정 로직
+    const saveResume = async () => {
         try {
             setIsLoading(true);
 
@@ -214,48 +278,37 @@ const RaonResume = () => {
 
             logger.log('📤 이력서 저장 요청:', requestData);
 
-            const response = await fetch('/raon/api/resumes', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify(requestData)
-            });
+            let response;
+            if (isEditMode && editingResumeId) {
+                // 수정 모드
+                response = await fetch(`/raon/api/resumes/${editingResumeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(requestData)
+                });
+            } else {
+                // 새로 생성
+                response = await fetch('/raon/api/resumes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(requestData)
+                });
+            }
 
             if (response.ok) {
                 const savedResume = await response.json();
                 logger.log('✅ 이력서 저장 성공:', savedResume);
-                alert('이력서가 저장되었습니다!');
+                alert(isEditMode ? '이력서가 수정되었습니다!' : '이력서가 저장되었습니다!');
 
-                // 폼 초기화
-                setFormData({
-                    title: '',
-                    name: '',
-                    phone: '',
-                    email: '',
-                    desiredPosition: '',
-                    skills: '',
-                    isDefault: false,
-                    schoolName: '',
-                    major: '',
-                    educationStatus: '',
-                    educationType: '',
-                    gpa: '',
-                    companyName: '',
-                    position: '',
-                    responsibilities: '',
-                    achievements: ''
-                });
-                setEducationStartDate('');
-                setEducationEndDate('');
-                setCareerStartDate('');
-                setCareerEndDate('');
-                setIsCurrentJob(false);
-                setCurrentTab(0);
-
-                // 목록 페이지로 이동
+                resetForm();
                 navigateToList();
+                setShowUpdateModal(false);
             } else {
                 const errorText = await response.text();
                 logger.error('이력서 저장 실패:', response.status, errorText);
@@ -280,10 +333,10 @@ const RaonResume = () => {
                 const resume = await response.json();
                 logger.log('✅ 이력서 조회 성공 (보기용):', resume);
 
-                // 보기 모드 활성화
                 setIsViewMode(true);
+                setIsEditMode(false);
+                setEditingResumeId(resume.id);
 
-                // 폼 데이터 설정
                 setFormData({
                     title: resume.title || '',
                     name: resume.name || '',
@@ -303,7 +356,6 @@ const RaonResume = () => {
                     achievements: resume.careers?.[0]?.achievements || ''
                 });
 
-                // 폼 페이지로 이동
                 setCurrentPage('form');
                 setCurrentTab(0);
             } else {
@@ -327,7 +379,10 @@ const RaonResume = () => {
                 const resume = await response.json();
                 logger.log('✅ 이력서 조회 성공 (수정용):', resume);
 
-                // 폼 데이터 설정
+                setIsEditMode(true);
+                setIsViewMode(false);
+                setEditingResumeId(resume.id);
+
                 setFormData({
                     title: resume.title || '',
                     name: resume.name || '',
@@ -347,10 +402,8 @@ const RaonResume = () => {
                     achievements: resume.careers?.[0]?.achievements || ''
                 });
 
-                // TODO: 날짜 파싱 및 설정 필요
-
-                // 폼 페이지로 이동
-                navigateToForm();
+                setCurrentPage('form');
+                setCurrentTab(0);
             } else {
                 logger.error('이력서 조회 실패:', response.status);
                 alert('이력서 조회에 실패했습니다.');
@@ -362,13 +415,14 @@ const RaonResume = () => {
     };
 
     // 이력서 삭제
-    const handleDeleteResume = async (id) => {
-        if (!window.confirm('정말 삭제하시겠습니까?')) {
-            return;
-        }
+    const handleDeleteResume = (id) => {
+        setResumeToDelete(id);
+        setShowDeleteModal(true);
+    };
 
+    const confirmDelete = async () => {
         try {
-            const response = await fetch(`/raon/api/resumes/${id}`, {
+            const response = await fetch(`/raon/api/resumes/${resumeToDelete}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -376,8 +430,9 @@ const RaonResume = () => {
             if (response.ok) {
                 logger.log('✅ 이력서 삭제 성공');
                 alert('이력서가 삭제되었습니다.');
-                // 목록 새로고침
                 fetchResumes();
+                setShowDeleteModal(false);
+                setResumeToDelete(null);
             } else {
                 logger.error('이력서 삭제 실패:', response.status);
                 alert('이력서 삭제에 실패했습니다.');
@@ -399,7 +454,6 @@ const RaonResume = () => {
                 const resume = await response.json();
                 logger.log('✅ 이력서 조회 성공 (AI 첨삭보기용):', resume);
 
-                // 폼 데이터 설정
                 setFormData({
                     title: resume.title || '',
                     name: resume.name || '',
@@ -419,10 +473,9 @@ const RaonResume = () => {
                     achievements: resume.careers?.[0]?.achievements || ''
                 });
 
-                // 자기소개서 탭으로 이동 (Tab 3)
                 setCurrentPage('form');
                 setCurrentTab(3);
-                setIsViewMode(false); // AI 첨삭은 편집 모드로
+                setIsViewMode(false);
             } else {
                 logger.error('이력서 조회 실패:', response.status);
                 alert('이력서 조회에 실패했습니다.');
@@ -433,13 +486,12 @@ const RaonResume = () => {
         }
     };
 
-    // 기본 이력서로 설정 - 모달 열기
+    // 기본 이력서로 설정
     const handleSetAsDefault = (id) => {
         setResumeToSetDefault(id);
         setShowSetDefaultModal(true);
     };
 
-    // 기본 이력서로 설정 - 확정
     const confirmSetDefault = async () => {
         try {
             const response = await fetch(`/raon/api/resumes/${resumeToSetDefault}/default`, {
@@ -449,7 +501,6 @@ const RaonResume = () => {
 
             if (response.ok) {
                 logger.log('✅ 기본 이력서 설정 성공');
-                // 목록 새로고침
                 await fetchResumes();
                 setShowSetDefaultModal(false);
                 setResumeToSetDefault(null);
@@ -463,9 +514,30 @@ const RaonResume = () => {
         }
     };
 
+    // 취소 버튼
+    const handleCancelClick = () => {
+        setShowCancelModal(true);
+    };
+
+    const confirmCancelAndExit = () => {
+        setShowCancelModal(false);
+        resetForm();
+        navigateToList();
+    };
+
     const handleApplyFeedback = () => {
-        window.alert('첨삭 내용이 반영되었습니다!');
+        setShowApplyModal(true);
+    };
+
+    const confirmApplyFeedback = () => {
+        setShowApplyModal(false);
         setShowFeedback(false);
+    };
+
+    // 수정 확인
+    const confirmUpdate = () => {
+        setShowUpdateModal(false);
+        saveResume();
     };
 
     // ==================== 이력서 작성 폼 페이지 ====================
@@ -473,8 +545,15 @@ const RaonResume = () => {
         <div className="resume-form-page">
             <div className="container">
                 <div className="form-header">
-                    <h1 className="form-title">새 이력서 작성</h1>
-                    <p className="form-subtitle">필요한 정보를 입력해주세요. 필수 항목(*)은 반드시 입력해야 합니다.</p>
+                    <h1 className="form-title">
+                        {isViewMode ? '이력서 보기' : isEditMode ? '이력서 수정' : '새 이력서 작성'}
+                    </h1>
+                    <p className="form-subtitle">
+                        {isViewMode 
+                            ? '작성하신 이력서를 확인하세요' 
+                            : '필요한 정보를 입력해주세요. 필수 항목(*)은 반드시 입력해야 합니다.'
+                        }
+                    </p>
                 </div>
 
                 <div className="tabs-container">
@@ -503,6 +582,8 @@ const RaonResume = () => {
                                 placeholder="예: 네이버 지원용"
                                 value={formData.title}
                                 onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             />
                         </div>
 
@@ -516,6 +597,8 @@ const RaonResume = () => {
                                 placeholder="홍길동"
                                 value={formData.name}
                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             />
                         </div>
 
@@ -527,6 +610,8 @@ const RaonResume = () => {
                                 placeholder="010-1234-5678"
                                 value={formData.phone}
                                 onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             />
                         </div>
 
@@ -538,6 +623,8 @@ const RaonResume = () => {
                                 placeholder="example@email.com"
                                 value={formData.email}
                                 onChange={(e) => setFormData({...formData, email: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             />
                         </div>
 
@@ -549,6 +636,8 @@ const RaonResume = () => {
                                 placeholder="예: 백엔드 개발자"
                                 value={formData.desiredPosition}
                                 onChange={(e) => setFormData({...formData, desiredPosition: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             />
                         </div>
                     </div>
@@ -567,6 +656,8 @@ const RaonResume = () => {
                                 rows="8"
                                 value={formData.skills}
                                 onChange={(e) => setFormData({...formData, skills: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             ></textarea>
                         </div>
 
@@ -589,7 +680,6 @@ const RaonResume = () => {
                         {/* ===== 학력 섹션 ===== */}
                         <div className="section-title">학력</div>
 
-                        {/* 1행: 학교명 / 전공 */}
                         <div className="form-row">
                             <div className="form-field">
                                 <label className="field-label">학교명</label>
@@ -599,6 +689,8 @@ const RaonResume = () => {
                                     placeholder="예: 한국대학교"
                                     value={formData.schoolName}
                                     onChange={(e) => setFormData({...formData, schoolName: e.target.value})}
+                                    readOnly={isViewMode}
+                                    disabled={isViewMode}
                                 />
                             </div>
                             <div className="form-field">
@@ -609,11 +701,12 @@ const RaonResume = () => {
                                     placeholder="고졸인 경우 비워두셔도 됩니다"
                                     value={formData.major}
                                     onChange={(e) => setFormData({...formData, major: e.target.value})}
+                                    readOnly={isViewMode}
+                                    disabled={isViewMode}
                                 />
                             </div>
                         </div>
 
-                        {/* 2행: 상태 / 학력 구분 */}
                         <div className="form-row">
                             <div className="form-field select-field">
                                 <label className="field-label">상태</label>
@@ -628,6 +721,7 @@ const RaonResume = () => {
                                         { value: '중퇴', label: '중퇴' }
                                     ]}
                                     placeholder="선택"
+                                    disabled={isViewMode}
                                 />
                             </div>
                             <div className="form-field select-field">
@@ -643,33 +737,32 @@ const RaonResume = () => {
                                         { value: '대학원', label: '대학원' }
                                     ]}
                                     placeholder="선택"
+                                    disabled={isViewMode}
                                 />
                             </div>
                         </div>
 
-                        {/* 3행: 시작일 / 종료일 */}
                         <div className="form-row">
                             <div className="form-field">
                                 <label className="field-label">시작일</label>
-                                <input 
-                                    type="date" 
-                                    className="field-input" 
+                                <CustomDate
                                     value={educationStartDate}
                                     onChange={(e) => setEducationStartDate(e.target.value)}
+                                    placeholder="시작일을 선택하세요"
+                                    disabled={isViewMode}
                                 />
                             </div>
                             <div className="form-field">
                                 <label className="field-label">종료일</label>
-                                <input 
-                                    type="date" 
-                                    className="field-input" 
+                                <CustomDate
                                     value={educationEndDate}
                                     onChange={(e) => setEducationEndDate(e.target.value)}
+                                    placeholder="종료일을 선택하세요"
+                                    disabled={isViewMode}
                                 />
                             </div>
                         </div>
 
-                        {/* 4행: 재학기간 / 학점 */}
                         <div className="form-row">
                             <div className="form-field">
                                 <label className="field-label">재학기간 (자동생성)</label>
@@ -689,6 +782,8 @@ const RaonResume = () => {
                                     placeholder="예: 4.0/4.5"
                                     value={formData.gpa}
                                     onChange={(e) => setFormData({...formData, gpa: e.target.value})}
+                                    readOnly={isViewMode}
+                                    disabled={isViewMode}
                                 />
                             </div>
                         </div>
@@ -707,6 +802,8 @@ const RaonResume = () => {
                                     placeholder="예: (주)테크컴퍼니"
                                     value={formData.companyName}
                                     onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                                    readOnly={isViewMode}
+                                    disabled={isViewMode}
                                 />
                             </div>
                             <div className="form-field">
@@ -717,6 +814,8 @@ const RaonResume = () => {
                                     placeholder="예: 백엔드 개발자"
                                     value={formData.position}
                                     onChange={(e) => setFormData({...formData, position: e.target.value})}
+                                    readOnly={isViewMode}
+                                    disabled={isViewMode}
                                 />
                             </div>
                         </div>
@@ -724,22 +823,31 @@ const RaonResume = () => {
                         <div className="form-row">
                             <div className="form-field">
                                 <label className="field-label">시작일</label>
-                                <input 
-                                    type="date" 
-                                    className="field-input" 
+                                <CustomDate
                                     value={careerStartDate}
                                     onChange={(e) => setCareerStartDate(e.target.value)}
+                                    placeholder="시작일을 선택하세요"
+                                    disabled={isViewMode}
                                 />
                             </div>
                             <div className="form-field">
                                 <label className="field-label">종료일</label>
-                                <input 
-                                    type="date" 
-                                    className="field-input" 
-                                    value={careerEndDate}
-                                    onChange={(e) => setCareerEndDate(e.target.value)}
-                                    disabled={isCurrentJob}
-                                />
+                                {!isCurrentJob ? (
+                                    <CustomDate
+                                        value={careerEndDate}
+                                        onChange={(e) => setCareerEndDate(e.target.value)}
+                                        placeholder="종료일을 선택하세요"
+                                        disabled={isViewMode}
+                                    />
+                                ) : (
+                                    <input
+                                        type="text"
+                                        className="field-input"
+                                        value="재직중"
+                                        disabled
+                                        style={{ background: '#f1f5f9', color: '#94a3b8' }}
+                                    />
+                                )}
                             </div>
                         </div>
 
@@ -755,21 +863,23 @@ const RaonResume = () => {
                                 placeholder="시작일과 종료일을 선택하세요"
                                 readOnly
                             />
-                            <div className="checkbox-inline">
-                                <input 
-                                    type="checkbox" 
-                                    id="currentJob" 
-                                    className="checkbox-small" 
-                                    checked={isCurrentJob}
-                                    onChange={(e) => {
-                                        setIsCurrentJob(e.target.checked);
-                                        if (e.target.checked) {
-                                            setCareerEndDate('');
-                                        }
-                                    }}
-                                />
-                                <label htmlFor="currentJob" className="checkbox-label-small">현재 재직중</label>
-                            </div>
+                            {!isViewMode && (
+                                <div className="checkbox-inline">
+                                    <input 
+                                        type="checkbox" 
+                                        id="currentJob" 
+                                        className="checkbox-small" 
+                                        checked={isCurrentJob}
+                                        onChange={(e) => {
+                                            setIsCurrentJob(e.target.checked);
+                                            if (e.target.checked) {
+                                                setCareerEndDate('');
+                                            }
+                                        }}
+                                    />
+                                    <label htmlFor="currentJob" className="checkbox-label-small">현재 재직중</label>
+                                </div>
+                            )}
                         </div>
 
                         <div className="form-field">
@@ -780,6 +890,8 @@ const RaonResume = () => {
                                 rows="4"
                                 value={formData.responsibilities}
                                 onChange={(e) => setFormData({...formData, responsibilities: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             ></textarea>
                         </div>
 
@@ -791,6 +903,8 @@ const RaonResume = () => {
                                 rows="4"
                                 value={formData.achievements}
                                 onChange={(e) => setFormData({...formData, achievements: e.target.value})}
+                                readOnly={isViewMode}
+                                disabled={isViewMode}
                             ></textarea>
                         </div>
                     </div>
@@ -811,17 +925,21 @@ const RaonResume = () => {
                                     value={coverLetter}
                                     onChange={(e) => setCoverLetter(e.target.value)}
                                     rows="15"
+                                    readOnly={isViewMode}
+                                    disabled={isViewMode}
                                 ></textarea>
 
-                                <button
-                                    className="btn-ai-feedback"
-                                    onClick={handleAIFeedback}
-                                    disabled={isAILoading}
-                                >
-                                    {isAILoading ? '⏳ AI 분석 중...' : '✨ AI 첨삭 받기'}
-                                </button>
+                                {!isViewMode && (
+                                    <button
+                                        className="btn-ai-feedback"
+                                        onClick={handleAIFeedback}
+                                        disabled={isAILoading}
+                                    >
+                                        {isAILoading ? '⏳ AI 분석 중...' : '✨ AI 첨삭 받기'}
+                                    </button>
+                                )}
 
-                                {!showFeedback && (
+                                {!showFeedback && !isViewMode && (
                                     <div className="tip-box">
                                         <div className="tip-title">✨ AI 첨삭 안내</div>
                                         <div className="tip-text">
@@ -909,6 +1027,15 @@ const RaonResume = () => {
                                             </div>
                                         )}
                                     </div>
+
+                                    {!isViewMode && (
+                                        <button
+                                            className="btn-apply-inline"
+                                            onClick={handleApplyFeedback}
+                                        >
+                                            이 첨삭 내용을 자소서에 반영하기
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -921,19 +1048,21 @@ const RaonResume = () => {
                             <h2 className="completion-title">작성 완료!</h2>
                             <p className="completion-text">이력서 작성이 거의 완료되었습니다</p>
 
-                            <div className="checkbox-box">
-                                <div className="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        className="checkbox-input"
-                                        id="defaultResume"
-                                        checked={formData.isDefault}
-                                        onChange={(e) => setFormData({...formData, isDefault: e.target.checked})}
-                                    />
-                                    <label htmlFor="defaultResume" className="checkbox-label">이 이력서를 기본 이력서로 설정</label>
+                            {!isViewMode && (
+                                <div className="checkbox-box">
+                                    <div className="checkbox-container">
+                                        <input
+                                            type="checkbox"
+                                            className="checkbox-input"
+                                            id="defaultResume"
+                                            checked={formData.isDefault}
+                                            onChange={(e) => setFormData({...formData, isDefault: e.target.checked})}
+                                        />
+                                        <label htmlFor="defaultResume" className="checkbox-label">이 이력서를 기본 이력서로 설정</label>
+                                    </div>
+                                    <p className="checkbox-desc">AI 면접 연습 시 이 이력서를 참고합니다</p>
                                 </div>
-                                <p className="checkbox-desc">AI 면접 연습 시 이 이력서를 참고합니다</p>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -941,19 +1070,35 @@ const RaonResume = () => {
                 {/* 하단 버튼 */}
                 <div className="action-bar" style={{ border: '1px solid #e2e8f0' }}>
                     <div className="button-left">
-                        <button 
-                            className="btn btn-cancel" 
-                            onClick={navigateToList}
-                            style={{
-                                background: '#fee',
-                                color: '#dc3545',
-                                border: '1px solid #fcc',
-                                opacity: '1',
-                                visibility: 'visible'
-                            }}
-                        >
-                            취소
-                        </button>
+                        {!isViewMode && (
+                            <button 
+                                className="btn btn-cancel" 
+                                onClick={handleCancelClick}
+                                style={{
+                                    background: '#fee',
+                                    color: '#dc3545',
+                                    border: '1px solid #fcc',
+                                    opacity: '1',
+                                    visibility: 'visible'
+                                }}
+                            >
+                                취소
+                            </button>
+                        )}
+                        {isViewMode && currentTab !== 3 && (
+                            <button
+                                className="btn btn-confirm"
+                                onClick={navigateToList}
+                                style={{
+                                    background: '#10b981',
+                                    color: 'white',
+                                    opacity: '1',
+                                    visibility: 'visible',
+                                }}
+                            >
+                                확인
+                            </button>
+                        )}
                     </div>
                     <div className="button-right" style={{ opacity: '1', visibility: 'visible' }}>
                         {currentTab > 0 && (
@@ -971,17 +1116,17 @@ const RaonResume = () => {
                         {currentTab < totalTabs - 1 && (
                             <button 
                                 className="btn btn-next" 
-                                onClick={nextTab}
+                                onClick={isViewMode && currentTab === 3 ? navigateToList : nextTab}
                                 style={{
                                     opacity: '1',
                                     visibility: 'visible',
                                     display: 'inline-block'
                                 }}
                             >
-                                다음
+                                {isViewMode && currentTab === 3 ? '확인' : '다음'}
                             </button>
                         )}
-                        {currentTab === totalTabs - 1 && (
+                        {!isViewMode && currentTab === totalTabs - 1 && (
                             <button
                                 className="btn btn-save"
                                 onClick={handleSaveResume}
@@ -991,12 +1136,61 @@ const RaonResume = () => {
                                     visibility: 'visible'
                                 }}
                             >
-                                {isLoading ? '저장 중...' : '저장하기'}
+                                {isLoading ? '저장 중...' : (isEditMode ? '수정하기' : '저장하기')}
                             </button>
                         )}
                     </div>
                 </div>
             </div>
+
+            {/* 모달들 */}
+            {showApplyModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowApplyModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">AI 첨삭 반영 완료</h3>
+                        <p className="raon-modal-message">자기소개서에 AI 첨삭 내용이 적용되었어요.</p>
+                        <button className="raon-modal-btn" onClick={confirmApplyFeedback}>확인</button>
+                    </div>
+                </div>
+            )}
+
+            {showEmptyModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowEmptyModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">내용을 입력해주세요</h3>
+                        <p className="raon-modal-message">자기소개서 내용을 먼저 작성한 후 AI 첨삭을 요청할 수 있어요.</p>
+                        <button className="raon-modal-btn" onClick={() => setShowEmptyModal(false)}>확인</button>
+                    </div>
+                </div>
+            )}
+
+            {showCancelModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowCancelModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">작성 중인 내용이 사라집니다</h3>
+                        <p className="raon-modal-message">
+                            뒤로 나가면 현재 작성 중인 이력서/자기소개서 내용이 복구되지 않습니다. 정말 나가시겠어요?
+                        </p>
+                        <div className="raon-modal-actions">
+                            <button className="raon-modal-btn-secondary" onClick={() => setShowCancelModal(false)}>계속 작성하기</button>
+                            <button className="raon-modal-btn" onClick={confirmCancelAndExit}>나가기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showUpdateModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowUpdateModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">이력서를 수정하시겠어요?</h3>
+                        <p className="raon-modal-message">수정된 내용이 저장됩니다.</p>
+                        <div className="raon-modal-actions">
+                            <button className="raon-modal-btn-secondary" onClick={() => setShowUpdateModal(false)}>취소</button>
+                            <button className="raon-modal-btn" onClick={confirmUpdate}>수정하기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 
@@ -1024,6 +1218,7 @@ const RaonResume = () => {
                     <div className="stat-card">
                         <div className="stat-number">{resumes.filter(r => r.isDefault).length}</div>
                         <div className="stat-label">기본 이력서</div>
+                        <div className="stat-note">※ 기본 이력서는 1개만 지정 가능합니다</div>
                     </div>
                     <div className="stat-card">
                         <div className="stat-number">0</div>
@@ -1150,7 +1345,6 @@ const RaonResume = () => {
                 <div className="modal-container" onClick={(e) => e.stopPropagation()}>
                     <div className="modal-header">
                         <h2 className="modal-title">AI 자소서 첨삭</h2>
-                        <button className="btn-close" onClick={closeModal}>×</button>
                     </div>
 
                     <div className="modal-body">
@@ -1192,13 +1386,43 @@ const RaonResume = () => {
                                 </div>
                             </div>
 
-                            <button className="btn-apply" onClick={handleApplyFeedback}>
-                                이 첨삭 내용을 자소서에 반영하기
+                            <button className="btn-apply" onClick={closeModal}>
+                                닫기
                             </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* 삭제 확인 모달 */}
+            {showDeleteModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowDeleteModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">이력서를 삭제하시겠어요?</h3>
+                        <p className="raon-modal-message">삭제된 이력서는 복구할 수 없습니다.</p>
+                        <div className="raon-modal-actions">
+                            <button className="raon-modal-btn-secondary" onClick={() => setShowDeleteModal(false)}>취소</button>
+                            <button className="raon-modal-btn" onClick={confirmDelete}>삭제</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 기본 이력서 설정 확인 모달 */}
+            {showSetDefaultModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowSetDefaultModal(false)}>
+                    <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="raon-modal-title">기본 이력서로 설정하시겠어요?</h3>
+                        <p className="raon-modal-message">
+                            이 이력서가 기본 이력서로 설정되며, 기존 기본 이력서는 해제됩니다.
+                        </p>
+                        <div className="raon-modal-actions">
+                            <button className="raon-modal-btn-secondary" onClick={() => setShowSetDefaultModal(false)}>취소</button>
+                            <button className="raon-modal-btn" onClick={confirmSetDefault}>설정하기</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 
@@ -1207,35 +1431,6 @@ const RaonResume = () => {
         <div className="resume-management">
             {currentPage === 'form' && renderFormPage()}
             {currentPage === 'list' && renderListPage()}
-
-            {/* 기본 이력서 설정 확인 모달 */}
-            {showSetDefaultModal && (
-                <div className="raon-modal-overlay" onClick={() => setShowSetDefaultModal(false)}>
-                    <div
-                        className="raon-modal-content"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="raon-modal-title">기본 이력서로 설정하시겠어요?</h3>
-                        <p className="raon-modal-message">
-                            이 이력서가 기본 이력서로 설정되며, 기존 기본 이력서는 해제됩니다.
-                        </p>
-                        <div className="raon-modal-actions">
-                            <button
-                                className="raon-modal-btn-secondary"
-                                onClick={() => setShowSetDefaultModal(false)}
-                            >
-                                취소
-                            </button>
-                            <button
-                                className="raon-modal-btn"
-                                onClick={confirmSetDefault}
-                            >
-                                설정하기
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

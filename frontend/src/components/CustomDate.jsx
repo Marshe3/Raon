@@ -5,7 +5,7 @@ const MIN_YEAR = 1900;
 const MAX_YEAR = 2030;
 const YEARS_PER_PAGE = 6;
 
-const CustomDate = ({ value, onChange, placeholder = "날짜 선택" }) => {
+const CustomDate = ({ value, onChange, placeholder = "날짜 선택", disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isYearMode, setIsYearMode] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -126,6 +126,8 @@ const CustomDate = ({ value, onChange, placeholder = "날짜 선택" }) => {
     setSelectedDate(null);
     onChange({ target: { value: "" } });
     setIsYearMode(false);
+    // ✅ 지우기 후 현재 달로 리셋
+    setCurrentDate(new Date());
     setIsOpen(false);
   };
 
@@ -186,14 +188,26 @@ const CustomDate = ({ value, onChange, placeholder = "날짜 선택" }) => {
 
   const yearsForCurrentPage = getYearsForPage(yearPageIndex);
 
+  // ✅ 달력 열 때 현재 달로 리셋하는 함수
+  const handleOpenCalendar = () => {
+    if (!disabled) {
+      setCurrentDate(new Date()); // 항상 현재 달로 리셋
+      setIsOpen(true);
+      setIsYearMode(false);
+    }
+  };
+
+  // ✅ 달력 닫는 함수
+  const handleCloseCalendar = () => {
+    setIsOpen(false);
+    setIsYearMode(false);
+  };
+
   return (
     <div className="modern-datepicker">
       <div
         className="datepicker-input-wrapper"
-        onClick={() => {
-          setIsOpen(!isOpen);
-          setIsYearMode(false);
-        }}
+        onClick={handleOpenCalendar}
       >
         <span className="input-icon-calendar">📅</span>
         <input
@@ -201,19 +215,17 @@ const CustomDate = ({ value, onChange, placeholder = "날짜 선택" }) => {
           value={selectedDate ? formatDate(selectedDate) : ""}
           placeholder={placeholder}
           readOnly
+          disabled={disabled}
           className="field-input"
         />
         <span className="dropdown-arrow-calendar">{isOpen ? "▲" : "▼"}</span>
       </div>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <>
           <div
             className="datepicker-overlay-modern"
-            onClick={() => {
-              setIsOpen(false);
-              setIsYearMode(false);
-            }}
+            onClick={handleCloseCalendar}
           />
           <div className="datepicker-popup-modern">
             <div className="datepicker-header-modern">
