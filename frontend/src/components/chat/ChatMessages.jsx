@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 /**
  * 채팅 메시지 목록 표시 컴포넌트 (검색 기능 추가)
@@ -6,15 +6,36 @@ import React, { useRef, useEffect } from 'react';
 const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText }) => {
   const messagesEndRef = useRef(null);
   const highlightedMessageRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
-  // 스크롤을 맨 아래로 이동 (검색 중이 아닐 때만)
+  // 사용자가 최하단에 있는지 확인
+  const isAtBottom = () => {
+    if (!messagesContainerRef.current) return true;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    // 최하단에서 50px 이내면 true
+    return scrollHeight - scrollTop - clientHeight < 50;
+  };
+
+  // 스크롤을 맨 아래로 이동 (검색 중이 아니고, 사용자가 최하단에 있을 때만)
   const scrollToBottom = () => {
     if (!searchResults || searchResults.length === 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // 사용자가 최하단에 있을 때만 자동 스크롤
+      if (isAtBottom()) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
   };
 
-  // 메시지 변경 시 스크롤
+  // 스크롤 이벤트 핸들러
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const atBottom = isAtBottom();
+      setIsUserScrolling(!atBottom);
+    }
+  };
+
+  // 메시지 변경 시 스크롤 (사용자가 최하단에 있을 때만)
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -59,7 +80,7 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
   };
 
   return (
-    <div className="chat-messages">
+    <div className="chat-messages" ref={messagesContainerRef} onScroll={handleScroll}>
       {messages.map((message) => {
         const isHighlighted = isCurrentSearchResult(message.id);
         
