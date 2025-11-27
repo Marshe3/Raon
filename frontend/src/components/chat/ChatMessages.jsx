@@ -13,8 +13,8 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
   const isAtBottom = () => {
     if (!messagesContainerRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    // 최하단에서 50px 이내면 true
-    return scrollHeight - scrollTop - clientHeight < 50;
+    // 최하단에서 100px 이내면 true (새 메시지 추가 시에도 감지되도록)
+    return scrollHeight - scrollTop - clientHeight < 100;
   };
 
   // 스크롤을 맨 아래로 이동 (검색 중이 아니고, 사용자가 최하단에 있을 때만)
@@ -22,8 +22,11 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
     if (!searchResults || searchResults.length === 0) {
       // 사용자가 최하단에 있을 때만 자동 스크롤
       if (isAtBottom() && messagesContainerRef.current) {
-        // scrollTop을 직접 설정하여 페이지 전체 스크롤 방지
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        // scrollTo를 사용하여 채팅 컨테이너만 스크롤 (페이지 전체 스크롤 방지)
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
       }
     }
   };
