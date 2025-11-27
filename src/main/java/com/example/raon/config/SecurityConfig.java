@@ -60,7 +60,8 @@ public class SecurityConfig {
                     "/login/**", "/oauth2/**",
                     "/raon/login/**", "/raon/oauth2/**",
                     "/api/auth/**", "/raon/api/auth/**",
-                    "/loginSuccess", "/loginFailure"
+                    "/loginSuccess", "/loginFailure",
+                    "/actuator/health", "/raon/actuator/health"
                 ).permitAll()
 
                 // 백오피스/디버그/채팅/챗봇/Gemini API (개발 중 편의상 오픈)
