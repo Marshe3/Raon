@@ -62,7 +62,7 @@ const SideMenu = ({ isOpen, onClose, isSessionActive, onEndSession }) => {
                 fontWeight: '600'
               }}
             >
-              세션 종료
+              🎯 면접 종료
             </button>
           </div>
         )}

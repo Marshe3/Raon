@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko">
   <head>
+	<!-- PersoAI SDK 에러 전역 필터 (가장 먼저 실행) -->
+	<script>
+	  // PersoAI SDK 관련 에러를 전역적으로 차단
+	  window.onerror = function(message, source, lineno, colno, error) {
+	    if (source && source.includes('perso-live-sdk.js')) {
+	      console.warn('⚠️ PersoAI SDK 에러 차단됨:', message);
+	      return true; // 에러 전파 중지
+	    }
+	    return false;
+	  };
+
+	  // unhandledrejection 이벤트도 처리
+	  window.addEventListener('unhandledrejection', function(event) {
+	    const reason = event.reason;
+	    if (reason && (reason.message || '').includes('perso')) {
+	      console.warn('⚠️ PersoAI SDK Promise 에러 차단됨');
+	      event.preventDefault();
+	    }
+	  });
+	</script>
+
 	<script src="https://developers.kakao.com/sdk/js/kakao.min.js" defer></script>
 	<script>
 	  window.addEventListener('DOMContentLoaded', () => {

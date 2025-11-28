@@ -7,6 +7,7 @@ import AvatarDisplay from './chat/AvatarDisplay';
 import ChatMessages from './chat/ChatMessages';
 import SideMenu from './chat/SideMenu';
 import ErrorNotification from './chat/ErrorNotification';
+import InterviewFeedbackModal from './InterviewFeedbackModal';
 
 const PERSO_SDK_URL = 'https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js';
 
@@ -82,6 +83,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const [hasRestorableHistory, setHasRestorableHistory] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+
+  // 면접 피드백 모달 상태
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackData, setFeedbackData] = useState(null);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const recognitionRef = useRef(null);
   const transcriptRef = useRef('');
   const mediaRecorderRef = useRef(null);
@@ -126,10 +132,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
           recognitionRef.current.abort();
         }
 
+        // PersoAI 세션 종료 (SDK 내부 정리 오류는 무시)
         try {
           persoSession.close();
         } catch (err) {
-          logger.error('세션 종료 중 오류:', err);
+          logger.warn('⚠️ PersoAI 세션 종료 중 비중요 오류 (무시됨):', err.message);
         }
 
         if (streamRef.current) {
@@ -140,7 +147,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
           try {
             audioContextRef.current.close();
           } catch (err) {
-            logger.error('AudioContext 종료 중 오류:', err);
+            logger.warn('⚠️ AudioContext 종료 중 비중요 오류 (무시됨):', err.message);
           }
         }
 
@@ -265,10 +272,39 @@ function RaonChatPerso({ user, isLoggedIn }) {
     };
     document.body.appendChild(script);
 
+    // PersoAI SDK 관련 에러를 전역적으로 무시
+    const errorHandler = (event) => {
+      const errorMessage = event.message || '';
+      const errorSource = event.filename || '';
+
+      // PersoAI SDK 관련 에러는 무시
+      if (errorSource.includes('perso-live-sdk.js') ||
+          errorMessage.includes('closeSelf') ||
+          errorMessage.includes('close') && errorSource.includes('perso')) {
+        logger.warn('⚠️ PersoAI SDK 정리 중 비중요 에러 (무시됨)');
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        return true;
+      }
+    };
+
+    // 더 강력한 에러 핸들러 (React 에러 바운더리보다 먼저 실행)
+    window.onerror = function(message, source, lineno, colno, error) {
+      if (source && source.includes('perso-live-sdk.js')) {
+        logger.warn('⚠️ PersoAI SDK 에러 차단됨');
+        return true; // 에러 전파 중지
+      }
+      return false;
+    };
+
+    window.addEventListener('error', errorHandler, true); // useCapture = true
+
     return () => {
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
+      window.removeEventListener('error', errorHandler);
     };
   }, []);
 
@@ -904,11 +940,74 @@ function RaonChatPerso({ user, isLoggedIn }) {
     }
   };
 
+  // 면접 피드백 요청 함수
+  const requestInterviewFeedback = async () => {
+    if (messages.length === 0) {
+      logger.warn('대화 내역이 없어 피드백을 생성할 수 없습니다');
+      return;
+    }
+
+    try {
+      setIsFeedbackLoading(true);
+      setIsFeedbackModalOpen(true);
+
+      logger.log('📊 면접 피드백 요청 중...');
+
+      // 메시지를 API 요청 형식으로 변환
+      const apiMessages = messages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+
+      const response = await fetch('/raon/api/gemini/interview-feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          messages: apiMessages,
+          chatId: null // 필요시 chatRoomId 추가
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('피드백 요청 실패');
+      }
+
+      const data = await response.json();
+      const feedbackJson = JSON.parse(data.text);
+
+      logger.log('✅ 면접 피드백 수신 성공:', feedbackJson);
+      setFeedbackData(feedbackJson);
+
+    } catch (err) {
+      logger.error('❌ 면접 피드백 요청 중 오류:', err);
+      setError('면접 피드백을 생성하는 중 오류가 발생했습니다');
+      setFeedbackData(null);
+    } finally {
+      setIsFeedbackLoading(false);
+    }
+  };
+
   const endSession = async () => {
     if (persoSession) {
       try {
+        // 면접 피드백 요청 (대화 내역이 있는 경우에만)
+        if (messages.length > 0) {
+          logger.log('🎯 면접 종료 - 피드백 생성 시작');
+          await requestInterviewFeedback();
+        }
+
         const sessionId = sessionStorage.getItem('raon_session_id');
-        persoSession.close();
+
+        // PersoAI 세션 종료 (SDK 내부 정리 오류는 무시)
+        try {
+          persoSession.close();
+        } catch (err) {
+          logger.warn('⚠️ PersoAI 세션 종료 중 비중요 오류 (무시됨):', err.message);
+        }
+
         setPersoSession(null);
         setIsSessionActive(false);
         setMessages([]);
@@ -1067,6 +1166,22 @@ function RaonChatPerso({ user, isLoggedIn }) {
             💬
           </button>
 
+          {/* 면접 종료 버튼 */}
+          {isSessionActive && (
+            <button
+              className="sidebar-icon-btn end-interview-btn"
+              onClick={endSession}
+              disabled={!isSessionActive}
+              style={{
+                background: isSessionActive ? '#e74c3c' : '#95a5a6',
+                marginTop: '10px'
+              }}
+              title="면접 종료 및 피드백 받기"
+            >
+              🎯
+            </button>
+          )}
+
           <div style={{ flex: 1 }}></div>
         </div>
 
@@ -1194,6 +1309,17 @@ function RaonChatPerso({ user, isLoggedIn }) {
       />
 
       <ErrorNotification error={error} onClose={() => setError(null)} />
+
+      {/* 면접 피드백 모달 */}
+      <InterviewFeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => {
+          setIsFeedbackModalOpen(false);
+          setFeedbackData(null);
+        }}
+        feedback={feedbackData}
+        isLoading={isFeedbackLoading}
+      />
     </div>
   );
 }

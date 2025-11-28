@@ -1,6 +1,7 @@
 package com.example.raon.controller;
 
 import com.example.raon.dto.CoverLetterFeedbackRequest;
+import com.example.raon.dto.InterviewFeedbackRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Gemini API를 사용한 자기소개서 첨삭 컨트롤러
@@ -155,6 +157,156 @@ public class GeminiController {
             }
         } catch (Exception e) {
             log.error("❌ Gemini API 호출 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 면접 피드백 요청
+     * POST /api/gemini/interview-feedback
+     */
+    @PostMapping("/interview-feedback")
+    public ResponseEntity<?> getInterviewFeedback(@RequestBody InterviewFeedbackRequest request) {
+        try {
+            log.info("면접 피드백 요청 - 메시지 개수: {}", request.getMessages().size());
+
+            // 대화 내역을 텍스트로 변환
+            String conversation = request.getMessages().stream()
+                    .map(msg -> {
+                        String speaker = "user".equals(msg.getRole()) ? "[면접자]" : "[면접관]";
+                        return speaker + " " + msg.getContent();
+                    })
+                    .collect(Collectors.joining("\n\n"));
+
+            String prompt = String.format("""
+                    당신은 전문 면접관이자 HR 전문가입니다. 다음 면접 대화 내역을 분석하여 면접자에 대한 종합적인 피드백을 제공해주세요.
+
+                    [면접 대화 내역]
+                    %s
+
+                    다음 5가지 항목을 각각 100점 만점으로 평가해주세요:
+
+                    1. **적합성 (100점)**: 질문의 의도에 맞는 답변인가?
+                    2. **구체성 (100점)**: 추상적이지 않고 구체적인 사례가 포함되었는가?
+                    3. **논리성 (100점)**: 답변의 흐름이 자연스럽고 논리적인가?
+                    4. **진정성 (100점)**: 진실이 담긴 답변인가? 외운 느낌은 없는가?
+                    5. **차별성 (100점)**: 다른 지원자와 구별되는 본인만의 강점이 드러나는가?
+
+                    각 항목에 대해:
+                    - 점수 (0-100점)
+                    - 평가 내용 (2-3문장)
+
+                    그리고 위 5가지 항목을 종합적으로 고려하여:
+                    - **종합 점수 (0-100점)**: 면접자의 전체적인 면접 수행 능력을 종합 평가한 점수
+                      (단순 평균이 아닌, 각 항목의 중요도와 면접자의 전반적인 인상을 고려한 종합 점수)
+                    - 전체 평가 요약 (5-7문장)
+                    - 면접자의 강점 3가지
+                    - 면접자의 개선점 3가지
+
+                    답변은 다음 JSON 형식으로 작성해주세요:
+                    {
+                      "overallScore": 종합점수(0-100, 전체적인 면접 수행 능력에 대한 종합 평가),
+                      "sections": [
+                        {
+                          "title": "적합성",
+                          "score": 점수(0-100),
+                          "criteria": "질문의 의도에 맞는 답변인가?",
+                          "feedback": "평가 내용"
+                        },
+                        {
+                          "title": "구체성",
+                          "score": 점수(0-100),
+                          "criteria": "추상적이지 않고 구체적인 사례가 포함되었는가?",
+                          "feedback": "평가 내용"
+                        },
+                        {
+                          "title": "논리성",
+                          "score": 점수(0-100),
+                          "criteria": "답변의 흐름이 자연스럽고 논리적인가?",
+                          "feedback": "평가 내용"
+                        },
+                        {
+                          "title": "진정성",
+                          "score": 점수(0-100),
+                          "criteria": "진실이 담긴 답변인가? 외운 느낌은 없는가?",
+                          "feedback": "평가 내용"
+                        },
+                        {
+                          "title": "차별성",
+                          "score": 점수(0-100),
+                          "criteria": "다른 지원자와 구별되는 본인만의 강점이 드러나는가?",
+                          "feedback": "평가 내용"
+                        }
+                      ],
+                      "summary": "전체 평가 요약",
+                      "strengths": ["강점1", "강점2", "강점3"],
+                      "weaknesses": ["개선점1", "개선점2", "개선점3"]
+                    }
+                    """, conversation);
+
+            Map<String, Object> requestBody = Map.of(
+                    "contents", List.of(
+                            Map.of("parts", List.of(
+                                    Map.of("text", prompt)
+                            ))
+                    )
+            );
+
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            log.info("Gemini API 호출 시작 (면접 피드백)...");
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+            log.info("Gemini API 응답 수신 성공 (면접 피드백)");
+
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody != null) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
+                if (candidates != null && !candidates.isEmpty()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                    String text = (String) parts.get(0).get("text");
+
+                    log.info("면접 피드백 응답 텍스트 길이: {}", text.length());
+
+                    // JSON 파싱
+                    String jsonText = text.replaceAll("```json\\n?", "").replaceAll("```", "").trim();
+
+                    int startIdx = jsonText.indexOf("{");
+                    int endIdx = jsonText.lastIndexOf("}");
+                    if (startIdx != -1 && endIdx != -1) {
+                        jsonText = jsonText.substring(startIdx, endIdx + 1);
+                    }
+
+                    Map<String, Object> result = Map.of("text", jsonText);
+                    log.info("✅ 면접 피드백 JSON 응답 생성 완료 - 길이: {}", jsonText.length());
+                    return ResponseEntity.ok(result);
+                } else {
+                    log.warn("Gemini 응답에 candidates가 없습니다");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("error", "Gemini 응답에 candidates가 없습니다"));
+                }
+            } else {
+                log.warn("응답 body가 null입니다");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "응답 body가 null입니다"));
+            }
+        } catch (Exception e) {
+            log.error("❌ 면접 피드백 API 호출 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
         }
