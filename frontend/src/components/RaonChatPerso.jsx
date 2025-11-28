@@ -1185,9 +1185,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
       </div>
 
       {/* 하단 상태바 */}
-      <div className="bottom-status-bar">
-        <span>마이크 권한 허용됨</span>
-      </div>
 
       <SideMenu
         isOpen={isMenuOpen}
