@@ -10,6 +10,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -48,13 +49,15 @@ public class InterviewFeedbackController {
 
             // DTO로 변환하여 응답
             List<Map<String, Object>> response = feedbacks.stream()
-                    .map(feedback -> Map.of(
-                            "feedbackId", feedback.getFeedbackId(),
-                            "score", feedback.getScore(),
-                            "feedbackSummary", feedback.getFeedbackSummary() != null ? feedback.getFeedbackSummary() : "",
-                            "interviewDate", feedback.getInterviewDate().toString(),
-                            "chatId", feedback.getChatRoom() != null ? feedback.getChatRoom().getId() : null
-                    ))
+                    .map(feedback -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("feedbackId", feedback.getFeedbackId());
+                        map.put("score", feedback.getScore());
+                        map.put("feedbackSummary", feedback.getFeedbackSummary() != null ? feedback.getFeedbackSummary() : "");
+                        map.put("interviewDate", feedback.getInterviewDate().toString());
+                        map.put("chatId", feedback.getChatRoom() != null ? feedback.getChatRoom().getId() : null);
+                        return map;
+                    })
                     .collect(Collectors.toList());
 
             log.info("면접 피드백 조회 성공 - 개수: {}", response.size());
@@ -84,12 +87,14 @@ public class InterviewFeedbackController {
             List<InterviewFeedback> feedbacks = interviewFeedbackService.getFeedbacksByUserIdAndDateRange(userId, startDate);
 
             List<Map<String, Object>> response = feedbacks.stream()
-                    .map(feedback -> Map.of(
-                            "feedbackId", feedback.getFeedbackId(),
-                            "score", feedback.getScore(),
-                            "feedbackSummary", feedback.getFeedbackSummary() != null ? feedback.getFeedbackSummary() : "",
-                            "interviewDate", feedback.getInterviewDate().toString()
-                    ))
+                    .map(feedback -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("feedbackId", feedback.getFeedbackId());
+                        map.put("score", feedback.getScore());
+                        map.put("feedbackSummary", feedback.getFeedbackSummary() != null ? feedback.getFeedbackSummary() : "");
+                        map.put("interviewDate", feedback.getInterviewDate().toString());
+                        return map;
+                    })
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(response);
