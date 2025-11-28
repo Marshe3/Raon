@@ -6,6 +6,37 @@ export default function BackendDeveloperTracker() {
   const [isRunning, setIsRunning] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 면접 피드백 데이터 로드
+  useEffect(() => {
+    const fetchFeedbacks = async () => {
+      try {
+        const response = await fetch('/raon/api/interview-feedbacks', {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setFeedbacks(data);
+          setAttempts(data.length);
+
+          // 평균 점수 계산
+          if (data.length > 0) {
+            const avgScore = data.reduce((sum, feedback) => sum + Number(feedback.score), 0) / data.length;
+            setTotalScore(avgScore);
+          }
+        }
+      } catch (error) {
+        console.error('면접 피드백 로드 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeedbacks();
+  }, []);
 
   useEffect(() => {
     if (!isRunning) return;
@@ -14,17 +45,17 @@ export default function BackendDeveloperTracker() {
       setStudyTime(prev => {
         let { hours, minutes, seconds } = prev;
         seconds += 1;
-        
+
         if (seconds >= 60) {
           seconds = 0;
           minutes += 1;
         }
-        
+
         if (minutes >= 60) {
           minutes = 0;
           hours += 1;
         }
-        
+
         return { hours, minutes, seconds };
       });
     }, 1000);
@@ -43,17 +74,8 @@ export default function BackendDeveloperTracker() {
     if (!isRunning) {
       setIsRunning(true);
     }
-    // 면접 시작 시 자동으로 시간과 횟수 증가
-    setAttempts(prev => prev + 1);
-    
-    // 랜덤 점수 생성 (70-95점 사이)
-    const newScore = Math.floor(Math.random() * 26) + 70;
-    setTotalScore(prev => {
-      const total = prev * (attempts) + newScore;
-      return total / (attempts + 1);
-    });
-
-    alert(`면접이 시작되었습니다!\n획득 점수: ${newScore}점`);
+    // 면접 페이지로 이동
+    window.location.href = '/avatar';
   };
 
   return (

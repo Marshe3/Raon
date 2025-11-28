@@ -2,13 +2,18 @@ package com.example.raon.controller;
 
 import com.example.raon.dto.CoverLetterFeedbackRequest;
 import com.example.raon.dto.InterviewFeedbackRequest;
+import com.example.raon.service.InterviewFeedbackService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,18 +24,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api/gemini")
+@RequiredArgsConstructor
 public class GeminiController {
 
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-
-    public GeminiController() {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
-    }
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final InterviewFeedbackService interviewFeedbackService;
 
     /**
      * 자기소개서 첨삭 요청
@@ -290,6 +292,21 @@ public class GeminiController {
                     int endIdx = jsonText.lastIndexOf("}");
                     if (startIdx != -1 && endIdx != -1) {
                         jsonText = jsonText.substring(startIdx, endIdx + 1);
+                    }
+
+                    // DB에 저장 시도
+                    try {
+                        Map<String, Object> feedbackJson = objectMapper.readValue(jsonText, Map.class);
+                        Number overallScoreNum = (Number) feedbackJson.get("overallScore");
+                        BigDecimal overallScore = new BigDecimal(overallScoreNum.toString());
+
+                        Long chatId = request.getChatId();
+                        Long userId = 1L; // TODO: 실제 인증된 사용자 ID 가져오기
+
+                        interviewFeedbackService.saveFeedback(userId, chatId, overallScore, jsonText);
+                        log.info("✅ 면접 피드백 DB 저장 완료 - score: {}", overallScore);
+                    } catch (Exception e) {
+                        log.warn("⚠️ 피드백 DB 저장 실패 (응답은 정상 반환): {}", e.getMessage());
                     }
 
                     Map<String, Object> result = Map.of("text", jsonText);
