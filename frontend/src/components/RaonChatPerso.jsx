@@ -37,9 +37,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   useEffect(() => {
     const activate = () => {
       try {
-        // 보통 '면접 연습'은 /avatar 라우트로 연결되어 있으므로 우선 href로 탐색
         const byHref = document.querySelector('a[href="/avatar"], a[href^="/avatar"]');
-        // 혹시 href가 다를 수 있어 텍스트로 보조 탐색 (공백 제거 후 비교)
         const byText = Array.from(document.querySelectorAll('a,button,span,div'))
           .find(el => (el.textContent || '').replace(/\s/g, '') === '면접연습');
         const target = byHref || byText || null;
@@ -53,7 +51,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
         // noop
       }
     };
-    // 헤더 DOM이 먼저 렌더링되도록 한 틱 미룸
     const t = setTimeout(activate, 0);
     return () => {
       clearTimeout(t);
@@ -94,6 +91,15 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const restoredMessagesRef = useRef(null);
   const prevChatLogLengthRef = useRef(0);
 
+  // ✅ 추가: 새 메시지 수신 시 카톡처럼 자동 하단 스크롤
+  useEffect(() => {
+    if (!isChatOpen || isSearchMode) return;
+    const el = document.querySelector('.floating-chat-container .chat-messages');
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [messages, isChatOpen, isSearchMode]);
+
   // 로그인 체크
   useEffect(() => {
     if (!isLoggedIn) {
@@ -109,28 +115,23 @@ function RaonChatPerso({ user, isLoggedIn }) {
   // 컴포넌트 언마운트 시 세션 종료
   useEffect(() => {
     return () => {
-      // 페이지를 떠날 때 세션 종료
       if (persoSession && isSessionActive) {
         logger.log('🚪 페이지를 떠납니다 - 세션 자동 종료');
 
-        // 녹음 중이면 중지
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
           mediaRecorderRef.current.stop();
         }
 
-        // 음성 인식 중이면 중지
         if (recognitionRef.current) {
           recognitionRef.current.abort();
         }
 
-        // 세션 종료
         try {
           persoSession.close();
         } catch (err) {
           logger.error('세션 종료 중 오류:', err);
         }
 
-        // 리소스 정리
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
@@ -408,7 +409,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   const createSession = async () => {
     if (!sdkLoaded || !window.PersoLiveSDK) {
-      setError('아바타 SDK가 로드되지 않았습니다');
+      setError('அ바타 SDK가 로드되지 않았습니다');
       return;
     }
 
@@ -782,32 +783,26 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
   const toggleRecording = async () => {
     if (!isRecording) {
-      // 녹음 시작
       try {
-        // 마이크 스트림 가져오기
         const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-        // AudioContext 생성
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = audioContext;
 
-        // 목적지(destination) 생성 - 녹음할 오디오를 합치는 곳
         const destination = audioContext.createMediaStreamDestination();
 
-        // 마이크 소스 생성 및 연결
         const micSource = audioContext.createMediaStreamSource(micStream);
         const micGain = audioContext.createGain();
-        micGain.gain.value = 1.0; // 마이크 볼륨 (1.0 = 100%)
+        micGain.gain.value = 1.0;
         micSource.connect(micGain);
         micGain.connect(destination);
         logger.log('🎤 마이크 녹음 활성화');
 
-        // 비디오 요소에서 챗봇 TTS 오디오 가져오기
         if (videoRef.current && videoRef.current.srcObject) {
           try {
             const videoSource = audioContext.createMediaStreamSource(videoRef.current.srcObject);
             const videoGain = audioContext.createGain();
-            videoGain.gain.value = 1.0; // 챗봇 음성 볼륨 (1.0 = 100%)
+            videoGain.gain.value = 1.0;
             videoSource.connect(videoGain);
             videoGain.connect(destination);
             logger.log('🔊 챗봇 TTS 음성도 녹음에 포함됩니다');
@@ -816,10 +811,9 @@ function RaonChatPerso({ user, isLoggedIn }) {
           }
         }
 
-        // 합쳐진 스트림으로 MediaRecorder 생성
         const mediaRecorder = new MediaRecorder(destination.stream);
         mediaRecorderRef.current = mediaRecorder;
-        streamRef.current = micStream; // 마이크 스트림 저장 (나중에 정리용)
+        streamRef.current = micStream;
         audioChunksRef.current = [];
 
         mediaRecorder.ondataavailable = (event) => {
@@ -842,7 +836,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
           logger.log('🎙️ 녹음 파일 저장 완료:', link.download);
 
-          // 리소스 정리
           if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
@@ -868,7 +861,6 @@ function RaonChatPerso({ user, isLoggedIn }) {
         setIsRecording(false);
       }
     } else {
-      // 녹음 종료
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
         logger.log('🎙️ 연속 녹음 종료');

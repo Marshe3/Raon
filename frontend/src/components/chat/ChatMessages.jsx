@@ -2,9 +2,10 @@ import React, { useRef, useEffect, useState } from 'react';
 
 /**
  * 채팅 메시지 목록 표시 컴포넌트 (검색 기능 추가)
+ * 스크롤이 항상 맨 위에 고정됨
  */
 const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText }) => {
-  const messagesEndRef = useRef(null);
+  const containerRef = useRef(null);
   const highlightedMessageRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -44,7 +45,7 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
     }
   }, [messages, searchResults]);
 
-  // 검색 결과로 스크롤
+  // 검색 결과로 스크롤 (검색 중일 때만)
   useEffect(() => {
     if (searchResults && searchResults.length > 0 && highlightedMessageRef.current) {
       highlightedMessageRef.current.scrollIntoView({
@@ -62,10 +63,10 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
     const parts = text.split(new RegExp(`(${search})`, 'gi'));
     return (
       <>
-        {parts.map((part, index) => 
+        {parts.map((part, index) =>
           part.toLowerCase() === search.toLowerCase() ? (
-            <mark key={index} style={{ 
-              backgroundColor: '#ffeb3b', 
+            <mark key={index} style={{
+              backgroundColor: '#ffeb3b',
               fontWeight: 'bold',
               padding: '2px 4px',
               borderRadius: '3px'
@@ -91,7 +92,7 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
     <div className="chat-messages" ref={messagesContainerRef} onScroll={handleScroll}>
       {messages.map((message) => {
         const isHighlighted = isCurrentSearchResult(message.id);
-        
+
         return (
           <div
             key={message.id}
@@ -106,8 +107,8 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
             } : {}}
           >
             <div className={`message-bubble-${message.type}`}>
-              {searchText && searchResults && searchResults.length > 0 ? 
-                highlightText(message.text, searchText) : 
+              {searchText && searchResults && searchResults.length > 0 ?
+                highlightText(message.text, searchText) :
                 message.text
               }
             </div>
@@ -117,7 +118,6 @@ const ChatMessages = ({ messages, searchResults, currentSearchIndex, searchText 
           </div>
         );
       })}
-      <div ref={messagesEndRef} />
     </div>
   );
 };
