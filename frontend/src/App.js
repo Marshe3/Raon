@@ -12,7 +12,8 @@ import Footer from "./components/Footer.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
 import RaonResume from "./components/RaonResume.jsx";
 import { logger } from "./utils/logger";
-import RaonDashboard from "./components/RaonDashboard.jsx";
+import RaonDashboard from "./components/RaonDashboard.jsx";           // ⬅️ 상세 학습 기록 화면
+import InterviewScorePage from "./components/InterviewScorePage.jsx"; // ⬅️ 점수 요약 + 버튼 화면 (추가)
 
 // ✅ ScrollToTop 컴포넌트 추가
 function ScrollToTop() {
@@ -224,11 +225,13 @@ function AppInner() {
           }
         />
 
-        {/* ✅ 학습 기록(대시보드) - 로그인 필요 + user prop 추가 */}
+        {/* ✅ 학습 기록(대시보드) - 이제 요약 화면(InterviewScorePage) 먼저 */}
         <Route
           path="/Dashboard"
           element={
-            isLoggedIn ? <RaonDashboard user={user} /> : <Navigate to="/login" replace />
+            isLoggedIn
+              ? <InterviewScorePage user={user} />
+              : <Navigate to="/login" replace />
           }
         />
 
@@ -237,6 +240,7 @@ function AppInner() {
           path="/history"
           element={<Navigate to="/Dashboard" replace />}
         />
+		
 
         {/* 항상 마지막 */}
         <Route path="*" element={<Navigate to="/" replace />} />

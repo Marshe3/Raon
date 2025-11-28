@@ -277,7 +277,7 @@
   bottom: 20px;
   right: 20px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
   padding: 12px 20px;
   background: white;
@@ -286,7 +286,6 @@
   z-index: 100;
   animation: slideInFromRight 0.3s ease;
   min-width: 500px;
-  max-height: 150px;
 }
 
 @keyframes slideInFromRight {
@@ -339,14 +338,6 @@
   font-size: 15px;
   color: #1f2937;
   padding: 8px 12px;
-  min-height: 40px;
-  max-height: 120px;
-  overflow-y: auto;
-  word-wrap: break-word;
-  word-break: break-word;
-  white-space: pre-wrap;
-  resize: none;
-  font-family: inherit;
 }
 
 .unified-input::placeholder {
@@ -356,19 +347,6 @@
 .unified-input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.unified-input::-webkit-scrollbar {
-  width: 4px;
-}
-
-.unified-input::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.unified-input::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
-  border-radius: 2px;
 }
 
 /* 닫기 버튼 */
@@ -462,7 +440,7 @@
 .chat-messages {
   flex: 1;
   padding: 20px;
-  padding-bottom: 120px;
+  padding-bottom: 140px; /* 입력창 높이만큼 하단 여백 추가 */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -574,7 +552,7 @@
   border-top: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   z-index: 100;
   margin: 0 60px;
   font-size: 12px;
