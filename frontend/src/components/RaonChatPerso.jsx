@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './RaonChatPerso.css';
 import { usePersoAI } from '../hooks/usePersoAI';
 import { logger } from '../utils/logger';
+import { fetchWithAuth } from '../utils/api';
 import AvatarDisplay from './chat/AvatarDisplay';
 import ChatMessages from './chat/ChatMessages';
 import SideMenu from './chat/SideMenu';
@@ -219,12 +220,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
     if (!sessionId) return;
 
     try {
-      await fetch(`/raon/api/sessions/${sessionId}/messages`, {
+      await fetchWithAuth(`/raon/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify({
           role: 'assistant',
           content: content
@@ -300,17 +300,13 @@ function RaonChatPerso({ user, isLoggedIn }) {
         let hasMessages = false;
 
         if (chatRoomId) {
-          const response = await fetch(`/raon/api/chatrooms/${chatRoomId}/messages`, {
-            credentials: 'include'
-          });
+          const response = await fetchWithAuth(`/raon/api/chatrooms/${chatRoomId}/messages`);
           if (response.ok) {
             const messages = await response.json();
             hasMessages = messages.length > 0;
           }
         } else if (savedSessionId) {
-          const response = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
-            credentials: 'include'
-          });
+          const response = await fetchWithAuth(`/raon/api/sessions/${savedSessionId}/messages`);
           if (response.ok) {
             const messages = await response.json();
             hasMessages = messages.length > 0;
@@ -344,9 +340,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
       let messagesData = [];
 
       if (chatRoomId) {
-        const response = await fetch(`/raon/api/chatrooms/${chatRoomId}/messages`, {
-          credentials: 'include'
-        });
+        const response = await fetchWithAuth(`/raon/api/chatrooms/${chatRoomId}/messages`);
         if (response.ok) {
           messagesData = await response.json();
           logger.log('📥 채팅방에서 메시지 로드:', messagesData.length);
@@ -354,9 +348,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
       }
 
       if (messagesData.length === 0 && savedSessionId) {
-        const response = await fetch(`/raon/api/sessions/${savedSessionId}/messages`, {
-          credentials: 'include'
-        });
+        const response = await fetchWithAuth(`/raon/api/sessions/${savedSessionId}/messages`);
         if (response.ok) {
           messagesData = await response.json();
           logger.log('📥 세션에서 메시지 로드:', messagesData.length);
@@ -465,12 +457,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
         logger.log('🔗 이전 대화 컨텍스트가 AI에게 전달됩니다');
       }
 
-      const response = await fetch('/raon/api/sessions/create', {
+      const response = await fetchWithAuth('/raon/api/sessions/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(sessionCreateRequest),
       });
 
@@ -663,12 +654,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
 
     if (sessionId) {
       try {
-        await fetch(`/raon/api/sessions/${sessionId}/messages`, {
+        await fetchWithAuth(`/raon/api/sessions/${sessionId}/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include',
           body: JSON.stringify({
             role: 'user',
             content: userMessage

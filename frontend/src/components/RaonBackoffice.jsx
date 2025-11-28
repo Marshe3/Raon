@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactDOM from "react-dom";
 import "./RaonBackoffice.css";
 import { logger } from "../utils/logger";
+import { fetchWithAuth } from "../utils/api";
 
 function RaonBackoffice({ user, isLoggedIn }) {
   const navigate = useNavigate();
@@ -36,8 +37,7 @@ function RaonBackoffice({ user, isLoggedIn }) {
   const loadConfiguration = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/raon/api/backoffice/configurations?t=" + Date.now(), {
-        credentials: "include",
+      const response = await fetchWithAuth("/raon/api/backoffice/configurations?t=" + Date.now(), {
         cache: "no-cache",
       });
       if (!response.ok) throw new Error(`설정 로드 실패: ${response.status}`);
@@ -105,10 +105,9 @@ function RaonBackoffice({ user, isLoggedIn }) {
         paddingHeight: 1,
         extraData: {},
       };
-      const response = await fetch("/raon/api/sessions/create", {
+      const response = await fetchWithAuth("/raon/api/sessions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(sessionRequest),
       });
       if (!response.ok) throw new Error(`세션 생성 실패: ${response.status}`);
