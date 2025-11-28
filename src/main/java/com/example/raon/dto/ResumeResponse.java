@@ -18,6 +18,7 @@ public class ResumeResponse {
     private String email;
     private String desiredPosition;
     private String skills;
+    private String coverLetter;
     private Boolean isDefault;
     private List<EducationDto> educations;
     private List<CareerDto> careers;
@@ -59,6 +60,7 @@ public class ResumeResponse {
                 .email(resume.getEmail())
                 .desiredPosition(resume.getDesiredPosition())
                 .skills(resume.getSkills())
+                .coverLetter(resume.getCoverLetter())
                 .isDefault(resume.getIsDefault())
                 .educations(resume.getEducations().stream()
                         .map(edu -> EducationDto.builder()

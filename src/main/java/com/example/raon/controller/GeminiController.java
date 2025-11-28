@@ -302,9 +302,10 @@ public class GeminiController {
 
                         Long chatId = request.getChatId();
                         Long userId = 1L; // TODO: 실제 인증된 사용자 ID 가져오기
+                        String interviewType = request.getInterviewType() != null ? request.getInterviewType() : "일반 면접";
 
-                        interviewFeedbackService.saveFeedback(userId, chatId, overallScore, jsonText);
-                        log.info("✅ 면접 피드백 DB 저장 완료 - score: {}", overallScore);
+                        interviewFeedbackService.saveFeedback(userId, chatId, overallScore, jsonText, interviewType);
+                        log.info("✅ 면접 피드백 DB 저장 완료 - type: {}, score: {}", interviewType, overallScore);
                     } catch (Exception e) {
                         log.warn("⚠️ 피드백 DB 저장 실패 (응답은 정상 반환): {}", e.getMessage());
                     }

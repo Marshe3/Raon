@@ -24,6 +24,11 @@ public class InterviewFeedbackRequest {
      */
     private Long chatId;
 
+    /**
+     * 면접 종류 (예: "백엔드 개발자", "게임 개발자")
+     */
+    private String interviewType;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

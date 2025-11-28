@@ -85,6 +85,12 @@ public class Resume {
     private String skills;
 
     /**
+     * 자기소개서 내용
+     */
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
+    /**
      * 기본 이력서 여부 (true인 경우 면접 시 기본으로 사용)
      */
     @Column(name = "is_default", nullable = false)
@@ -118,7 +124,7 @@ public class Resume {
 
     @Builder
     public Resume(User user, String title, String name, String phone, String email,
-                  String desiredPosition, String skills, Boolean isDefault) {
+                  String desiredPosition, String skills, String coverLetter, Boolean isDefault) {
         this.user = user;
         this.title = title;
         this.name = name;
@@ -126,6 +132,7 @@ public class Resume {
         this.email = email;
         this.desiredPosition = desiredPosition;
         this.skills = skills;
+        this.coverLetter = coverLetter;
         this.isDefault = isDefault != null ? isDefault : false;
     }
 
@@ -147,13 +154,14 @@ public class Resume {
      * 이력서 정보 업데이트
      */
     public void update(String title, String name, String phone, String email,
-                       String desiredPosition, String skills) {
+                       String desiredPosition, String skills, String coverLetter) {
         if (title != null) this.title = title;
         if (name != null) this.name = name;
         if (phone != null) this.phone = phone;
         if (email != null) this.email = email;
         if (desiredPosition != null) this.desiredPosition = desiredPosition;
         if (skills != null) this.skills = skills;
+        if (coverLetter != null) this.coverLetter = coverLetter;
     }
 
     /**

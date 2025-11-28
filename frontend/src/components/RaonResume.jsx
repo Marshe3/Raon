@@ -260,6 +260,7 @@ const RaonResume = () => {
                 email: formData.email,
                 desiredPosition: formData.desiredPosition,
                 skills: formData.skills,
+                coverLetter: coverLetter,
                 isDefault: formData.isDefault,
                 educations: formData.schoolName ? [{
                     educationType: formData.educationType,
@@ -358,6 +359,8 @@ const RaonResume = () => {
                     achievements: resume.careers?.[0]?.achievements || ''
                 });
 
+                setCoverLetter(resume.coverLetter || '');
+
                 setCurrentPage('form');
                 setCurrentTab(0);
                 window.scrollTo(0, 0);
@@ -404,6 +407,8 @@ const RaonResume = () => {
                     responsibilities: resume.careers?.[0]?.responsibilities || '',
                     achievements: resume.careers?.[0]?.achievements || ''
                 });
+
+                setCoverLetter(resume.coverLetter || '');
 
                 setCurrentPage('form');
                 setCurrentTab(0);
@@ -477,6 +482,8 @@ const RaonResume = () => {
                     responsibilities: resume.careers?.[0]?.responsibilities || '',
                     achievements: resume.careers?.[0]?.achievements || ''
                 });
+
+                setCoverLetter(resume.coverLetter || '');
 
                 setCurrentPage('form');
                 setCurrentTab(3);

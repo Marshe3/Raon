@@ -30,7 +30,7 @@ public class InterviewFeedbackService {
      * 면접 피드백 저장
      */
     @Transactional
-    public InterviewFeedback saveFeedback(Long userId, Long chatId, BigDecimal score, String feedbackSummary) {
+    public InterviewFeedback saveFeedback(Long userId, Long chatId, BigDecimal score, String feedbackSummary, String interviewType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
 
@@ -44,11 +44,12 @@ public class InterviewFeedbackService {
                 .chatRoom(chatRoom)
                 .score(score)
                 .feedbackSummary(feedbackSummary)
+                .interviewType(interviewType)
                 .interviewDate(LocalDateTime.now())
                 .build();
 
         InterviewFeedback saved = interviewFeedbackRepository.save(feedback);
-        log.info("면접 피드백 저장 완료 - userId: {}, score: {}", userId, score);
+        log.info("면접 피드백 저장 완료 - userId: {}, type: {}, score: {}", userId, interviewType, score);
 
         return saved;
     }

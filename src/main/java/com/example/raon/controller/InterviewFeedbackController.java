@@ -56,6 +56,7 @@ public class InterviewFeedbackController {
                         map.put("feedbackSummary", feedback.getFeedbackSummary() != null ? feedback.getFeedbackSummary() : "");
                         map.put("interviewDate", feedback.getInterviewDate().toString());
                         map.put("chatId", feedback.getChatRoom() != null ? feedback.getChatRoom().getId() : null);
+                        map.put("interviewType", feedback.getInterviewType() != null ? feedback.getInterviewType() : "일반 면접");
                         return map;
                     })
                     .collect(Collectors.toList());

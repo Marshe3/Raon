@@ -34,6 +34,9 @@ public class InterviewFeedback {
     @Column(name = "feedback_summary", columnDefinition = "TEXT")
     private String feedbackSummary;
 
+    @Column(name = "interview_type", length = 100)
+    private String interviewType;
+
     @Column(name = "interview_date", nullable = false)
     private LocalDateTime interviewDate;
 

@@ -3,14 +3,14 @@ import { Laptop, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function BackendDeveloperTracker() {
-  const [studyTime, setStudyTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
-  const [isRunning, setIsRunning] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
   const [feedbacks, setFeedbacks] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [latestSections, setLatestSections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedInterviewType, setSelectedInterviewType] = useState('전체');
+  const [interviewTypes, setInterviewTypes] = useState(['전체']);
 
   // 면접 피드백 데이터 로드
   useEffect(() => {
@@ -22,32 +22,19 @@ export default function BackendDeveloperTracker() {
 
         if (response.ok) {
           const data = await response.json();
-          setFeedbacks(data);
-          setAttempts(data.length);
 
-          // 평균 점수 계산
-          if (data.length > 0) {
-            const avgScore = data.reduce((sum, feedback) => sum + Number(feedback.score), 0) / data.length;
-            setTotalScore(avgScore);
-
-            // 차트 데이터 준비 (최근 10개)
-            const recentData = data.slice(0, 10).reverse().map((feedback, index) => ({
-              name: `${index + 1}회`,
-              score: Number(feedback.score)
-            }));
-            setChartData(recentData);
-
-            // 최근 피드백의 sections 데이터 파싱
-            try {
-              const latestFeedback = data[0];
-              const feedbackJson = JSON.parse(latestFeedback.feedbackSummary);
-              if (feedbackJson.sections) {
-                setLatestSections(feedbackJson.sections);
-              }
-            } catch (e) {
-              console.warn('피드백 JSON 파싱 실패:', e);
+          // 면접 종류 추출 (DB의 interviewType 컬럼에서 직접 추출)
+          const types = new Set(['전체']);
+          data.forEach(feedback => {
+            // null이나 빈 값이 아닌 경우만 추가
+            if (feedback.interviewType && feedback.interviewType.trim() !== '') {
+              types.add(feedback.interviewType);
             }
-          }
+          });
+          setInterviewTypes(Array.from(types));
+
+          setFeedbacks(data);
+          updateStats(data, '전체');
         }
       } catch (error) {
         console.error('면접 피드백 로드 실패:', error);
@@ -59,45 +46,74 @@ export default function BackendDeveloperTracker() {
     fetchFeedbacks();
   }, []);
 
+  // 면접 종류 변경 시 통계 업데이트
   useEffect(() => {
-    if (!isRunning) return;
+    updateStats(feedbacks, selectedInterviewType);
+  }, [selectedInterviewType, feedbacks]);
 
-    const timer = setInterval(() => {
-      setStudyTime(prev => {
-        let { hours, minutes, seconds } = prev;
-        seconds += 1;
-
-        if (seconds >= 60) {
-          seconds = 0;
-          minutes += 1;
-        }
-
-        if (minutes >= 60) {
-          minutes = 0;
-          hours += 1;
-        }
-
-        return { hours, minutes, seconds };
+  // 통계 업데이트 함수
+  const updateStats = (data, type) => {
+    // 선택된 타입으로 필터링
+    let filteredData = data;
+    if (type !== '전체') {
+      filteredData = data.filter(feedback => {
+        return feedback.interviewType === type;
       });
-    }, 1000);
+    } else {
+      // "전체"를 선택했을 때는 interviewType이 있는 것만 표시
+      filteredData = data.filter(feedback => {
+        return feedback.interviewType && feedback.interviewType.trim() !== '';
+      });
+    }
 
-    return () => clearInterval(timer);
-  }, [isRunning]);
+    setAttempts(filteredData.length);
 
-  const formatTime = () => {
-    const h = studyTime.hours;
-    const m = String(studyTime.minutes).padStart(2, '0');
-    const s = String(studyTime.seconds).padStart(2, '0');
-    return `${h}:${m}:${s}`;
+    // 평균 점수 계산
+    if (filteredData.length > 0) {
+      const avgScore = filteredData.reduce((sum, feedback) => sum + Number(feedback.score), 0) / filteredData.length;
+      setTotalScore(avgScore);
+
+      // 차트 데이터 준비 (최근 10개)
+      const recentData = filteredData.slice(0, 10).reverse().map((feedback, index) => ({
+        name: `${index + 1}회`,
+        score: Number(feedback.score)
+      }));
+      setChartData(recentData);
+
+      // 최근 피드백의 sections 데이터 파싱
+      try {
+        const latestFeedback = filteredData[0];
+        const feedbackJson = JSON.parse(latestFeedback.feedbackSummary);
+        if (feedbackJson.sections) {
+          setLatestSections(feedbackJson.sections);
+        }
+      } catch (e) {
+        console.warn('피드백 JSON 파싱 실패:', e);
+        setLatestSections([]);
+      }
+    } else {
+      setTotalScore(0);
+      setChartData([]);
+      setLatestSections([]);
+    }
   };
 
   const startInterview = () => {
-    if (!isRunning) {
-      setIsRunning(true);
-    }
     // 면접 페이지로 이동
     window.location.href = '/avatar';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+            <p className="text-gray-600">로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
@@ -113,42 +129,40 @@ export default function BackendDeveloperTracker() {
               <p className="text-gray-600 mt-1">API 설계 · 데이터베이스 · 서버 개발</p>
             </div>
           </div>
+
+          {/* Interview Type Selector */}
+          <div className="mt-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">면접 종류</label>
+            <div className="flex flex-wrap gap-2">
+              {interviewTypes.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedInterviewType(type)}
+                  className={`px-5 py-2.5 rounded-full font-medium text-sm transition-all duration-200 outline-none ${
+                    selectedInterviewType === type
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Total Attempts */}
           <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
             <div className="text-5xl font-bold text-blue-600 mb-2">{attempts}</div>
-            <div className="text-gray-600">총 먼점 횟수</div>
-          </div>
-
-          {/* Study Time */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <div className="text-5xl font-bold text-blue-600 mb-2 font-mono">
-              {formatTime()}
-            </div>
-            <div className="text-gray-600 flex items-center justify-between">
-              <span>총 학습 시간</span>
-              <button
-                onClick={() => setIsRunning(!isRunning)}
-                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-full transition-colors"
-              >
-                {isRunning ? '일시정지' : '시작'}
-              </button>
-            </div>
+            <div className="text-gray-600">총 면접 횟수</div>
           </div>
 
           {/* Average Score */}
           <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
             <div className="text-5xl font-bold text-blue-600 mb-2">{totalScore > 0 ? Math.round(totalScore) : 0}점</div>
             <div className="text-gray-600">평균 점수</div>
-          </div>
-
-          {/* Completion Rate */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-            <div className="text-5xl font-bold text-blue-600 mb-2">92%</div>
-            <div className="text-gray-600">향상도</div>
           </div>
         </div>
 

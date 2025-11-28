@@ -12,6 +12,7 @@ public class ResumeRequest {
     private String email;
     private String desiredPosition;
     private String skills;
+    private String coverLetter;
     private Boolean isDefault;
     private List<EducationDto> educations;
     private List<CareerDto> careers;

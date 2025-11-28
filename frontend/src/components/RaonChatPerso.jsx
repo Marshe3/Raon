@@ -967,7 +967,8 @@ function RaonChatPerso({ user, isLoggedIn }) {
         credentials: 'include',
         body: JSON.stringify({
           messages: apiMessages,
-          chatId: null // 필요시 chatRoomId 추가
+          chatId: null, // 필요시 chatRoomId 추가
+          interviewType: avatarName || '일반 면접' // 면접 종류 전송
         })
       });
 

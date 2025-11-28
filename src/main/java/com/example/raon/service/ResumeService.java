@@ -80,6 +80,7 @@ public class ResumeService {
                 .email(request.getEmail())
                 .desiredPosition(request.getDesiredPosition())
                 .skills(request.getSkills())
+                .coverLetter(request.getCoverLetter())
                 .isDefault(request.getIsDefault())
                 .build();
 
@@ -151,7 +152,8 @@ public class ResumeService {
                 request.getPhone(),
                 request.getEmail(),
                 request.getDesiredPosition(),
-                request.getSkills()
+                request.getSkills(),
+                request.getCoverLetter()
         );
 
         // 기존 학력, 경력 삭제 후 재생성 (단순화)
