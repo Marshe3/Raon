@@ -14,7 +14,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./sql:/docker-entrypoint-initdb.d:ro
     ports:
-      - "3306:3306"
+      - "3307:3306"
     networks:
       - raon-network
     healthcheck:
@@ -67,7 +67,7 @@ services:
       # Spring Profile
       SPRING_PROFILES_ACTIVE: prod
     ports:
-      - "8080:8086"
+      - "8081:8086"
     networks:
       - raon-network
     healthcheck:
@@ -91,7 +91,7 @@ services:
     networks:
       - raon-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
       timeout: 5s
       retries: 3
