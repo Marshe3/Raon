@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './RaonResume.css';
 import { logger } from '../utils/logger';
 import CustomSelect from './CustomSelect';
+import CustomDate from './CustomDate';
 import { getResumeFeedback } from '../services/geminiService';
 
 const RaonResume = () => {
@@ -49,6 +50,13 @@ const RaonResume = () => {
     const [coverLetter, setCoverLetter] = useState(''); // 자소서 내용
     const [aiFeedback, setAiFeedback] = useState(null); // AI 첨삭 결과
     const [isAILoading, setIsAILoading] = useState(false); // AI 첨삭 로딩 상태
+
+    // 모달 상태
+    const [showSetDefaultModal, setShowSetDefaultModal] = useState(false);
+    const [resumeToSetDefault, setResumeToSetDefault] = useState(null);
+
+    // 보기/수정 모드
+    const [isViewMode, setIsViewMode] = useState(false);
 
     // 페이지 전환
     const navigateToForm = () => setCurrentPage('form');
@@ -108,7 +116,15 @@ const RaonResume = () => {
             if (response.ok) {
                 const data = await response.json();
                 logger.log('✅ 이력서 목록 불러오기 성공:', data);
-                setResumes(data);
+
+                // 기본 이력서를 제일 앞으로 정렬
+                const sortedData = data.sort((a, b) => {
+                    if (a.isDefault && !b.isDefault) return -1;
+                    if (!a.isDefault && b.isDefault) return 1;
+                    return 0;
+                });
+
+                setResumes(sortedData);
             } else if (response.status === 401) {
                 logger.warn('⚠️ 로그인이 필요합니다');
                 setResumes([]);
@@ -253,7 +269,7 @@ const RaonResume = () => {
         }
     };
 
-    // 이력서 보기
+    // 이력서 보기 - 읽기 전용으로 폼으로 이동
     const handleViewResume = async (id) => {
         try {
             const response = await fetch(`/raon/api/resumes/${id}`, {
@@ -262,9 +278,34 @@ const RaonResume = () => {
 
             if (response.ok) {
                 const resume = await response.json();
-                logger.log('✅ 이력서 조회 성공:', resume);
-                // TODO: 이력서 상세보기 모달 또는 페이지로 이동
-                alert(`이력서 "${resume.title}" 상세보기 기능은 준비 중입니다.`);
+                logger.log('✅ 이력서 조회 성공 (보기용):', resume);
+
+                // 보기 모드 활성화
+                setIsViewMode(true);
+
+                // 폼 데이터 설정
+                setFormData({
+                    title: resume.title || '',
+                    name: resume.name || '',
+                    phone: resume.phone || '',
+                    email: resume.email || '',
+                    desiredPosition: resume.desiredPosition || '',
+                    skills: resume.skills || '',
+                    isDefault: resume.isDefault || false,
+                    schoolName: resume.educations?.[0]?.schoolName || '',
+                    major: resume.educations?.[0]?.major || '',
+                    educationStatus: resume.educations?.[0]?.status || '',
+                    educationType: resume.educations?.[0]?.educationType || '',
+                    gpa: resume.educations?.[0]?.gpa || '',
+                    companyName: resume.careers?.[0]?.companyName || '',
+                    position: resume.careers?.[0]?.position || '',
+                    responsibilities: resume.careers?.[0]?.responsibilities || '',
+                    achievements: resume.careers?.[0]?.achievements || ''
+                });
+
+                // 폼 페이지로 이동
+                setCurrentPage('form');
+                setCurrentTab(0);
             } else {
                 logger.error('이력서 조회 실패:', response.status);
                 alert('이력서 조회에 실패했습니다.');
@@ -344,6 +385,81 @@ const RaonResume = () => {
         } catch (error) {
             logger.error('이력서 삭제 오류:', error);
             alert('이력서 삭제 중 오류가 발생했습니다.');
+        }
+    };
+
+    // AI 자소서 첨삭보기 (이력서 목록에서)
+    const handleShowAIFeedback = async (id) => {
+        try {
+            const response = await fetch(`/raon/api/resumes/${id}`, {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const resume = await response.json();
+                logger.log('✅ 이력서 조회 성공 (AI 첨삭보기용):', resume);
+
+                // 폼 데이터 설정
+                setFormData({
+                    title: resume.title || '',
+                    name: resume.name || '',
+                    phone: resume.phone || '',
+                    email: resume.email || '',
+                    desiredPosition: resume.desiredPosition || '',
+                    skills: resume.skills || '',
+                    isDefault: resume.isDefault || false,
+                    schoolName: resume.educations?.[0]?.schoolName || '',
+                    major: resume.educations?.[0]?.major || '',
+                    educationStatus: resume.educations?.[0]?.status || '',
+                    educationType: resume.educations?.[0]?.educationType || '',
+                    gpa: resume.educations?.[0]?.gpa || '',
+                    companyName: resume.careers?.[0]?.companyName || '',
+                    position: resume.careers?.[0]?.position || '',
+                    responsibilities: resume.careers?.[0]?.responsibilities || '',
+                    achievements: resume.careers?.[0]?.achievements || ''
+                });
+
+                // 자기소개서 탭으로 이동 (Tab 3)
+                setCurrentPage('form');
+                setCurrentTab(3);
+                setIsViewMode(false); // AI 첨삭은 편집 모드로
+            } else {
+                logger.error('이력서 조회 실패:', response.status);
+                alert('이력서 조회에 실패했습니다.');
+            }
+        } catch (error) {
+            logger.error('이력서 조회 오류:', error);
+            alert('이력서 조회 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 기본 이력서로 설정 - 모달 열기
+    const handleSetAsDefault = (id) => {
+        setResumeToSetDefault(id);
+        setShowSetDefaultModal(true);
+    };
+
+    // 기본 이력서로 설정 - 확정
+    const confirmSetDefault = async () => {
+        try {
+            const response = await fetch(`/raon/api/resumes/${resumeToSetDefault}/default`, {
+                method: 'PUT',
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                logger.log('✅ 기본 이력서 설정 성공');
+                // 목록 새로고침
+                await fetchResumes();
+                setShowSetDefaultModal(false);
+                setResumeToSetDefault(null);
+            } else {
+                logger.error('기본 이력서 설정 실패:', response.status);
+                alert('기본 이력서 설정에 실패했습니다.');
+            }
+        } catch (error) {
+            logger.error('기본 이력서 설정 오류:', error);
+            alert('기본 이력서 설정 중 오류가 발생했습니다.');
         }
     };
 
@@ -932,53 +1048,93 @@ const RaonResume = () => {
                 ) : (
                     <div className="resume-grid">
                         {resumes.map((resume) => (
-                            <div key={resume.id} className={`resume-card ${resume.isDefault ? 'is-default' : ''}`}>
-                                {resume.isDefault && <div className="default-indicator"></div>}
+                            <div
+                                key={resume.id}
+                                className={`resume-card ${resume.isDefault ? 'is-default' : ''}`}
+                                onClick={() => handleViewResume(resume.id)}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                {resume.isDefault && (
+                                    <>
+                                        <div className="default-indicator"></div>
+                                        <div className="default-badge">기본</div>
+                                    </>
+                                )}
+
                                 <div className="card-content">
-                                    <h3 className="card-title">{resume.title}</h3>
+                                    <div className="card-title">
+                                        {resume.title || '새 이력서'}
+                                    </div>
+
                                     <div className="info-list">
                                         <div className="info-item">
-                                            <span className="info-icon">👤</span>
-                                            <span className="info-value">{resume.name}</span>
+                                            <span className="info-icon">👨‍💼</span>
+                                            <span className="info-value">{resume.name || '이름없음'}</span>
+                                        </div>
+                                        <div className="info-item">
+                                            <span className="info-icon">📅</span>
+                                            <span className="info-value">
+                                                {new Date(resume.createdAt).toLocaleString('ko-KR')}
+                                            </span>
                                         </div>
                                         <div className="info-item">
                                             <span className="info-icon">💼</span>
-                                            <span className="info-value">{resume.desiredPosition || '직무 미지정'}</span>
-                                        </div>
-                                        <div className="info-item">
-                                            <span className="info-icon">📧</span>
-                                            <span className="info-value">{resume.email || '이메일 미입력'}</span>
+                                            <span className="info-value">
+                                                {resume.desiredPosition || '직무 미지정'}
+                                            </span>
                                         </div>
                                     </div>
-                                    {resume.skills && (
-                                        <div className="skills-box">
-                                            <span className="skills-label">기술:</span>
-                                            {resume.skills}
-                                        </div>
-                                    )}
-                                    <div className="stats-row">
-                                        <span>📅 {new Date(resume.createdAt).toLocaleDateString('ko-KR')}</span>
+
+                                    <div className="skills-box">
+                                        <span className="skills-label">요약</span>
+                                        <span>
+                                            기본정보, 기술/역량, 학력/경력, 자기소개서가 포함된 이력서입니다.
+                                        </span>
                                     </div>
                                 </div>
-                                <div className="card-actions">
+
+                                <div className="card-actions" onClick={(e) => e.stopPropagation()}>
                                     <button
-                                        className="btn-action btn-view"
-                                        onClick={() => handleViewResume(resume.id)}
+                                        className="btn-review"
+                                        type="button"
+                                        onClick={() => handleShowAIFeedback(resume.id)}
                                     >
-                                        👁️ 보기
+                                        AI 자소서 첨삭보기
                                     </button>
-                                    <button
-                                        className="btn-action btn-edit"
-                                        onClick={() => handleEditResume(resume.id)}
-                                    >
-                                        ✏️ 수정
-                                    </button>
-                                    <button
-                                        className="btn-action btn-delete"
-                                        onClick={() => handleDeleteResume(resume.id)}
-                                    >
-                                        🗑️ 삭제
-                                    </button>
+
+                                    <div className="card-set-default-row">
+                                        {!resume.isDefault ? (
+                                            <button
+                                                className="btn-set-default"
+                                                type="button"
+                                                onClick={() => handleSetAsDefault(resume.id)}
+                                            >
+                                                기본 이력서로 설정
+                                            </button>
+                                        ) : (
+                                            <div
+                                                className="btn-set-default--placeholder"
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                    </div>
+
+                                    <div className="card-action-buttons">
+                                        <button
+                                            className="btn-edit"
+                                            type="button"
+                                            onClick={() => handleEditResume(resume.id)}
+                                        >
+                                            수정
+                                        </button>
+                                        <button
+                                            className="btn-delete"
+                                            type="button"
+                                            onClick={() => handleDeleteResume(resume.id)}
+                                        >
+                                            삭제
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -1051,6 +1207,35 @@ const RaonResume = () => {
         <div className="resume-management">
             {currentPage === 'form' && renderFormPage()}
             {currentPage === 'list' && renderListPage()}
+
+            {/* 기본 이력서 설정 확인 모달 */}
+            {showSetDefaultModal && (
+                <div className="raon-modal-overlay" onClick={() => setShowSetDefaultModal(false)}>
+                    <div
+                        className="raon-modal-content"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="raon-modal-title">기본 이력서로 설정하시겠어요?</h3>
+                        <p className="raon-modal-message">
+                            이 이력서가 기본 이력서로 설정되며, 기존 기본 이력서는 해제됩니다.
+                        </p>
+                        <div className="raon-modal-actions">
+                            <button
+                                className="raon-modal-btn-secondary"
+                                onClick={() => setShowSetDefaultModal(false)}
+                            >
+                                취소
+                            </button>
+                            <button
+                                className="raon-modal-btn"
+                                onClick={confirmSetDefault}
+                            >
+                                설정하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

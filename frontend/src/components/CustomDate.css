@@ -1,0 +1,312 @@
+/* ==================== 모던한 커스텀 DatePicker ==================== */
+
+.modern-datepicker {
+  position: relative;
+  width: 100%;
+}
+
+/* 입력 필드 */
+.datepicker-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.datepicker-input-wrapper .field-input {
+  flex: 1;
+  cursor: pointer;
+  padding-left: 44px !important;
+  padding-right: 44px !important;
+  background: white;
+  border: 2px solid #e2e8f0;
+}
+
+.datepicker-input-wrapper .field-input:hover {
+  border-color: #cbd5e0;
+  background: #fafafa;
+}
+
+.input-icon-calendar {
+  position: absolute;
+  left: 14px;
+  font-size: 18px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dropdown-arrow-calendar {
+  position: absolute;
+  right: 14px;
+  font-size: 11px;
+  color: #64748b;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+/* 오버레이 - 투명 */
+.datepicker-overlay-modern {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9998;
+  background: transparent;
+}
+
+/* 팝업 */
+.datepicker-popup-modern {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 9999;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e2e8f0;
+  min-width: 320px;
+}
+
+/* 헤더 */
+.datepicker-header-modern {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.nav-btn-modern {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f8fafc;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #475569;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-btn-modern:hover {
+  background: #334155;
+  color: white;
+  transform: scale(1.05);
+}
+
+.current-month-modern {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.year-month-modern {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.3px;
+}
+
+/* 바디 공통 */
+.datepicker-body-modern {
+  margin-top: 4px;
+}
+
+/* 요일 헤더 */
+.day-names-modern {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.day-name-modern {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+}
+
+.day-name-modern.sunday {
+  color: #ef4444;
+}
+
+.day-name-modern.saturday {
+  color: #3b82f6;
+}
+
+/* 날짜 그리드 */
+.days-grid-modern {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-cell-modern {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.day-cell-modern:not(.disabled):hover {
+  background: #f1f5f9;
+  color: #334155;
+  transform: scale(1.05);
+}
+
+.day-cell-modern.disabled {
+  color: #cbd5e1;
+  opacity: 0.3;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.day-cell-modern.today {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+  border-color: #fbbf24;
+}
+
+.day-cell-modern.today:hover {
+  background: #fde68a;
+}
+
+/* 선택된 날짜 */
+.day-cell-modern.selected {
+  background: #c7d2fe;
+  color: #3730a3;
+  font-weight: 700;
+  border-color: transparent;
+}
+
+.day-cell-modern.selected:hover {
+  background: #4f46e5;
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+/* 하단 버튼 */
+.datepicker-footer-modern {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.footer-btn-modern {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.today-btn-modern {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.today-btn-modern:hover {
+  background: #e5ecff;
+  color: #334155;
+  border-color: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.clear-btn-modern {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.clear-btn-modern:hover {
+  background: #fecaca;
+  color: #b91c1c;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+/* ==================== 연도 선택 그리드 (6개 / 페이지) ==================== */
+
+.year-grid-modern {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.year-cell-modern {
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.year-cell-modern:hover {
+  background: #e5ecff;
+  border-color: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+/* 현재 연도 표시 */
+.year-cell-modern.year-current {
+  border-color: #6366f1;
+}
+
+/* 선택된 연도(현재 선택된 날짜의 연도) */
+.year-cell-modern.year-selected {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+
+/* 모바일 */
+@media (max-width: 768px) {
+  .datepicker-popup-modern {
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 300px;
+  }
+
+  .day-cell-modern,
+  .day-name-modern {
+    width: 36px;
+    height: 36px;
+    font-size: 13px;
+  }
+}

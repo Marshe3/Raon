@@ -31,6 +31,40 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const sdkConfig = stateSdkConfig || restoredSdkConfig;
 
   const [sdkLoaded, setSdkLoaded] = useState(false);
+
+  /** ✅ 추가: 상단 글로벌 헤더의 '면접 연습' 탭 활성화 표시만 부여 */
+  const headerActiveRef = useRef(null);
+  useEffect(() => {
+    const activate = () => {
+      try {
+        // 보통 '면접 연습'은 /avatar 라우트로 연결되어 있으므로 우선 href로 탐색
+        const byHref = document.querySelector('a[href="/avatar"], a[href^="/avatar"]');
+        // 혹시 href가 다를 수 있어 텍스트로 보조 탐색 (공백 제거 후 비교)
+        const byText = Array.from(document.querySelectorAll('a,button,span,div'))
+          .find(el => (el.textContent || '').replace(/\s/g, '') === '면접연습');
+        const target = byHref || byText || null;
+
+        if (target) {
+          headerActiveRef.current = target;
+          target.classList.add('active');
+          target.setAttribute('aria-current', 'page');
+        }
+      } catch (_) {
+        // noop
+      }
+    };
+    // 헤더 DOM이 먼저 렌더링되도록 한 틱 미룸
+    const t = setTimeout(activate, 0);
+    return () => {
+      clearTimeout(t);
+      const el = headerActiveRef.current;
+      if (el) {
+        el.classList.remove('active');
+        el.removeAttribute('aria-current');
+      }
+    };
+  }, []);
+
   const [persoSession, setPersoSession] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const videoRef = useRef(null);
@@ -1098,19 +1132,20 @@ function RaonChatPerso({ user, isLoggedIn }) {
                   autoFocus
                 />
               ) : (
-                <input
-                  type="text"
+                <textarea
                   className="unified-input"
                   placeholder="메시지를 입력하세요..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
                       handleSendMessage();
                     }
                   }}
                   disabled={!isSessionActive}
                   autoFocus
+                  rows={1}
                 />
               )}
 
