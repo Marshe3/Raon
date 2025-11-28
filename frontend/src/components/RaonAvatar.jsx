@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RaonAvatar.css';
 import { logger } from '../utils/logger';
+import { fetchWithAuth } from '../utils/api';
 
 const RaonAvatar = ({ user, isLoggedIn }) => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
   useEffect(() => {
     const loadChatbots = async () => {
       try {
-        const response = await fetch('/raon/api/chatbots/public');
+        const response = await fetchWithAuth('/raon/api/chatbots/public');
         if (!response.ok) throw new Error('챗봇 목록을 불러오는데 실패했습니다');
         const data = await response.json();
 
@@ -102,8 +103,7 @@ const RaonAvatar = ({ user, isLoggedIn }) => {
     const loadConfigurations = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/raon/api/backoffice/configurations?forceRefresh=true', {
-          credentials: 'include',
+        const response = await fetchWithAuth('/raon/api/backoffice/configurations?forceRefresh=true', {
           cache: 'no-cache',
         });
         if (!response.ok) throw new Error(`설정 로드 실패: ${response.status}`);

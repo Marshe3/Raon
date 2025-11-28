@@ -113,12 +113,12 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService)
                 )
                 .successHandler(oAuth2LoginSuccessHandler)
-                .failureUrl(frontendUrl + "/login?error=true")
+                .failureUrl("/login?error=true")  // 상대 경로로 변경
             )
             // 로그아웃 설정 (JWT 방식에서는 프론트엔드에서 토큰 삭제)
             .logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl(frontendUrl + "/")
+                .logoutSuccessUrl("/")  // 상대 경로로 변경
                 .deleteCookies("JSESSIONID")
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)

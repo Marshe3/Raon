@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './RaonResume.css';
 import { logger } from '../utils/logger';
+import { fetchWithAuth } from '../utils/api';
 import CustomSelect from './CustomSelect';
 import CustomDate from './CustomDate';
 import { getResumeFeedback } from '../services/geminiService';
@@ -167,9 +168,7 @@ const RaonResume = () => {
     const fetchResumes = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch('/raon/api/resumes', {
-                credentials: 'include'
-            });
+            const response = await fetchWithAuth('/raon/api/resumes');
 
             if (response.ok) {
                 const data = await response.json();
@@ -286,21 +285,19 @@ const RaonResume = () => {
 
             let response;
             if (isEditMode && editingResumeId) {
-                response = await fetch(`/raon/api/resumes/${editingResumeId}`, {
+                response = await fetchWithAuth(`/raon/api/resumes/${editingResumeId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    credentials: 'include',
                     body: JSON.stringify(requestData)
                 });
             } else {
-                response = await fetch('/raon/api/resumes', {
+                response = await fetchWithAuth('/raon/api/resumes', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    credentials: 'include',
                     body: JSON.stringify(requestData)
                 });
             }
@@ -328,9 +325,7 @@ const RaonResume = () => {
     // 이력서 보기
     const handleViewResume = async (id) => {
         try {
-            const response = await fetch(`/raon/api/resumes/${id}`, {
-                credentials: 'include'
-            });
+            const response = await fetchWithAuth(`/raon/api/resumes/${id}`);
 
             if (response.ok) {
                 const resume = await response.json();
@@ -377,9 +372,7 @@ const RaonResume = () => {
     // 이력서 수정
     const handleEditResume = async (id) => {
         try {
-            const response = await fetch(`/raon/api/resumes/${id}`, {
-                credentials: 'include'
-            });
+            const response = await fetchWithAuth(`/raon/api/resumes/${id}`);
 
             if (response.ok) {
                 const resume = await response.json();
@@ -432,9 +425,8 @@ const RaonResume = () => {
     // ✅ 삭제 확인 - alert 제거
     const confirmDelete = async () => {
         try {
-            const response = await fetch(`/raon/api/resumes/${resumeToDelete}`, {
-                method: 'DELETE',
-                credentials: 'include'
+            const response = await fetchWithAuth(`/raon/api/resumes/${resumeToDelete}`, {
+                method: 'DELETE'
             });
 
             if (response.ok) {
@@ -456,9 +448,7 @@ const RaonResume = () => {
     // AI 자소서 첨삭보기
     const handleShowAIFeedback = async (id) => {
         try {
-            const response = await fetch(`/raon/api/resumes/${id}`, {
-                credentials: 'include'
-            });
+            const response = await fetchWithAuth(`/raon/api/resumes/${id}`);
 
             if (response.ok) {
                 const resume = await response.json();
@@ -507,9 +497,8 @@ const RaonResume = () => {
 
     const confirmSetDefault = async () => {
         try {
-            const response = await fetch(`/raon/api/resumes/${resumeToSetDefault}/default`, {
-                method: 'PUT',
-                credentials: 'include'
+            const response = await fetchWithAuth(`/raon/api/resumes/${resumeToSetDefault}/default`, {
+                method: 'PUT'
             });
 
             if (response.ok) {

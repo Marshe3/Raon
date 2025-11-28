@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,10 +14,12 @@ import java.time.LocalDateTime;
 
 /**
  * 서버 시작 시 기존 JWT Refresh Token을 모두 삭제
- * 개발 환경에서 서버 재시작 시 자동 로그인 방지
+ * 개발 환경에서만 서버 재시작 시 자동 로그인 방지
+ * 운영 환경에서는 비활성화하여 배포 시 사용자 로그아웃 방지
  */
 @Slf4j
 @Component
+@Profile("dev")  // dev 프로필에서만 활성화
 @RequiredArgsConstructor
 public class StartupTokenCleanup {
 

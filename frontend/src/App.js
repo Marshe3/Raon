@@ -12,6 +12,7 @@ import Footer from "./components/Footer.jsx";
 import RaonChatPerso from "./components/RaonChatPerso.jsx";
 import RaonResume from "./components/RaonResume.jsx";
 import { logger } from "./utils/logger";
+import { fetchWithAuth } from "./utils/api";
 import RaonDashboard from "./components/RaonDashboard.jsx";           // ⬅️ 상세 학습 기록 화면
 import InterviewScorePage from "./components/InterviewScorePage.jsx"; // ⬅️ 점수 요약 + 버튼 화면 (추가)
 
@@ -35,35 +36,10 @@ function AppInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
 
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      logger.log("Access Token 갱신 시도...");
-      const response = await fetch("/raon/api/auth/refresh", {
-        method: "POST",
-        credentials: "include"
-      });
-
-      if (response.ok) {
-        logger.log("Access Token 갱신 성공");
-        return true;
-      } else {
-        logger.log("Access Token 갱신 실패 - 로그아웃 처리");
-        setIsLoggedIn(false);
-        setUser(null);
-        return false;
-      }
-    } catch (error) {
-      logger.error("토큰 갱신 오류:", error);
-      return false;
-    }
-  }, []);
-
   const checkLoginStatus = useCallback(async () => {
     try {
       logger.log("로그인 상태 확인 시작...");
-      const response = await fetch("/raon/api/users/me", {
-        credentials: "include"
-      });
+      const response = await fetchWithAuth("/raon/api/users/me");
       logger.log("API 응답 상태:", response.status);
 
       if (response.ok) {
@@ -71,30 +47,17 @@ function AppInner() {
         logger.log("로그인된 사용자 정보:", userData);
         setUser(userData);
         setIsLoggedIn(true);
-      } else if (response.status === 401) {
-        logger.log("Access Token 만료 - 갱신 시도");
-        const refreshed = await refreshAccessToken();
-
-        if (refreshed) {
-          const retryResponse = await fetch("/raon/api/users/me", {
-            credentials: "include"
-          });
-          if (retryResponse.ok) {
-            const userData = await retryResponse.json();
-            setUser(userData);
-            setIsLoggedIn(true);
-          }
-        } else {
-          setIsLoggedIn(false);
-        }
       } else {
+        logger.warn("로그인 상태 확인 실패");
         setUser(null);
         setIsLoggedIn(false);
       }
     } catch (e) {
       logger.error("로그인 상태 확인 오류:", e);
+      setUser(null);
+      setIsLoggedIn(false);
     }
-  }, [refreshAccessToken]);
+  }, []);
 
   useEffect(() => {
     checkLoginStatus();
@@ -117,9 +80,8 @@ function AppInner() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/raon/api/auth/logout", {
-        method: "POST",
-        credentials: "include"
+      await fetchWithAuth("/raon/api/auth/logout", {
+        method: "POST"
       });
 
       setIsLoggedIn(false);

@@ -117,6 +117,17 @@ public class AuthController {
             }
         }
 
+        // Spring Security Session 무효화
+        try {
+            jakarta.servlet.http.HttpSession session = request.getSession(false);
+            if (session != null) {
+                session.invalidate();
+                log.info("🔓 Spring Security Session 무효화 완료");
+            }
+        } catch (Exception e) {
+            log.error("Failed to invalidate session", e);
+        }
+
         // 쿠키 삭제 (여러 Path에 대해 시도)
         log.info("🧹 로그아웃: 쿠키 삭제 시작");
 
@@ -126,6 +137,8 @@ public class AuthController {
             deleteTokenCookie(response, "accessToken", path);
             deleteTokenCookie(response, "refreshToken", path);
             deleteTokenCookie(response, "JSESSIONID", path);
+            deleteTokenCookie(response, "RAON_SESSION", path);
+            deleteTokenCookie(response, "oauth2_auth_request", path);
         }
 
         log.info("✅ 로그아웃: 쿠키 삭제 완료");
