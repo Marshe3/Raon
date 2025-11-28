@@ -94,14 +94,13 @@ export async function fetchWithAuth(url, options = {}) {
           logger.log(`🔁 요청 재시도 - ${url}`);
           response = await fetch(url, defaultOptions);
         } else {
-          // 토큰 갱신 실패 - 로그아웃 처리
+          // 토큰 갱신 실패 - 에러 전파 (컴포넌트에서 처리)
           const error = new Error('Token refresh failed');
           onTokenRefreshed(error);
 
-          // 로그인 페이지로 리다이렉트
-          logger.warn("🚪 토큰 갱신 실패 - 로그인 페이지로 이동");
-          window.location.href = '/';
-          throw error;
+          logger.warn("⚠️ 토큰 갱신 실패 - 401 응답 반환");
+          // 자동 리다이렉트 제거: App.js에서 로그아웃 상태 처리하도록 함
+          // response는 이미 401 상태이므로 그대로 반환
         }
       } finally {
         isRefreshing = false;
