@@ -25,12 +25,12 @@ function GoogleIcon({ className = "" }) {
 function RaonSocialLogin() {
   const handleKakaoLogin = () => {
     console.log('카카오 로그인 시도');
-    window.location.href = 'http://localhost:8086/raon/oauth2/authorization/kakao';
+    window.location.href = '/raon/oauth2/authorization/kakao';
   };
 
   const handleGoogleLogin = () => {
     console.log('구글 로그인 시도');
-    window.location.href = 'http://localhost:8086/raon/oauth2/authorization/google';
+    window.location.href = '/raon/oauth2/authorization/google';
   };
 
   return (
