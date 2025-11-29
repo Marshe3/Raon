@@ -1,0 +1,142 @@
+Starting a Gradle Daemon, 9 busy and 2 incompatible Daemons could not be reused, use --status for details
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName UP-TO-DATE
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::               (v3.4.10)
+
+2025-11-26T14:33:32.750+09:00  INFO 32408 --- [Raon] [  restartedMain] com.example.raon.RaonApplication         : Starting RaonApplication using Java 21.0.8 with PID 32408 (C:\Users\USER\git\Raon\build\classes\java\main started by USER in C:\Users\USER\git\Raon)
+2025-11-26T14:33:32.752+09:00  INFO 32408 --- [Raon] [  restartedMain] com.example.raon.RaonApplication         : The following 1 profile is active: "dev"
+2025-11-26T14:33:32.798+09:00  INFO 32408 --- [Raon] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-11-26T14:33:32.799+09:00  INFO 32408 --- [Raon] [  restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-11-26T14:33:33.689+09:00  INFO 32408 --- [Raon] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-11-26T14:33:33.906+09:00  INFO 32408 --- [Raon] [  restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 207 ms. Found 10 JPA repository interfaces.
+2025-11-26T14:33:34.577+09:00  INFO 32408 --- [Raon] [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8086 (http)
+2025-11-26T14:33:34.590+09:00  INFO 32408 --- [Raon] [  restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-11-26T14:33:34.590+09:00  INFO 32408 --- [Raon] [  restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2025-11-26T14:33:34.652+09:00  INFO 32408 --- [Raon] [  restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/raon]   : Initializing Spring embedded WebApplicationContext
+2025-11-26T14:33:34.653+09:00  INFO 32408 --- [Raon] [  restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1852 ms
+2025-11-26T14:33:34.741+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : Driver class com.mysql.cj.jdbc.Driver found in Thread context class loader org.springframework.boot.devtools.restart.classloader.RestartClassLoader@7651f17f
+2025-11-26T14:33:34.846+09:00  INFO 32408 --- [Raon] [  restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-11-26T14:33:34.919+09:00  INFO 32408 --- [Raon] [  restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.29.Final
+2025-11-26T14:33:34.967+09:00  INFO 32408 --- [Raon] [  restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-11-26T14:33:35.296+09:00  INFO 32408 --- [Raon] [  restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-11-26T14:33:35.326+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : HikariPool-1 - configuration:
+2025-11-26T14:33:35.330+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : allowPoolSuspension.............false
+2025-11-26T14:33:35.330+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : autoCommit......................true
+2025-11-26T14:33:35.330+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : catalog.........................none
+2025-11-26T14:33:35.330+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : connectionInitSql...............none
+2025-11-26T14:33:35.330+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : connectionTestQuery.............none
+2025-11-26T14:33:35.331+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : connectionTimeout...............30000
+2025-11-26T14:33:35.331+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : dataSource......................none
+2025-11-26T14:33:35.331+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : dataSourceClassName.............none
+2025-11-26T14:33:35.331+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : dataSourceJNDI..................none
+2025-11-26T14:33:35.331+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : dataSourceProperties............{password=<masked>}
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : driverClassName................."com.mysql.cj.jdbc.Driver"
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : exceptionOverrideClassName......none
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : healthCheckProperties...........{}
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : healthCheckRegistry.............none
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : idleTimeout.....................600000
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : initializationFailTimeout.......1
+2025-11-26T14:33:35.332+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : isolateInternalQueries..........false
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : jdbcUrl.........................jdbc:mysql://project-db-campus.smhrd.com:3312/Insa6_aiservice_p3_3?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : keepaliveTime...................0
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : leakDetectionThreshold..........0
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : maxLifetime.....................1800000
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : maximumPoolSize.................10
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : metricRegistry..................none
+2025-11-26T14:33:35.333+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : metricsTrackerFactory...........none
+2025-11-26T14:33:35.334+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : minimumIdle.....................10
+2025-11-26T14:33:35.334+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : password........................<masked>
+2025-11-26T14:33:35.334+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : poolName........................"HikariPool-1"
+2025-11-26T14:33:35.334+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : readOnly........................false
+2025-11-26T14:33:35.334+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : registerMbeans..................false
+2025-11-26T14:33:35.334+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : scheduledExecutor...............none
+2025-11-26T14:33:35.335+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : schema..........................none
+2025-11-26T14:33:35.335+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : threadFactory...................internal
+2025-11-26T14:33:35.335+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : transactionIsolation............default
+2025-11-26T14:33:35.335+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : username........................"Insa6_aiservice_p3_3"
+2025-11-26T14:33:35.335+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariConfig           : validationTimeout...............5000
+2025-11-26T14:33:35.335+09:00  INFO 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-11-26T14:33:35.634+09:00  INFO 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@690bd41c
+2025-11-26T14:33:35.635+09:00  INFO 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-11-26T14:33:35.722+09:00  WARN 32408 --- [Raon] [  restartedMain] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-11-26T14:33:35.737+09:00 DEBUG 32408 --- [Raon] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Pool stats (total=1, active=1, idle=0, waiting=0)
+2025-11-26T14:33:35.745+09:00  INFO 32408 --- [Raon] [  restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0.26
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-11-26T14:33:35.804+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7c9939fb
+2025-11-26T14:33:35.845+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=2, active=0, idle=2, waiting=0)
+2025-11-26T14:33:35.913+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@3da433c0
+2025-11-26T14:33:35.954+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=3, active=0, idle=3, waiting=0)
+2025-11-26T14:33:36.023+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@cd3cd51
+2025-11-26T14:33:36.063+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=4, active=0, idle=4, waiting=0)
+2025-11-26T14:33:36.133+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5d8bcc8f
+2025-11-26T14:33:36.169+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=5, active=0, idle=5, waiting=0)
+2025-11-26T14:33:36.242+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7541e9af
+2025-11-26T14:33:36.278+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=6, active=0, idle=6, waiting=0)
+2025-11-26T14:33:36.352+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@59c575b5
+2025-11-26T14:33:36.388+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=7, active=0, idle=7, waiting=0)
+2025-11-26T14:33:36.472+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@14a4e706
+2025-11-26T14:33:36.508+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=8, active=0, idle=8, waiting=0)
+2025-11-26T14:33:36.583+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@752aaa2a
+2025-11-26T14:33:36.619+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=9, active=0, idle=9, waiting=0)
+2025-11-26T14:33:36.692+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@3b15f4cc
+2025-11-26T14:33:36.728+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After adding stats (total=10, active=0, idle=10, waiting=0)
+2025-11-26T14:33:36.728+09:00 DEBUG 32408 --- [Raon] [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Connection not added, stats (total=10, active=0, idle=10, waiting=0)
+2025-11-26T14:33:36.850+09:00  INFO 32408 --- [Raon] [  restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-11-26T14:33:37.195+09:00  INFO 32408 --- [Raon] [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-11-26T14:33:37.690+09:00  INFO 32408 --- [Raon] [  restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-11-26T14:33:38.600+09:00  WARN 32408 --- [Raon] [  restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-11-26T14:33:39.175+09:00  WARN 32408 --- [Raon] [  restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : Unable to start LiveReload server
+2025-11-26T14:33:39.210+09:00  WARN 32408 --- [Raon] [  restartedMain] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2025-11-26T14:33:39.213+09:00  INFO 32408 --- [Raon] [  restartedMain] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-11-26T14:33:39.216+09:00  INFO 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-11-26T14:33:39.216+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before shutdown stats (total=10, active=0, idle=10, waiting=0)
+2025-11-26T14:33:39.217+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@690bd41c: (connection evicted)
+2025-11-26T14:33:39.220+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@7c9939fb: (connection evicted)
+2025-11-26T14:33:39.220+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@3da433c0: (connection evicted)
+2025-11-26T14:33:39.220+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@cd3cd51: (connection evicted)
+2025-11-26T14:33:39.220+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@5d8bcc8f: (connection evicted)
+2025-11-26T14:33:39.220+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@7541e9af: (connection evicted)
+2025-11-26T14:33:39.221+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@59c575b5: (connection evicted)
+2025-11-26T14:33:39.221+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@14a4e706: (connection evicted)
+2025-11-26T14:33:39.221+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@752aaa2a: (connection evicted)
+2025-11-26T14:33:39.221+09:00 DEBUG 32408 --- [Raon] [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@3b15f4cc: (connection evicted)
+2025-11-26T14:33:39.222+09:00 DEBUG 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After shutdown stats (total=0, active=0, idle=0, waiting=0)
+2025-11-26T14:33:39.222+09:00  INFO 32408 --- [Raon] [  restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-11-26T14:33:39.233+09:00  INFO 32408 --- [Raon] [  restartedMain] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2025-11-26T14:33:39.258+09:00 ERROR 32408 --- [Raon] [  restartedMain] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 8086 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 8086 or configure this application to listen on another port.
+
+
+BUILD SUCCESSFUL in 16s
+4 actionable tasks: 1 executed, 3 up-to-date

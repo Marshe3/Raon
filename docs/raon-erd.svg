@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="900" viewBox="0 0 1300 900" role="img" aria-label="ERD for Raon AI interview practice system">
+  <defs>
+    <style type="text/css"><![CDATA[
+      text { font-family: "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .box { fill: #f8fafc; stroke: #1f2937; stroke-width: 1.4; }
+      .header { fill: #1d4ed8; }
+      .title { fill: #fff; font-weight: 700; font-size: 13px; }
+      .attr { font-size: 12px; }
+      .relation { stroke: #0f172a; stroke-width: 1.6; fill: none; }
+      .relation.dashed { stroke-dasharray: 6 4; }
+      .card { font-size: 11px; font-weight: 600; stroke: #fff; stroke-width: 3px; paint-order: stroke; }
+      .note { font-size: 11px; fill: #4b5563; }
+    ]]></style>
+  </defs>
+
+  <!-- User -->
+  <g transform="translate(60 50)">
+    <rect class="box" width="250" height="240" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">User</text>
+    <text class="attr" x="12" y="52">PK user_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">email (VARCHAR100, unique)</text>
+    <text class="attr" x="12" y="84">social_type (VARCHAR20, not null)</text>
+    <text class="attr" x="12" y="100">social_id (VARCHAR255, unique)</text>
+    <text class="attr" x="12" y="116">nickname (VARCHAR50)</text>
+    <text class="attr" x="12" y="132">profile_image (VARCHAR500)</text>
+    <text class="attr" x="12" y="148">join_date (DATETIME)</text>
+    <text class="attr" x="12" y="164">last_login (DATETIME)</text>
+    <text class="attr" x="12" y="180">deleted_at (DATETIME)</text>
+    <text class="attr" x="12" y="196">created_at (DATETIME)</text>
+    <text class="attr" x="12" y="212">updated_at (DATETIME)</text>
+  </g>
+
+  <!-- RefreshToken -->
+  <g transform="translate(380 60)">
+    <rect class="box" width="250" height="140" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">RefreshToken</text>
+    <text class="attr" x="12" y="52">PK id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK user_id (BIGINT, unique)</text>
+    <text class="attr" x="12" y="84">token (VARCHAR500, encrypted)</text>
+    <text class="attr" x="12" y="100">expires_at (DATETIME)</text>
+    <text class="attr" x="12" y="116">created_at (DATETIME)</text>
+  </g>
+
+  <!-- Chatbot -->
+  <g transform="translate(700 50)">
+    <rect class="box" width="250" height="260" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">Chatbot</text>
+    <text class="attr" x="12" y="52">PK chatbot_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">chatbot_name (VARCHAR100)</text>
+    <text class="attr" x="12" y="84">description (TEXT)</text>
+    <text class="attr" x="12" y="100">model_style (VARCHAR50)</text>
+    <text class="attr" x="12" y="116">tts_type (VARCHAR50)</text>
+    <text class="attr" x="12" y="132">llm_type (VARCHAR50)</text>
+    <text class="attr" x="12" y="148">stt_type (VARCHAR50)</text>
+    <text class="attr" x="12" y="164">prompt_id (VARCHAR100)</text>
+    <text class="attr" x="12" y="180">document_id (VARCHAR100)</text>
+    <text class="attr" x="12" y="196">is_active (BOOLEAN)</text>
+    <text class="attr" x="12" y="212">is_public (BOOLEAN)</text>
+    <text class="attr" x="12" y="228">created_at (DATETIME)</text>
+    <text class="attr" x="12" y="244">updated_at (DATETIME)</text>
+  </g>
+
+  <!-- Resume -->
+  <g transform="translate(60 320)">
+    <rect class="box" width="250" height="220" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">Resume</text>
+    <text class="attr" x="12" y="52">PK resume_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK user_id (BIGINT)</text>
+    <text class="attr" x="12" y="84">title (VARCHAR100)</text>
+    <text class="attr" x="12" y="100">name (VARCHAR50)</text>
+    <text class="attr" x="12" y="116">phone (VARCHAR20)</text>
+    <text class="attr" x="12" y="132">email (VARCHAR100)</text>
+    <text class="attr" x="12" y="148">desired_position (VARCHAR100)</text>
+    <text class="attr" x="12" y="164">skills (TEXT)</text>
+    <text class="attr" x="12" y="180">is_default (BOOLEAN)</text>
+    <text class="attr" x="12" y="196">created_at (DATETIME)</text>
+    <text class="attr" x="12" y="212">updated_at (DATETIME)</text>
+  </g>
+
+  <!-- CoverLetter -->
+  <g transform="translate(380 320)">
+    <rect class="box" width="250" height="190" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">CoverLetter</text>
+    <text class="attr" x="12" y="52">PK cover_letter_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK user_id (BIGINT)</text>
+    <text class="attr" x="12" y="84">title (VARCHAR100)</text>
+    <text class="attr" x="12" y="100">content (TEXT)</text>
+    <text class="attr" x="12" y="116">company_name (VARCHAR100)</text>
+    <text class="attr" x="12" y="132">position (VARCHAR100)</text>
+    <text class="attr" x="12" y="148">is_default (BOOLEAN)</text>
+    <text class="attr" x="12" y="164">created_at (DATETIME)</text>
+    <text class="attr" x="12" y="180">updated_at (DATETIME)</text>
+  </g>
+
+  <!-- ChatRoom -->
+  <g transform="translate(700 320)">
+    <rect class="box" width="250" height="110" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">ChatRoom</text>
+    <text class="attr" x="12" y="52">PK chat_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">perso_session_id (VARCHAR255, unique)</text>
+    <text class="attr" x="12" y="84">created_at (DATETIME)</text>
+  </g>
+
+  <!-- Education -->
+  <g transform="translate(60 580)">
+    <rect class="box" width="250" height="230" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">Education</text>
+    <text class="attr" x="12" y="52">PK education_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK resume_id (BIGINT, cascade)</text>
+    <text class="attr" x="12" y="84">education_type (VARCHAR50)</text>
+    <text class="attr" x="12" y="100">school_name (VARCHAR100)</text>
+    <text class="attr" x="12" y="116">major (VARCHAR100)</text>
+    <text class="attr" x="12" y="132">attendance_period (VARCHAR50)</text>
+    <text class="attr" x="12" y="148">status (VARCHAR20)</text>
+    <text class="attr" x="12" y="164">gpa (VARCHAR20)</text>
+    <text class="attr" x="12" y="180">order_index (INT)</text>
+    <text class="attr" x="12" y="196">created_at (DATETIME)</text>
+    <text class="attr" x="12" y="212">updated_at (DATETIME)</text>
+  </g>
+
+  <!-- Career -->
+  <g transform="translate(380 580)">
+    <rect class="box" width="250" height="230" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">Career</text>
+    <text class="attr" x="12" y="52">PK career_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK resume_id (BIGINT, cascade)</text>
+    <text class="attr" x="12" y="84">company_name (VARCHAR100)</text>
+    <text class="attr" x="12" y="100">position (VARCHAR100)</text>
+    <text class="attr" x="12" y="116">employment_period (VARCHAR50)</text>
+    <text class="attr" x="12" y="132">is_current (BOOLEAN)</text>
+    <text class="attr" x="12" y="148">responsibilities (TEXT)</text>
+    <text class="attr" x="12" y="164">achievements (TEXT)</text>
+    <text class="attr" x="12" y="180">order_index (INT)</text>
+    <text class="attr" x="12" y="196">created_at (DATETIME)</text>
+    <text class="attr" x="12" y="212">updated_at (DATETIME)</text>
+  </g>
+
+  <!-- InterviewFeedback -->
+  <g transform="translate(700 520)">
+    <rect class="box" width="250" height="190" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">InterviewFeedback</text>
+    <text class="attr" x="12" y="52">PK feedback_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK user_id (BIGINT)</text>
+    <text class="attr" x="12" y="84">FK chat_id (nullable, set null)</text>
+    <text class="attr" x="12" y="100">score (DECIMAL 5,2)</text>
+    <text class="attr" x="12" y="116">feedback_summary (TEXT)</text>
+    <text class="attr" x="12" y="132">interview_type (VARCHAR100)</text>
+    <text class="attr" x="12" y="148">interview_date (DATETIME)</text>
+    <text class="attr" x="12" y="164">created_at (DATETIME)</text>
+  </g>
+
+  <!-- Message -->
+  <g transform="translate(700 750)">
+    <rect class="box" width="250" height="140" rx="8" ry="8" />
+    <rect class="header" width="250" height="32" rx="8" ry="8" />
+    <text class="title" x="125" y="21" text-anchor="middle">Message</text>
+    <text class="attr" x="12" y="52">PK message_id (BIGINT)</text>
+    <text class="attr" x="12" y="68">FK chat_id (BIGINT, cascade)</text>
+    <text class="attr" x="12" y="84">role (VARCHAR20)</text>
+    <text class="attr" x="12" y="100">content (TEXT)</text>
+    <text class="attr" x="12" y="116">created_at (DATETIME)</text>
+  </g>
+
+  <!-- Relations -->
+  <line class="relation" x1="310" y1="130" x2="380" y2="130" />
+  <text class="card" x="320" y="120">1</text>
+  <text class="card" x="366" y="120">1</text>
+
+  <line class="relation" x1="185" y1="290" x2="185" y2="320" />
+  <text class="card" x="170" y="306">1</text>
+  <text class="card" x="170" y="322">N</text>
+
+  <line class="relation" x1="245" y1="290" x2="505" y2="320" />
+  <text class="card" x="255" y="280">1</text>
+  <text class="card" x="490" y="310">N</text>
+
+  <line class="relation" x1="185" y1="540" x2="185" y2="580" />
+  <text class="card" x="170" y="556">1</text>
+  <text class="card" x="170" y="588">N</text>
+
+  <path class="relation" d="M 245 540 L 245 560 L 505 560 L 505 580" />
+  <text class="card" x="253" y="548">1</text>
+  <text class="card" x="513" y="588">N</text>
+
+  <line class="relation" x1="310" y1="200" x2="700" y2="520" />
+  <text class="card" x="322" y="194">1</text>
+  <text class="card" x="686" y="512">N</text>
+
+  <line class="relation" x1="825" y1="430" x2="825" y2="750" />
+  <text class="card" x="835" y="446">1</text>
+  <text class="card" x="835" y="738">N</text>
+
+  <line class="relation dashed" x1="855" y1="430" x2="855" y2="520" />
+  <text class="card" x="863" y="444">1</text>
+  <text class="card" x="863" y="512">1 (opt)</text>
+
+  <line class="relation" x1="310" y1="210" x2="380" y2="210" />
+  <text class="card" x="320" y="200">1</text>
+  <text class="card" x="366" y="200">N</text>
+
+    <text class="note" x="60" y="22">Raon ERD - solid lines: mandatory; dashed: optional ChatRoom &#8596; InterviewFeedback (SET NULL)</text>
+</svg>
