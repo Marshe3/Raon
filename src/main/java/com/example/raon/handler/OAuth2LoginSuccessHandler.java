@@ -143,8 +143,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("Added JWT tokens to cookies (accessToken: {}초, refreshToken: {}초)",
                  accessTokenCookieMaxAge, refreshTokenCookieMaxAge);
 
-        // 5. 프론트엔드 홈으로 리디렉션 (상대 경로 사용)
-        // 절대 URL 대신 상대 경로로 리다이렉트하여 Cloudflare 재진입 방지
+        // 5. 프론트엔드 홈으로 리디렉션
         getRedirectStrategy().sendRedirect(request, response, frontendUrl);
     }
 
