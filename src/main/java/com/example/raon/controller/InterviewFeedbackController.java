@@ -1,6 +1,8 @@
 package com.example.raon.controller;
 
 import com.example.raon.domain.InterviewFeedback;
+import com.example.raon.domain.User;
+import com.example.raon.repository.UserRepository;
 import com.example.raon.service.InterviewFeedbackService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class InterviewFeedbackController {
 
     private final InterviewFeedbackService interviewFeedbackService;
+    private final UserRepository userRepository;
 
     /**
      * 현재 로그인한 사용자의 모든 면접 피드백 조회
@@ -41,9 +44,11 @@ public class InterviewFeedbackController {
             String email = authentication.getName();
             log.info("면접 피드백 조회 요청 - 사용자: {}", email);
 
-            // TODO: email로 userId 조회 필요
-            // 임시로 userId = 1로 테스트
-            Long userId = 1L;
+            // email로 실제 사용자 조회
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
+
+            Long userId = user.getUserId();
 
             List<InterviewFeedback> feedbacks = interviewFeedbackService.getFeedbacksByUserId(userId);
 
@@ -82,7 +87,11 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            Long userId = 1L; // TODO: 실제 userId 조회
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
+
+            Long userId = user.getUserId();
 
             LocalDateTime startDate = LocalDateTime.now().minusDays(days);
             List<InterviewFeedback> feedbacks = interviewFeedbackService.getFeedbacksByUserIdAndDateRange(userId, startDate);
@@ -118,7 +127,11 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            Long userId = 1L; // TODO: 실제 userId 조회
+            String email = authentication.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
+
+            Long userId = user.getUserId();
 
             var averageScore = interviewFeedbackService.getAverageScore(userId);
 
