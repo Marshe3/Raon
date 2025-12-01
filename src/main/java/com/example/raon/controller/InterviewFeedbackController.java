@@ -41,13 +41,9 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            // authentication.getName()은 카카오는 id, 구글은 sub를 반환 (= socialId)
-            String socialId = authentication.getName();
-            log.info("면접 피드백 조회 요청 - socialId: {}", socialId);
-
-            // socialId로 실제 사용자 조회
-            User user = userService.getUserBySocialId(socialId);
-            Long userId = user.getUserId();
+            // authentication.getName()은 userId를 String으로 반환
+            Long userId = Long.parseLong(authentication.getName());
+            log.info("면접 피드백 조회 요청 - userId: {}", userId);
 
             List<InterviewFeedback> feedbacks = interviewFeedbackService.getFeedbacksByUserId(userId);
 
@@ -86,9 +82,9 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            String socialId = authentication.getName();
-            User user = userService.getUserBySocialId(socialId);
-            Long userId = user.getUserId();
+            // authentication.getName()은 userId를 String으로 반환
+            Long userId = Long.parseLong(authentication.getName());
+            log.info("기간별 면접 피드백 조회 요청 - userId: {}, days: {}", userId, days);
 
             LocalDateTime startDate = LocalDateTime.now().minusDays(days);
             List<InterviewFeedback> feedbacks = interviewFeedbackService.getFeedbacksByUserIdAndDateRange(userId, startDate);
@@ -124,9 +120,9 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            String socialId = authentication.getName();
-            User user = userService.getUserBySocialId(socialId);
-            Long userId = user.getUserId();
+            // authentication.getName()은 userId를 String으로 반환
+            Long userId = Long.parseLong(authentication.getName());
+            log.info("평균 점수 조회 요청 - userId: {}", userId);
 
             var averageScore = interviewFeedbackService.getAverageScore(userId);
 

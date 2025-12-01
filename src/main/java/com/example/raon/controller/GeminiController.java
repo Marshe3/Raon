@@ -305,11 +305,9 @@ public class GeminiController {
 
                         Long chatId = request.getChatId();
 
-                        // 로그인한 사용자 정보 조회 (authentication.getName()은 socialId 반환)
+                        // 로그인한 사용자 정보 조회 (authentication.getName()은 userId를 String으로 반환)
                         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-                        String socialId = authentication.getName();
-                        User user = userService.getUserBySocialId(socialId);
-                        Long userId = user.getUserId();
+                        Long userId = Long.parseLong(authentication.getName());
 
                         String interviewType = request.getInterviewType() != null ? request.getInterviewType() : "일반 면접";
 

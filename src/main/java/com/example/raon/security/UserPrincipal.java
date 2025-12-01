@@ -29,7 +29,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public String getUsername() {
-        return email;
+        return String.valueOf(userId); // userId를 반환 (socialId 조회용)
     }
 
     @Override
