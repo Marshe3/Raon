@@ -2,8 +2,8 @@ package com.example.raon.controller;
 
 import com.example.raon.domain.InterviewFeedback;
 import com.example.raon.domain.User;
-import com.example.raon.repository.UserRepository;
 import com.example.raon.service.InterviewFeedbackService;
+import com.example.raon.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class InterviewFeedbackController {
 
     private final InterviewFeedbackService interviewFeedbackService;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     /**
      * 현재 로그인한 사용자의 모든 면접 피드백 조회
@@ -41,13 +41,12 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            String email = authentication.getName();
-            log.info("면접 피드백 조회 요청 - 사용자: {}", email);
+            // authentication.getName()은 카카오는 id, 구글은 sub를 반환 (= socialId)
+            String socialId = authentication.getName();
+            log.info("면접 피드백 조회 요청 - socialId: {}", socialId);
 
-            // email로 실제 사용자 조회
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
-
+            // socialId로 실제 사용자 조회
+            User user = userService.getUserBySocialId(socialId);
             Long userId = user.getUserId();
 
             List<InterviewFeedback> feedbacks = interviewFeedbackService.getFeedbacksByUserId(userId);
@@ -87,10 +86,8 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            String email = authentication.getName();
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
-
+            String socialId = authentication.getName();
+            User user = userService.getUserBySocialId(socialId);
             Long userId = user.getUserId();
 
             LocalDateTime startDate = LocalDateTime.now().minusDays(days);
@@ -127,10 +124,8 @@ public class InterviewFeedbackController {
                 return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다"));
             }
 
-            String email = authentication.getName();
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + email));
-
+            String socialId = authentication.getName();
+            User user = userService.getUserBySocialId(socialId);
             Long userId = user.getUserId();
 
             var averageScore = interviewFeedbackService.getAverageScore(userId);

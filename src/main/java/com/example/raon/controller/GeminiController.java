@@ -1,8 +1,10 @@
 package com.example.raon.controller;
 
+import com.example.raon.domain.User;
 import com.example.raon.dto.CoverLetterFeedbackRequest;
 import com.example.raon.dto.InterviewFeedbackRequest;
 import com.example.raon.service.InterviewFeedbackService;
+import com.example.raon.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,7 @@ public class GeminiController {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final InterviewFeedbackService interviewFeedbackService;
+    private final UserService userService;
 
     /**
      * 자기소개서 첨삭 요청
@@ -301,11 +304,17 @@ public class GeminiController {
                         BigDecimal overallScore = new BigDecimal(overallScoreNum.toString());
 
                         Long chatId = request.getChatId();
-                        Long userId = 1L; // TODO: 실제 인증된 사용자 ID 가져오기
+
+                        // 로그인한 사용자 정보 조회 (authentication.getName()은 socialId 반환)
+                        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                        String socialId = authentication.getName();
+                        User user = userService.getUserBySocialId(socialId);
+                        Long userId = user.getUserId();
+
                         String interviewType = request.getInterviewType() != null ? request.getInterviewType() : "일반 면접";
 
                         interviewFeedbackService.saveFeedback(userId, chatId, overallScore, jsonText, interviewType);
-                        log.info("✅ 면접 피드백 DB 저장 완료 - type: {}, score: {}", interviewType, overallScore);
+                        log.info("✅ 면접 피드백 DB 저장 완료 - userId: {}, type: {}, score: {}", userId, interviewType, overallScore);
                     } catch (Exception e) {
                         log.warn("⚠️ 피드백 DB 저장 실패 (응답은 정상 반환): {}", e.getMessage());
                     }
