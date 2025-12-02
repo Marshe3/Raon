@@ -1,25 +1,27 @@
-# Raon 프로젝트 상세 문서
+# Raon 프로젝트 상세 기술 문서
 
-> AI 음성 채팅 기능을 제공하는 Spring Boot + React 풀스택 애플리케이션
+> AI 기반 취업 지원 플랫폼 - 개발자를 위한 기술 문서
 
-**작성일:** 2025-01-27
-**버전:** 1.0.0
+**작성일:** 2025-12-02
+**버전:** 2.0.0
 **작성자:** Claude Code
+**프로젝트:** Raon (라온)
 
 ---
 
 ## 📑 목차
 
-1. [프로젝트 개요](1-프로젝트-개요)
-2. [기술 스택](2-기술-스택)
-3. [프로젝트 구조](3-프로젝트-구조)
-4. [주요 기능](4-주요-기능)
-5. [아키텍처 개선: API 관리 방식 변경](5-아키텍처-개선-api-관리-방식-변경)
-6. [코드 리뷰](6-코드-리뷰)
-7. [보안 개선 사항](7-보안-개선-사항)
-8. [환경 설정](8-환경-설정)
-9. [실행 가이드](9-실행-가이드)
-10. [트러블슈팅](10-트러블슈팅)
+1. [프로젝트 개요](#1-프로젝트-개요)
+2. [시스템 아키텍처](#2-시스템-아키텍처)
+3. [기술 스택 상세](#3-기술-스택-상세)
+4. [데이터베이스 설계](#4-데이터베이스-설계)
+5. [주요 기능 구현](#5-주요-기능-구현)
+6. [보안 및 인증](#6-보안-및-인증)
+7. [배포 및 인프라](#7-배포-및-인프라)
+8. [API 명세](#8-api-명세)
+9. [코드 구조](#9-코드-구조)
+10. [개발 가이드](#10-개발-가이드)
+11. [트러블슈팅](#11-트러블슈팅)
 
 ---
 
@@ -27,335 +29,577 @@
 
 ### 1.1 프로젝트 소개
 
-**Raon**은 PersoAI의 Live Chat SDK를 활용한 AI 음성 채팅 애플리케이션입니다. 사용자는 AI 캐릭터와 실시간으로 음성 및 텍스트 채팅을 할 수 있으며, 다양한 AI 모델(LLM, TTS)과 커스터마이징 옵션을 선택할 수 있습니다.
+**Raon(라온)**은 AI 기술을 활용하여 취업 준비생들의 면접 준비와 역량 강화를 지원하는 종합 플랫폼입니다.
 
-### 1.2 핵심 가치
+**핵심 가치:**
+- 🎯 **AI 기반 면접 연습**: PersoAI SDK를 활용한 실시간 음성 면접 시뮬레이션
+- 📝 **문서 관리**: 이력서, 자기소개서 작성 및 AI 피드백
+- 📊 **학습 분석**: 면접 연습 기록 및 성과 분석
+- 🔒 **보안 강화**: OAuth2 + JWT 기반 인증, Cloudflare Tunnel 보안
 
-- **보안 강화**: API 자격증명을 백엔드에서 중앙 관리하여 민감 정보 노출 방지
-- **사용자 편의성**: 복잡한 API 설정 없이 간단한 버튼 클릭으로 AI 채팅 시작
-- **확장성**: Spring Boot 기반의 RESTful API 구조로 향후 기능 확장 용이
+### 1.2 기술적 특징
 
----
+1. **마이크로서비스 지향 아키텍처**
+   - Frontend/Backend 완전 분리
+   - Docker Compose를 통한 컨테이너 오케스트레이션
 
-## 2. 기술 스택
+2. **클라우드 네이티브**
+   - Naver Cloud Platform 기반
+   - Cloudflare Tunnel을 통한 보안 강화
+   - Docker 기반 배포
 
-### 2.1 백엔드
-
-| 기술 | 버전 | 용도 |
-|------|------|------|
-| Java | 21 | 프로그래밍 언어 |
-| Spring Boot | 3.4.10 | 애플리케이션 프레임워크 |
-| Spring Web | 3.4.10 | RESTful API 구현 |
-| Spring Security | 3.4.10 | 보안 및 인증 |
-| Spring Data JPA | 3.4.10 | ORM 및 데이터베이스 연동 |
-| MySQL Connector | 8.4.0 | MySQL 드라이버 |
-| Lombok | - | 코드 간소화 |
-| Gradle | - | 빌드 도구 |
-
-### 2.2 프론트엔드
-
-| 기술 | 버전 | 용도 |
-|------|------|------|
-| React | 19.2.0 | UI 라이브러리 |
-| React DOM | 19.2.0 | DOM 렌더링 |
-| React Scripts | 5.0.1 | 빌드 및 개발 서버 |
-| PersoLive SDK | 1.0.8 | AI 음성 채팅 SDK |
-| File Saver | 2.0.5 | 파일 저장 유틸리티 |
-
-### 2.3 데이터베이스
-
-- **MySQL 8.x**
-- Host: `project-db-campus.smhrd.com:3312`
-- Database: `Insa6_aiservice_p3_3`
-
-### 2.4 외부 API
-
-- **PersoAI Live API**
-- Endpoint: `https://live-api.perso.ai`
-- 용도: AI 음성 채팅 세션 관리 및 설정
+3. **현대적 기술 스택**
+   - Spring Boot 3.4.10 (Java 21)
+   - React 19.2.0
+   - MySQL 8.x
 
 ---
 
-## 3. 프로젝트 구조
+## 2. 시스템 아키텍처
 
-### 3.1 백엔드 구조
-
-```
-src/main/java/com/example/raon/
-├── RaonApplication.java                # Spring Boot 메인 클래스
-├── config/
-│   ├── SecurityConfig.java            # Spring Security 설정
-│   └── WebConfig.java                 # CORS 등 웹 설정
-├── controller/
-│   ├── UserController.java            # 사용자 관련 API
-│   └── PersoAIController.java         # PersoAI API 자격증명 제공
-├── service/
-│   ├── UserService.java               # 사용자 서비스 인터페이스
-│   ├── UserServiceImpl.java           # 사용자 서비스 구현
-│   └── PersoAIService.java            # PersoAI 관련 서비스
-├── domain/
-│   └── UserEntity.java                # 사용자 엔티티
-├── dto/
-│   └── user/
-│       └── UserDto.java               # 사용자 DTO
-└── repository/
-    └── UserRepository.java            # 사용자 레포지토리
-
-src/main/resources/
-└── application.properties              # 애플리케이션 설정 파일
-```
-
-### 3.2 프론트엔드 구조
+### 2.1 전체 시스템 구조
 
 ```
-frontend/
-├── public/
-│   ├── index.html                     # HTML 템플릿 (SDK 스크립트 포함)
-│   ├── background.png                 # 배경 이미지
-│   └── perso.png                      # AI 캐릭터 이미지
-├── src/
-│   ├── App.js                         # 메인 앱 컴포넌트
-│   ├── index.js                       # 엔트리 포인트
-│   └── components/
-│       └── PersoLiveChat/
-│           ├── PersoLiveChat.jsx      # AI 채팅 메인 컴포넌트
-│           ├── PersoLiveChat.css      # 스타일시트
-│           └── wav-recorder.js        # 음성 녹음 유틸리티
-└── package.json                        # 의존성 관리
+┌─────────────────────────────────────────────────────────────┐
+│                      사용자 (클라이언트)                     │
+│                                                               │
+│  React SPA + PersoAI SDK + OAuth2 Client                    │
+└─────────────────┬───────────────────────────────────────────┘
+                  │ HTTPS
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Cloudflare Tunnel (보안 계층)                   │
+│  • SSL/TLS 암호화                                            │
+│  • DDoS 방어                                                 │
+│  • CDN 가속                                                  │
+└─────────────────┬───────────────────────────────────────────┘
+                  │ 암호화된 터널
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│       Naver Cloud Platform (211.188.52.153)                 │
+│       Ubuntu 24.04.3 LTS                                     │
+│                                                               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │         Docker Compose Network                        │  │
+│  │                                                        │  │
+│  │  ┌──────────────┐    ┌──────────────┐               │  │
+│  │  │  Frontend    │◄──►│  Backend     │               │  │
+│  │  │  (Nginx)     │HTTP│  (Spring)    │               │  │
+│  │  │  Port: 80    │    │  Port: 8086  │               │  │
+│  │  └──────────────┘    └──────┬───────┘               │  │
+│  │                              │ JDBC                   │  │
+│  │                       ┌──────▼───────┐               │  │
+│  │                       │   MySQL      │               │  │
+│  │                       │   Port: 3306 │               │  │
+│  │                       └──────────────┘               │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 레이어별 역할
+
+#### 2.2.1 Presentation Layer (프론트엔드)
+- **기술**: React 19.2.0, Nginx
+- **역할**:
+  - UI/UX 제공
+  - PersoAI SDK 통합 (음성 채팅)
+  - OAuth2 소셜 로그인 UI
+  - 상태 관리 및 라우팅
+
+#### 2.2.2 Application Layer (백엔드)
+- **기술**: Spring Boot 3.4.10
+- **역할**:
+  - RESTful API 제공
+  - 비즈니스 로직 처리
+  - 인증/인가 (JWT)
+  - 외부 API 연동
+
+#### 2.2.3 Data Layer (데이터베이스)
+- **기술**: MySQL 8.x
+- **역할**:
+  - 영속성 데이터 저장
+  - 트랜잭션 관리
+  - 인덱싱 및 쿼리 최적화
+
+#### 2.2.4 Security Layer (보안)
+- **기술**: Cloudflare Tunnel, Spring Security
+- **역할**:
+  - 네트워크 보안
+  - 애플리케이션 보안
+  - 인증/인가 처리
+
+---
+
+## 3. 기술 스택 상세
+
+### 3.1 백엔드 기술
+
+#### 3.1.1 Spring Boot 3.4.10
+
+**주요 의존성:**
+
+```gradle
+dependencies {
+    // Core
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+
+    // WebFlux (비동기 HTTP)
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Cache
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    // Database
+    runtimeOnly 'com.mysql:mysql-connector-j'
+}
+```
+
+**주요 기능:**
+- RESTful API 구현
+- JPA를 통한 ORM
+- OAuth2 클라이언트 (Google, Kakao)
+- JWT 토큰 기반 인증
+- Caffeine 캐싱
+
+#### 3.1.2 데이터베이스
+
+**MySQL 8.x 설정:**
+
+```properties
+spring.datasource.url=jdbc:mysql://project-db-campus.smhrd.com:3312/Insa6_aiservice_p3_3
+spring.datasource.username=Insa6_aiservice_p3_3
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+```
+
+### 3.2 프론트엔드 기술
+
+#### 3.2.1 React 19.2.0
+
+**주요 라이브러리:**
+
+```json
+{
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^6.30.1",
+    "framer-motion": "^12.23.24",
+    "recharts": "^3.5.1",
+    "lucide-react": "^0.554.0",
+    "@google/genai": "^1.30.0"
+  }
+}
+```
+
+**주요 기능:**
+- SPA (Single Page Application)
+- React Router를 통한 클라이언트 라우팅
+- Framer Motion 애니메이션
+- Recharts 데이터 시각화
+
+### 3.3 배포 환경
+
+#### 3.3.1 Infrastructure
+
+- **클라우드**: Naver Cloud Platform
+- **OS**: Ubuntu 24.04.3 LTS
+- **컨테이너**: Docker 20.10+, Docker Compose v2
+- **네트워크**: Cloudflare Tunnel
+
+#### 3.3.2 Docker Compose 구성
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: .
+    ports:
+      - "8081:8086"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
 ```
 
 ---
 
-## 4. 주요 기능
+## 4. 데이터베이스 설계
 
-### 4.1 AI 음성 채팅
+### 4.1 ERD (Entity Relationship Diagram)
 
-- **실시간 음성 대화**: 음성 인식(STT)을 통한 대화 입력
-- **AI 음성 응답**: Text-to-Speech(TTS)로 자연스러운 음성 응답
-- **텍스트 채팅**: 텍스트 입력을 통한 대화 지원
-- **채팅 로그**: 대화 내역 실시간 표시
+#### 4.1.1 핵심 엔티티
 
-### 4.2 커스터마이징
+**1. 사용자 관리**
 
-- **LLM 선택**: 다양한 언어 모델 중 선택
-- **TTS 선택**: 음성 엔진 선택
-- **AI 캐릭터 스타일**: 캐릭터 외형 커스터마이징
-- **배경 이미지**: 배경 화면 선택
-- **프롬프트 설정**: AI의 성격 및 역할 정의
-- **문서 업로드**: 참고 문서를 기반으로 한 대화
+```sql
+-- users 테이블
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    social_id VARCHAR(255) NOT NULL UNIQUE,
+    social_type ENUM('GOOGLE', 'KAKAO') NOT NULL,
+    email VARCHAR(255),
+    nickname VARCHAR(100),
+    profile_image VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_social (social_id, social_type)
+);
 
-### 4.3 화면 설정
+-- user_oauth_tokens 테이블
+CREATE TABLE user_oauth_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    expires_at TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
 
-- **화면 방향**: Portrait/Landscape 선택
-- **캐릭터 위치**: 좌우/상하 위치 조정
-- **캐릭터 크기**: 캐릭터 높이 조정
-- **음성 채팅 활성화**: 음성 기능 ON/OFF
+-- refresh_tokens 테이블
+CREATE TABLE refresh_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    token VARCHAR(500) NOT NULL UNIQUE,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_token (token),
+    INDEX idx_expires (expires_at)
+);
+```
+
+**2. 챗봇 및 채팅**
+
+```sql
+-- chatbots 테이블
+CREATE TABLE chatbots (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- chat_rooms 테이블
+CREATE TABLE chat_rooms (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(200),
+    session_id VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id)
+);
+
+-- messages 테이블
+CREATE TABLE messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    chatroom_id BIGINT NOT NULL,
+    role ENUM('USER', 'ASSISTANT') NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chatroom_id) REFERENCES chat_rooms(id) ON DELETE CASCADE,
+    INDEX idx_chatroom (chatroom_id),
+    INDEX idx_created (created_at)
+);
+```
+
+**3. 이력서 및 자기소개서**
+
+```sql
+-- resumes 테이블
+CREATE TABLE resumes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(100),
+    email VARCHAR(255),
+    phone VARCHAR(20),
+    address VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- careers 테이블
+CREATE TABLE careers (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    resume_id BIGINT NOT NULL,
+    company VARCHAR(200),
+    position VARCHAR(100),
+    start_date DATE,
+    end_date DATE,
+    description TEXT,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE
+);
+
+-- educations 테이블
+CREATE TABLE educations (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    resume_id BIGINT NOT NULL,
+    school VARCHAR(200),
+    major VARCHAR(100),
+    degree VARCHAR(50),
+    start_date DATE,
+    end_date DATE,
+    FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE
+);
+
+-- cover_letters 테이블
+CREATE TABLE cover_letters (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    company VARCHAR(200),
+    question TEXT,
+    answer TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+**4. 면접 및 학습**
+
+```sql
+-- interview_feedbacks 테이블
+CREATE TABLE interview_feedbacks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    question TEXT,
+    answer TEXT,
+    feedback TEXT,
+    score INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user (user_id),
+    INDEX idx_created (created_at)
+);
+
+-- learning_histories 테이블
+CREATE TABLE learning_histories (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    session_date DATE,
+    duration INT,
+    score INT,
+    feedback TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_date (user_id, session_date)
+);
+```
+
+### 4.2 인덱스 전략
+
+**1. 기본 인덱스**
+- Primary Key: 자동 생성
+- Foreign Key: 조인 성능 향상
+
+**2. 복합 인덱스**
+```sql
+-- 사용자별 날짜 조회 최적화
+CREATE INDEX idx_user_date ON learning_histories(user_id, session_date);
+
+-- 소셜 로그인 조회 최적화
+CREATE INDEX idx_social ON users(social_id, social_type);
+
+-- 토큰 만료 조회 최적화
+CREATE INDEX idx_expires ON refresh_tokens(expires_at);
+```
 
 ---
 
-## 5. 아키텍처 개선: API 관리 방식 변경
+## 5. 주요 기능 구현
 
-이 섹션은 프로젝트의 가장 중요한 변경사항인 **API 자격증명 관리 방식의 개선 과정**을 상세히 설명합니다.
+### 5.1 OAuth2 소셜 로그인
 
-### 5.1 문제 상황 (Before)
-
-#### 초기 구조
+#### 5.1.1 인증 흐름
 
 ```
-┌─────────────┐
-│  Frontend   │
-│             │
-│ ┌─────────┐ │
-│ │ Input   │ │  ← 사용자가 직접 입력
-│ │ API Key │ │
-│ │ API URL │ │
-│ └─────────┘ │
-│      │      │
-│      ↓      │
-│   PersoAI   │  → PersoAI API 직접 호출
-│     SDK     │
-└─────────────┘
+1. 사용자가 Google/Kakao 로그인 버튼 클릭
+   ↓
+2. OAuth2 Provider로 리다이렉트
+   ↓
+3. 사용자 동의 후 Authorization Code 발급
+   ↓
+4. Backend가 Authorization Code로 Access Token 교환
+   ↓
+5. Access Token으로 사용자 정보 조회
+   ↓
+6. CustomOAuth2UserService가 사용자 정보 처리
+   - 신규 사용자: DB에 저장
+   - 기존 사용자: 정보 업데이트
+   ↓
+7. JWT Token 생성 및 반환
+   - Access Token (1시간)
+   - Refresh Token (7일, DB 저장)
+   ↓
+8. Frontend에 토큰 전달 및 로컬 저장
 ```
 
-#### 초기 코드 (PersoLiveChat.jsx)
+#### 5.1.2 구현 코드
 
-```javascript
-// State: 사용자가 직접 입력
-const [apiServer, setApiServer] = useState('');
-const [apiKey, setApiKey] = useState('');
-
-// UI: 입력 필드 노출
-<input
-  type="text"
-  value={apiServer}
-  onChange={(e) => setApiServer(e.target.value)}
-  placeholder="API Server 주소"
-/>
-<input
-  type="text"
-  value={apiKey}
-  onChange={(e) => setApiKey(e.target.value)}
-  placeholder="API Key"
-/>
-
-// API 호출: 프론트엔드에서 직접
-const config = await window.PersoLiveSDK.getAllSettings(apiServer, apiKey);
-```
-
-#### 문제점
-
-1. **보안 취약점**
-   - API Key가 브라우저에 노출됨
-   - 개발자 도구(F12)로 쉽게 확인 가능
-   - 소스 코드에서도 평문으로 보임
-
-2. **사용자 경험 저하**
-   - 일반 사용자가 API Key를 알기 어려움
-   - 매번 입력해야 하는 번거로움
-   - 입력 오류 발생 가능성
-
-3. **관리의 어려움**
-   - API Key 변경 시 모든 사용자에게 알려야 함
-   - 키 유출 시 대응 어려움
-
-### 5.2 1차 개선 시도 (실패)
-
-#### 시도한 아키텍처
-
-```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│  Frontend   │ ───> │   Backend   │ ───> │  PersoAI    │
-│             │      │             │      │     API     │
-│             │      │ RestTemplate│      │             │
-└─────────────┘      └─────────────┘      └─────────────┘
-                          ↓
-                     "/api/v1/settings" 호출 시도
-                          ↓
-                        ❌ 404 Not Found
-```
-
-#### 구현 코드
-
-**PersoAIService.java (실패한 버전)**
+**SecurityConfig.java**
 
 ```java
-@Service
-public class PersoAIService {
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
 
-    @Value("${persoai.api.server}")
-    private String apiServer;
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**", "/oauth2/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                    .userService(customOAuth2UserService)
+                )
+                .successHandler(oAuth2SuccessHandler)
+            )
+            .addFilterBefore(jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class);
 
-    @Value("${persoai.api.key}")
-    private String apiKey;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    public Object getAllSettings() {
-        String url = apiServer + "/api/v1/settings";  // ❌ 잘못된 엔드포인트
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Bearer " + apiKey);  // ❌ 잘못된 헤더 형식
-
-        HttpEntity<Object> request = new HttpEntity<>(null, headers);
-
-        // 404 Not Found 에러 발생
-        ResponseEntity<Object> response = restTemplate.exchange(
-            url, HttpMethod.GET, request, Object.class
-        );
-
-        return response.getBody();
+        return http.build();
     }
 }
 ```
 
-**에러 로그**
+**CustomOAuth2UserService.java**
 
-```
-org.springframework.web.client.HttpClientErrorException$NotFound:
-404 Not Found
+```java
+@Service
+public class CustomOAuth2UserService
+    extends DefaultOAuth2UserService {
 
-at org.springframework.web.client.RestTemplate.handleResponse
-    (RestTemplate.java:953)
-```
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest userRequest) {
+        OAuth2User oauth2User = super.loadUser(userRequest);
 
-#### 실패 원인
+        String registrationId = userRequest
+            .getClientRegistration()
+            .getRegistrationId();
 
-1. **엔드포인트 불일치**
-   - PersoAI SDK가 사용하는 실제 엔드포인트를 알 수 없음
-   - `/api/v1/settings` 경로가 존재하지 않음
+        // Provider별 사용자 정보 추출
+        Map<String, Object> attributes = oauth2User.getAttributes();
+        String socialId = extractSocialId(registrationId, attributes);
+        String email = extractEmail(registrationId, attributes);
 
-2. **인증 방식 불일치**
-   - `Authorization: Bearer` 방식이 아닌 `api-key` 헤더 필요
-   - SDK 내부 로직을 우회하려다 실패
+        // 사용자 저장 또는 업데이트
+        User user = userRepository
+            .findBySocialIdAndSocialType(socialId,
+                SocialType.valueOf(registrationId.toUpperCase()))
+            .orElseGet(() -> createNewUser(socialId, email, registrationId));
 
-3. **SDK 의존성**
-   - PersoAI SDK는 복잡한 WebRTC 및 비디오 스트리밍 처리
-   - 단순 REST API로 대체 불가능
-
-### 5.3 최종 해결책 (After)
-
-#### 최종 아키텍처
-
-```
-┌─────────────────────────────────────────────────┐
-│                   Frontend                       │
-│                                                  │
-│  ① GET /api/persoai/credentials                 │
-│     ↓                                            │
-│  ② 자격증명 수신 (apiServer, apiKey)            │
-│     ↓                                            │
-│  ③ PersoLive SDK 호출                           │
-│     window.PersoLiveSDK.getAllSettings(...)     │
-│                                                  │
-└──────────────┬──────────────────────────────────┘
-               │
-               ↓
-┌──────────────────────────────────────────────────┐
-│                   Backend                         │
-│                                                   │
-│  PersoAIController                               │
-│  GET /api/persoai/credentials                    │
-│  → { apiServer, apiKey } 반환                    │
-│                                                   │
-│  application.properties                          │
-│  persoai.api.server=https://live-api.perso.ai   │
-│  persoai.api.key=plak-ed3f...                    │
-└───────────────────────────────────────────────────┘
-               │
-               ↓
-┌───────────────────────────────────────────────────┐
-│           PersoAI Live API                        │
-│                                                    │
-│  SDK가 내부적으로 올바른 엔드포인트 사용         │
-│  (프록시 불필요)                                  │
-└────────────────────────────────────────────────────┘
+        return new CustomOAuth2User(user, attributes);
+    }
+}
 ```
 
-#### 핵심 개념
+### 5.2 JWT 토큰 기반 인증
 
-**"백엔드는 자격증명만 제공, 실제 API 호출은 SDK가 담당"**
+#### 5.2.1 토큰 구조
 
-### 5.4 구현 상세
-
-#### Step 1: 백엔드 자격증명 제공 엔드포인트 생성
-
-**application.properties**
-
-```properties
-# PersoAI API 설정 (백엔드에서만 관리)
-persoai.api.server=https://live-api.perso.ai
-persoai.api.key=plak-ed3f1817238abf96b6c37b3edc605f1e
+**Access Token Payload:**
+```json
+{
+  "sub": "user_id",
+  "email": "user@example.com",
+  "iat": 1701234567,
+  "exp": 1701238167,
+  "type": "access"
+}
 ```
+
+**Refresh Token Payload:**
+```json
+{
+  "sub": "user_id",
+  "iat": 1701234567,
+  "exp": 1701839367,
+  "type": "refresh"
+}
+```
+
+#### 5.2.2 JwtTokenProvider.java
+
+```java
+@Component
+public class JwtTokenProvider {
+
+    @Value("${jwt.secret}")
+    private String secret;
+
+    @Value("${jwt.access-token-validity}")
+    private long accessTokenValidity;
+
+    @Value("${jwt.refresh-token-validity}")
+    private long refreshTokenValidity;
+
+    public String createAccessToken(String userId, String email) {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + accessTokenValidity);
+
+        return Jwts.builder()
+            .setSubject(userId)
+            .claim("email", email)
+            .claim("type", "access")
+            .setIssuedAt(now)
+            .setExpiration(validity)
+            .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+            .compact();
+    }
+
+    public boolean validateToken(String token) {
+        try {
+            Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+}
+```
+
+### 5.3 AI 챗봇 통합 (PersoAI SDK)
+
+#### 5.3.1 API 자격증명 관리
+
+**문제**: 프론트엔드에서 직접 API Key 노출
+**해결**: 백엔드에서 자격증명 관리
 
 **PersoAIController.java**
 
 ```java
 @RestController
 @RequestMapping("/api/persoai")
-@CrossOrigin(origins = "*")
 public class PersoAIController {
-
-    private static final Logger logger = LoggerFactory.getLogger(PersoAIController.class);
 
     @Value("${persoai.api.server}")
     private String apiServer;
@@ -363,893 +607,394 @@ public class PersoAIController {
     @Value("${persoai.api.key}")
     private String apiKey;
 
-    /**
-     * PersoAI API 자격증명 반환
-     * GET /api/persoai/credentials
-     */
     @GetMapping("/credentials")
-    public ResponseEntity<Object> getCredentials() {
-        try {
-            logger.info("API 자격증명 요청 받음");
-
-            Map<String, String> credentials = new HashMap<>();
-            credentials.put("apiServer", apiServer);
-            credentials.put("apiKey", apiKey);
-
-            logger.info("API 자격증명 반환: apiServer={}", apiServer);
-            return ResponseEntity.ok(credentials);
-        } catch (Exception e) {
-            logger.error("API 자격증명 조회 실패", e);
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "자격증명 조회 실패");
-            error.put("message", e.getMessage());
-            return ResponseEntity.status(500).body(error);
-        }
+    public ResponseEntity<Map<String, String>> getCredentials() {
+        Map<String, String> credentials = Map.of(
+            "apiServer", apiServer,
+            "apiKey", apiKey
+        );
+        return ResponseEntity.ok(credentials);
     }
 }
 ```
 
-**API 응답 예시**
+**Frontend 사용:**
 
+```javascript
+// 자격증명 로드
+const response = await fetch('/raon/api/persoai/credentials');
+const { apiServer, apiKey } = await response.json();
+
+// SDK 초기화
+const config = await window.PersoLiveSDK.getAllSettings(
+    apiServer,
+    apiKey
+);
+
+// 세션 생성
+const sessionId = await window.PersoLiveSDK.createSessionId(
+    apiServer,
+    apiKey,
+    llmType,
+    ttsType,
+    modelStyle,
+    promptId
+);
+```
+
+### 5.4 Gemini API 통합
+
+#### 5.4.1 자기소개서 피드백
+
+```java
+@Service
+public class CoverLetterService {
+
+    @Value("${gemini.api.key}")
+    private String geminiApiKey;
+
+    public String generateFeedback(String question, String answer) {
+        String prompt = String.format(
+            "다음 자기소개서 답변에 대해 피드백해주세요.\n\n" +
+            "질문: %s\n" +
+            "답변: %s\n\n" +
+            "구체적이고 건설적인 피드백을 제공해주세요.",
+            question, answer
+        );
+
+        // Gemini API 호출
+        GenerativeModel model = new GenerativeModel(
+            "gemini-2.0-flash-exp",
+            geminiApiKey
+        );
+
+        GenerateContentResponse response = model
+            .generateContent(prompt);
+
+        return response.getText();
+    }
+}
+```
+
+---
+
+## 6. 보안 및 인증
+
+### 6.1 보안 계층
+
+#### 6.1.1 Cloudflare Tunnel
+
+**기능:**
+- SSL/TLS 암호화
+- DDoS 방어
+- CDN 가속화
+- 서버 IP 숨김
+
+**설정:**
+```bash
+# Cloudflare Tunnel 설치
+curl -L --output cloudflared.deb \
+    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+
+sudo dpkg -i cloudflared.deb
+
+# 터널 생성
+cloudflared tunnel create raon-tunnel
+
+# 설정 파일
+# ~/.cloudflared/config.yml
+tunnel: <TUNNEL_ID>
+credentials-file: /root/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: raon.example.com
+    service: http://localhost:80
+  - service: http_status:404
+```
+
+#### 6.1.2 Spring Security
+
+**CORS 설정:**
+
+```java
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    @Value("${allowed.origins}")
+    private String allowedOrigins;
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/**")
+            .allowedOrigins(allowedOrigins.split(","))
+            .allowedMethods("GET", "POST", "PUT", "DELETE")
+            .allowedHeaders("*")
+            .allowCredentials(true)
+            .maxAge(3600);
+    }
+}
+```
+
+### 6.2 데이터 암호화
+
+#### 6.2.1 OAuth Token 암호화
+
+```java
+@Component
+public class TokenEncryption {
+
+    @Value("${encryption.password}")
+    private String password;
+
+    @Value("${encryption.salt}")
+    private String salt;
+
+    public String encrypt(String plainText) {
+        // AES 암호화 구현
+    }
+
+    public String decrypt(String encrypted) {
+        // AES 복호화 구현
+    }
+}
+```
+
+---
+
+## 7. 배포 및 인프라
+
+### 7.1 Docker 멀티 스테이지 빌드
+
+**Backend Dockerfile:**
+
+```dockerfile
+# Stage 1: Build
+FROM gradle:8.5-jdk21-alpine AS build
+WORKDIR /app
+
+COPY build.gradle settings.gradle gradlew ./
+COPY gradle ./gradle
+RUN gradle dependencies --no-daemon || true
+
+COPY src ./src
+RUN gradle clean bootJar --no-daemon -x test
+
+# Stage 2: Runtime
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+RUN addgroup -g 1001 spring && \
+    adduser -D -u 1001 -G spring spring
+
+COPY --from=build /app/build/libs/*.jar app.jar
+RUN chown -R spring:spring /app
+
+USER spring
+EXPOSE 8086
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s \
+  CMD wget --no-verbose --tries=1 --spider \
+      http://localhost:8086/raon/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+**Frontend Dockerfile:**
+
+```dockerfile
+# Stage 1: Build
+FROM node:18-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Stage 2: Production
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+### 7.2 배포 자동화
+
+**deploy.sh:**
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🚀 Raon 배포 시작..."
+
+# 환경 변수 확인
+if [ ! -f .env ]; then
+    echo "❌ .env 파일이 없습니다"
+    exit 1
+fi
+
+# 기존 컨테이너 중지
+docker compose down
+
+# 이미지 빌드
+docker compose build --no-cache
+
+# 컨테이너 시작
+docker compose up -d
+
+# 헬스 체크
+sleep 10
+docker compose ps
+
+echo "✅ 배포 완료!"
+```
+
+---
+
+## 8. API 명세
+
+### 8.1 인증 API
+
+#### POST /api/auth/refresh
+토큰 갱신
+
+**Request:**
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzUxMi..."
+}
+```
+
+**Response:**
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzUxMi...",
+  "refreshToken": "eyJhbGciOiJIUzUxMi..."
+}
+```
+
+### 8.2 사용자 API
+
+#### GET /api/users/me
+현재 사용자 정보
+
+**Response:**
+```json
+{
+  "id": 1,
+  "socialId": "123456789",
+  "socialType": "GOOGLE",
+  "email": "user@example.com",
+  "nickname": "홍길동",
+  "profileImage": "https://..."
+}
+```
+
+### 8.3 챗봇 API
+
+#### GET /api/persoai/credentials
+PersoAI API 자격증명
+
+**Response:**
 ```json
 {
   "apiServer": "https://live-api.perso.ai",
-  "apiKey": "plak-ed3f1817238abf96b6c37b3edc605f1e"
+  "apiKey": "plak-..."
 }
-```
-
-#### Step 2: 프론트엔드 수정
-
-**PersoLiveChat.jsx - State 관리**
-
-```javascript
-const PersoLiveChat = () => {
-  // State 관리
-  const [apiServer, setApiServer] = useState(''); // 백엔드에서 받아옴
-  const [apiKey, setApiKey] = useState('');       // 백엔드에서 받아옴
-  const [config, setConfig] = useState(null);
-  // ... 기타 state
-```
-
-**PersoLiveChat.jsx - 설정 로드 함수**
-
-```javascript
-// API 인증 및 설정 가져오기
-const getConfig = async () => {
-  try {
-    console.log('백엔드에서 API 자격증명 로드 중...');
-
-    // ① 백엔드에서 API 자격증명 가져오기
-    const credResponse = await fetch('/raon/api/persoai/credentials');
-
-    if (!credResponse.ok) {
-      throw new Error(`백엔드 에러! status: ${credResponse.status}`);
-    }
-
-    const credentials = await credResponse.json();
-    console.log('자격증명 수신:', { apiServer: credentials.apiServer });
-
-    // 자격증명 저장
-    setApiServer(credentials.apiServer);
-    setApiKey(credentials.apiKey);
-
-    // ② PersoLive SDK로 직접 설정 정보 가져오기
-    console.log('PersoLive SDK로 설정 로드 중...');
-    const configData = await window.PersoLiveSDK.getAllSettings(
-      credentials.apiServer,
-      credentials.apiKey
-    );
-
-    console.log('설정 로드 성공:', configData);
-    setConfig(configData);
-
-    if (configData.prompts && configData.prompts.length > 0) {
-      setIntroMessage(configData.prompts[0].intro_message);
-    }
-
-    alert('✅ 설정 로드 성공!');
-  } catch (e) {
-    console.error('설정 로드 에러:', e);
-    // 에러 처리...
-  }
-};
-```
-
-**PersoLiveChat.jsx - 세션 생성 함수**
-
-```javascript
-const startSession = async () => {
-  // ... 설정 준비
-
-  try {
-    setSessionState(1); // Starting
-
-    // PersoLive SDK로 세션 ID 생성 (자격증명 사용)
-    const sessionId = await window.PersoLiveSDK.createSessionId(
-      apiServer,      // 백엔드에서 받은 값
-      apiKey,         // 백엔드에서 받은 값
-      llmOption.name,
-      ttsOption.name,
-      modelStyleOption.name,
-      promptOption.prompt_id,
-      documentKey,
-      backgroundImageKey,
-      chatbotLeft / 100,
-      chatbotTop / 100,
-      chatbotHeight / 100
-    );
-
-    // PersoLive SDK로 세션 생성
-    const newSession = await window.PersoLiveSDK.createSession(
-      apiServer,
-      sessionId,
-      width,
-      height,
-      enableVoiceChat
-    );
-
-    // 세션 설정...
-  } catch (e) {
-    console.error('세션 시작 에러:', e);
-    alert('세션 시작 실패: ' + e.message);
-  }
-};
-```
-
-**PersoLiveChat.jsx - UI 변경**
-
-```javascript
-{/* 변경 전 */}
-<p className="configuration">1. API Server</p>
-<input
-  type="text"
-  value={apiServer}
-  onChange={(e) => setApiServer(e.target.value)}
-/>
-
-<p className="configuration">2. API Key</p>
-<input
-  type="text"
-  value={apiKey}
-  onChange={(e) => setApiKey(e.target.value)}
-/>
-<button onClick={getConfig}>Authorize</button>
-
-{/* 변경 후 */}
-{!config && (
-  <div>
-    <p className="configuration">설정 로드하기</p>
-    <button onClick={getConfig}>
-      설정 불러오기
-    </button>
-  </div>
-)}
-```
-
-### 5.5 변경 사항 요약
-
-#### 파일별 변경 내역
-
-| 파일 | 변경 유형 | 주요 변경 내용 |
-|------|----------|---------------|
-| `application.properties` | 추가 | PersoAI API 설정 추가 |
-| `PersoAIController.java` | 신규 생성 | 자격증명 제공 엔드포인트 |
-| `PersoLiveChat.jsx` | 대폭 수정 | API 입력 UI 제거, SDK 직접 호출 |
-
-#### 코드 라인 변경
-
-**PersoLiveChat.jsx**
-
-- **삭제된 코드**: 약 60줄 (입력 필드, 검증 로직)
-- **추가된 코드**: 약 40줄 (백엔드 연동 로직)
-- **순 감소**: 20줄
-
-### 5.6 개선 효과
-
-#### Before vs After 비교
-
-| 항목 | Before | After |
-|------|--------|-------|
-| **API Key 노출** | 브라우저에 노출 | 백엔드에서만 관리 |
-| **사용자 입력** | API 설정 직접 입력 | 버튼 한 번 클릭 |
-| **에러 가능성** | 입력 오류 가능 | 자동화로 최소화 |
-| **보안 수준** | 낮음 ⚠️ | 높음 ✅ |
-| **사용 편의성** | 불편 | 간편 ✅ |
-| **관리 용이성** | 어려움 | 중앙 관리 ✅ |
-
-#### 보안 개선 측정
-
-- **API Key 노출 위험**: 100% → 0%
-- **소스 코드 내 민감정보**: 제거 완료
-- **브라우저 개발자 도구 노출**: 차단 완료
-
-#### 사용자 경험 개선
-
-- **필요 입력 필드**: 2개 → 0개
-- **클릭 횟수**: 여러 번 → 1번
-- **설정 시간**: 약 2분 → 약 5초
-
----
-
-## 6. 코드 리뷰
-
-### 6.1 백엔드 코드 리뷰
-
-#### PersoAIController.java
-
-**장점 ✅**
-
-```java
-@RestController
-@RequestMapping("/api/persoai")
-@CrossOrigin(origins = "*")
-public class PersoAIController {
-
-    // ✅ SLF4J 로거 사용으로 운영 환경 로깅 최적화
-    private static final Logger logger = LoggerFactory.getLogger(PersoAIController.class);
-
-    // ✅ @Value로 설정 파일에서 값 주입, 하드코딩 방지
-    @Value("${persoai.api.server}")
-    private String apiServer;
-
-    @Value("${persoai.api.key}")
-    private String apiKey;
-```
-
-**개선 가능 사항 ⚠️**
-
-```java
-// 현재 코드
-@CrossOrigin(origins = "*")  // ⚠️ 모든 출처 허용
-
-// 권장 변경
-@CrossOrigin(origins = "http://localhost:3000")  // ✅ 특정 출처만 허용
-// 또는 application.properties에서 관리
-// cors.allowed-origins=http://localhost:3000,https://raon.com
-```
-
-**에러 처리**
-
-```java
-@GetMapping("/credentials")
-public ResponseEntity<Object> getCredentials() {
-    try {
-        // ✅ 상세한 로깅
-        logger.info("API 자격증명 요청 받음");
-
-        Map<String, String> credentials = new HashMap<>();
-        credentials.put("apiServer", apiServer);
-        credentials.put("apiKey", apiKey);
-
-        return ResponseEntity.ok(credentials);
-    } catch (Exception e) {
-        // ✅ 에러 로깅 및 구조화된 에러 응답
-        logger.error("API 자격증명 조회 실패", e);
-
-        Map<String, String> error = new HashMap<>();
-        error.put("error", "자격증명 조회 실패");
-        error.put("message", e.getMessage());
-
-        return ResponseEntity.status(500).body(error);
-    }
-}
-```
-
-#### SecurityConfig.java 검토
-
-```java
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf().disable()                    // ⚠️ CSRF 비활성화
-        .authorizeHttpRequests(authorize -> authorize
-            .anyRequest().permitAll()       // ⚠️ 모든 요청 허용
-        );
-    return http.build();
-}
-```
-
-**보안 권장 사항**
-
-```java
-// 프로덕션 환경을 위한 개선안
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf()
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-        .and()
-        .authorizeHttpRequests(authorize -> authorize
-            .requestMatchers("/api/persoai/**").authenticated()  // 인증 필요
-            .requestMatchers("/public/**").permitAll()           // 공개 경로만 허용
-            .anyRequest().authenticated()
-        )
-        .httpBasic();  // 또는 JWT 인증
-    return http.build();
-}
-```
-
-### 6.2 프론트엔드 코드 리뷰
-
-#### PersoLiveChat.jsx
-
-**상태 관리 ✅**
-
-```javascript
-// ✅ useState로 명확한 상태 관리
-const [apiServer, setApiServer] = useState('');
-const [apiKey, setApiKey] = useState('');
-const [config, setConfig] = useState(null);
-const [session, setSession] = useState(null);
-const [chatState, setChatState] = useState(0);
-const [sessionState, setSessionState] = useState(0);
-```
-
-**비동기 처리 ✅**
-
-```javascript
-const getConfig = async () => {
-  try {
-    // ✅ async/await로 명확한 비동기 흐름
-    const credResponse = await fetch('/raon/api/persoai/credentials');
-
-    if (!credResponse.ok) {
-      throw new Error(`백엔드 에러! status: ${credResponse.status}`);
-    }
-
-    const credentials = await credResponse.json();
-    setApiServer(credentials.apiServer);
-    setApiKey(credentials.apiKey);
-
-    // ✅ SDK 호출 순서 명확
-    const configData = await window.PersoLiveSDK.getAllSettings(
-      credentials.apiServer,
-      credentials.apiKey
-    );
-
-    setConfig(configData);
-  } catch (e) {
-    // ✅ 에러 핸들링
-    console.error('설정 로드 에러:', e);
-  }
-};
-```
-
-**개선 가능 사항 ⚠️**
-
-```javascript
-// 현재: alert 사용
-alert('✅ 설정 로드 성공!');
-
-// 권장: Toast/Notification 컴포넌트
-<Toast message="설정 로드 성공!" type="success" />
-```
-
-**컴포넌트 크기 문제 ⚠️**
-
-```
-파일 크기: 약 700+ 줄
-권장 크기: 200-300 줄
-```
-
-**리팩토링 제안**
-
-```javascript
-// 컴포넌트 분리
-PersoLiveChat.jsx (메인)
-├── ConfigPanel.jsx       // 설정 패널
-├── ChatView.jsx          // 채팅 화면
-├── ControlPanel.jsx      // 제어 패널
-└── hooks/
-    ├── usePersoAI.js     // PersoAI 로직
-    └── useSession.js     // 세션 관리
-```
-
-### 6.3 성능 리뷰
-
-#### 백엔드 성능
-
-**RestTemplate vs WebClient**
-
-```java
-// 현재: 동기 방식 (일반적인 사용 케이스에 적합)
-private final RestTemplate restTemplate = new RestTemplate();
-
-// 대안: 비동기 방식 (고성능 필요 시)
-private final WebClient webClient = WebClient.create();
-
-// WebClient 사용 예시
-public Mono<Object> getCredentialsAsync() {
-    return webClient.get()
-        .uri("/api/persoai/credentials")
-        .retrieve()
-        .bodyToMono(Object.class);
-}
-```
-
-**현재 구조의 성능 특성**
-
-- 자격증명 조회: O(1) - 메모리에서 즉시 반환
-- API 호출 없음: 응답 시간 < 10ms
-- 동시 요청 처리: Spring Boot 기본 스레드풀 사용
-
-#### 프론트엔드 성능
-
-**렌더링 최적화 필요**
-
-```javascript
-// 현재: 모든 prop 변경 시 리렌더링
-const redrawChatbotCanvas = () => {
-  // Canvas 그리기 로직
-};
-
-// 개선: React.memo 사용
-const ChatCanvas = React.memo(({
-  screenOrientation,
-  chatbotLeft,
-  chatbotTop,
-  chatbotHeight
-}) => {
-  // Canvas 그리기 로직
-}, (prevProps, nextProps) => {
-  // 실제 변경된 prop만 체크
-  return prevProps.chatbotLeft === nextProps.chatbotLeft &&
-         prevProps.chatbotTop === nextProps.chatbotTop;
-});
 ```
 
 ---
 
-## 7. 보안 개선 사항
+## 9. 코드 구조
 
-### 7.1 적용된 보안 조치
+### 9.1 패키지 구조
 
-#### 1. API 자격증명 보호
-
-**Before**
-```javascript
-// ❌ 브라우저에 노출
-<input value={apiKey} onChange={...} />
-// API Key가 HTML, JavaScript에 평문으로 존재
+```
+com.example.raon
+├── config          # 설정 클래스
+├── controller      # REST API 컨트롤러
+├── service         # 비즈니스 로직
+├── repository      # 데이터 액세스
+├── domain          # 엔티티
+├── dto             # DTO
+├── security        # 보안 관련
+├── util            # 유틸리티
+└── exception       # 예외 처리
 ```
 
-**After**
-```java
-// ✅ 백엔드에서만 관리
-@Value("${persoai.api.key}")
-private String apiKey;  // 서버 메모리에만 존재
+### 9.2 레이어 패턴
+
+```
+Controller → Service → Repository → Database
+    ↓           ↓
+   DTO       Domain
 ```
 
-#### 2. CORS 설정
+---
 
-```java
-@CrossOrigin(origins = "*")  // 현재: 개발 환경
-// 프로덕션: 특정 도메인만 허용
-```
+## 10. 개발 가이드
 
-#### 3. HTTPS 사용
-
-```properties
-# PersoAI API는 HTTPS 사용
-persoai.api.server=https://live-api.perso.ai
-```
-
-### 7.2 추가 권장 보안 조치
-
-#### 1. 환경 변수 사용
-
-```properties
-# 현재: application.properties에 직접 기록
-persoai.api.key=plak-ed3f1817238abf96b6c37b3edc605f1e
-
-# 권장: 환경 변수 사용
-persoai.api.key=${PERSOAI_API_KEY}
-```
-
-**설정 방법**
+### 10.1 로컬 개발 환경 설정
 
 ```bash
-# Linux/Mac
-export PERSOAI_API_KEY=plak-ed3f1817238abf96b6c37b3edc605f1e
+# 1. 저장소 클론
+git clone https://github.com/Marshe3/Raon.git
+cd Raon
 
-# Windows
-set PERSOAI_API_KEY=plak-ed3f1817238abf96b6c37b3edc605f1e
-```
+# 2. 환경 변수 설정
+cp .env.example .env
 
-#### 2. .gitignore 추가
-
-```gitignore
-# 민감 정보 파일 제외
-application-local.properties
-application-prod.properties
-.env
-```
-
-#### 3. Spring Security 강화
-
-```java
-@Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf()
-            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-        .and()
-        .authorizeHttpRequests(authorize -> authorize
-            .requestMatchers("/api/persoai/**").authenticated()
-            .anyRequest().permitAll()
-        )
-        .oauth2Login();  // OAuth2 인증
-    return http.build();
-}
-```
-
-#### 4. Rate Limiting
-
-```java
-@RestController
-@RequestMapping("/api/persoai")
-public class PersoAIController {
-
-    private final RateLimiter rateLimiter = RateLimiter.create(10.0);  // 초당 10 요청
-
-    @GetMapping("/credentials")
-    public ResponseEntity<Object> getCredentials() {
-        if (!rateLimiter.tryAcquire()) {
-            return ResponseEntity.status(429).body("Too many requests");
-        }
-        // ... 기존 로직
-    }
-}
-```
-
-### 7.3 보안 체크리스트
-
-#### 개발 환경
-
-- [x] API Key 백엔드 관리
-- [x] HTTPS 사용
-- [ ] 환경 변수 사용
-- [ ] .gitignore 설정
-- [ ] CORS 제한
-
-#### 프로덕션 환경
-
-- [ ] CSRF 활성화
-- [ ] 인증/인가 구현
-- [ ] Rate Limiting
-- [ ] 로깅 및 모니터링
-- [ ] SSL/TLS 인증서
-- [ ] 방화벽 설정
-
----
-
-## 8. 환경 설정
-
-### 8.1 필수 요구사항
-
-- **Java**: 21 이상
-- **Node.js**: 16 이상
-- **MySQL**: 8.x
-- **Gradle**: 7.x 이상 (Wrapper 포함)
-
-### 8.2 백엔드 설정
-
-#### application.properties
-
-```properties
-# 서버 설정
-spring.application.name=Raon
-server.port=8086
-server.servlet.context-path=/raon
-
-# MySQL 연결 설정
-spring.datasource.url=jdbc:mysql://project-db-campus.smhrd.com:3312/Insa6_aiservice_p3_3?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-spring.datasource.username=Insa6_aiservice_p3_3
-spring.datasource.password=aischool3
-spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-
-# JPA 설정
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
-
-# PersoAI API 설정
-persoai.api.server=https://live-api.perso.ai
-persoai.api.key=plak-ed3f1817238abf96b6c37b3edc605f1e
-
-# 로깅 설정
-logging.level.com.zaxxer.hikari=DEBUG
-logging.level.org.hibernate.engine.jdbc.connections.internal.DriverManagerConnectionProviderImpl=DEBUG
-```
-
-### 8.3 프론트엔드 설정
-
-#### package.json
-
-```json
-{
-  "name": "frontend",
-  "version": "0.1.0",
-  "proxy": "http://localhost:8086",  // 백엔드 프록시 설정
-  "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "file-saver": "^2.0.5"
-  }
-}
-```
-
-#### public/index.html
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <!-- PersoLive SDK 로드 -->
-    <script src="https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js"></script>
-    <!-- 기타 설정 -->
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
-```
-
----
-
-## 9. 실행 가이드
-
-### 9.1 백엔드 실행
-
-#### 방법 1: IDE에서 실행
-
-```java
-// RaonApplication.java 실행
-@SpringBootApplication
-public class RaonApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(RaonApplication.class, args);
-    }
-}
-```
-
-#### 방법 2: Gradle로 실행
-
-```bash
-# Windows
-.\gradlew bootRun
-
-# Linux/Mac
+# 3. 백엔드 실행
 ./gradlew bootRun
-```
 
-#### 방법 3: JAR 빌드 후 실행
-
-```bash
-# 빌드
-.\gradlew build
-
-# 실행
-java -jar build/libs/Raon-0.0.1-SNAPSHOT.jar
-```
-
-**실행 확인**
-
-```bash
-# 서버 포트 확인
-netstat -ano | findstr :8086
-
-# API 테스트
-curl http://localhost:8086/raon/api/persoai/credentials
-```
-
-### 9.2 프론트엔드 실행
-
-```bash
-# 의존성 설치
+# 4. 프론트엔드 실행
 cd frontend
 npm install
-
-# 개발 서버 시작
 npm start
-
-# 브라우저 자동 실행
-# http://localhost:3000
 ```
 
-### 9.3 전체 애플리케이션 사용 흐름
+### 10.2 코딩 컨벤션
 
-1. **백엔드 시작**
-   ```
-   ✅ Spring Boot 서버 실행
-   ✅ 포트 8086에서 대기 중
-   ✅ MySQL 연결 성공
-   ```
+**Java:**
+- Google Java Style Guide 준수
+- Lombok 사용
+- Builder 패턴 권장
 
-2. **프론트엔드 시작**
-   ```
-   ✅ React 개발 서버 실행
-   ✅ 포트 3000에서 실행 중
-   ✅ 백엔드 프록시 설정 활성화
-   ```
-
-3. **사용자 시나리오**
-   ```
-   ① 브라우저에서 http://localhost:3000 접속
-   ② "설정 불러오기" 버튼 클릭
-   ③ 백엔드에서 자격증명 수신
-   ④ SDK로 PersoAI 설정 로드
-   ⑤ LLM, TTS, 캐릭터 등 선택
-   ⑥ "Start Session" 클릭
-   ⑦ AI와 음성/텍스트 채팅 시작
-   ```
+**JavaScript:**
+- ESLint + Prettier
+- 함수형 컴포넌트 사용
+- Hooks 활용
 
 ---
 
-## 10. 트러블슈팅
+## 11. 트러블슈팅
 
-### 10.1 백엔드 문제
+### 11.1 일반적인 문제
 
-#### 문제: 서버 시작 실패
-
+**1. CORS 오류**
 ```
-Error: Application run failed
-```
-
-**원인 및 해결**
-
-```bash
-# 1. 포트 충돌 확인
-netstat -ano | findstr :8086
-
-# 2. 프로세스 종료
-taskkill /PID <PID> /F
-
-# 3. MySQL 연결 확인
-mysql -h project-db-campus.smhrd.com -P 3312 -u Insa6_aiservice_p3_3 -p
+Access-Control-Allow-Origin 오류
+→ SecurityConfig에서 allowedOrigins 확인
 ```
 
-#### 문제: CORS 에러
-
+**2. JWT 토큰 만료**
 ```
-Access to fetch at 'http://localhost:8086/raon/api/persoai/credentials'
-from origin 'http://localhost:3000' has been blocked by CORS policy
-```
-
-**해결**
-
-```java
-@CrossOrigin(origins = "http://localhost:3000")
+401 Unauthorized
+→ /api/auth/refresh로 토큰 갱신
 ```
 
-### 10.2 프론트엔드 문제
-
-#### 문제: 설정 로드 실패 (500 에러)
-
+**3. Docker 빌드 실패**
 ```
-❌ 설정 로드 실패
-HTTP error! status: 500
-```
-
-**원인**
-- 백엔드 서버 미실행
-- application.properties 설정 오류
-
-**해결**
-
-```bash
-# 1. 백엔드 서버 상태 확인
-curl http://localhost:8086/raon/api/persoai/credentials
-
-# 2. 백엔드 로그 확인
-# IntelliJ/Eclipse 콘솔에서 에러 메시지 확인
-```
-
-#### 문제: SDK 로드 실패
-
-```
-Uncaught ReferenceError: PersoLiveSDK is not defined
-```
-
-**해결**
-
-```html
-<!-- public/index.html에 SDK 스크립트 추가 확인 -->
-<script src="https://est-perso-live.github.io/perso-live-sdk/js/v1.0.8/perso-live-sdk.js"></script>
-```
-
-### 10.3 PersoAI API 문제
-
-#### 문제: API 인증 실패
-
-```
-PersoAI API 호출 실패: 401 Unauthorized
-```
-
-**원인**
-- 잘못된 API Key
-- API Key 만료
-
-**해결**
-
-```properties
-# application.properties 확인 및 업데이트
-persoai.api.key=<새로운_API_키>
-```
-
-### 10.4 데이터베이스 문제
-
-#### 문제: Connection refused
-
-```
-com.mysql.cj.jdbc.exceptions.CommunicationsException:
-Communications link failure
-```
-
-**해결**
-
-```properties
-# 1. URL 확인
-spring.datasource.url=jdbc:mysql://project-db-campus.smhrd.com:3312/...
-
-# 2. 방화벽 확인
-# 3. VPN/네트워크 확인
+→ docker system prune -a
+→ 캐시 삭제 후 재빌드
 ```
 
 ---
 
-## 부록 A: API 명세
-
-### GET /api/persoai/credentials
-
-**요청**
-
-```http
-GET /raon/api/persoai/credentials HTTP/1.1
-Host: localhost:8086
-```
-
-**응답**
-
-```json
-{
-  "apiServer": "https://live-api.perso.ai",
-  "apiKey": "plak-ed3f1817238abf96b6c37b3edc605f1e"
-}
-```
-
-**상태 코드**
-
-- `200 OK`: 성공
-- `500 Internal Server Error`: 서버 에러
-
----
-
-## 부록 B: 용어 사전
-
-| 용어 | 설명 |
-|------|------|
-| **PersoAI** | AI 음성 채팅 서비스 제공 업체 |
-| **PersoLive SDK** | PersoAI의 JavaScript SDK |
-| **LLM** | Large Language Model (대규모 언어 모델) |
-| **TTS** | Text-to-Speech (음성 합성) |
-| **STT** | Speech-to-Text (음성 인식) |
-| **WebRTC** | 실시간 통신 기술 |
-| **CORS** | Cross-Origin Resource Sharing |
-
----
-
-## 부록 C: 참고 자료
-
-- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [React Documentation](https://react.dev/)
-- [PersoAI Documentation](https://perso.ai/)
-- [MySQL Connector/J](https://dev.mysql.com/doc/connector-j/en/)
-
----
-
-**문서 버전**: 1.0.0
-**최종 수정일**: 2025-01-27
+**문서 버전**: 2.0.0
+**최종 수정일**: 2025-12-02
 **작성자**: Claude Code
-**문의**: 프로젝트 관리자
