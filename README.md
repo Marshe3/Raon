@@ -1,174 +1,1082 @@
-# Raon - 챗봇 API 명세서
+# Raon (라온)
 
-본 문서는 Raon 프로젝트의 챗봇 API에 대한 명세와 사용 방법을 안내합니다.
+## AI 기반 취업 지원 플랫폼
 
-## 1. 개요
+> AI 챗봇과 함께하는 면접 준비와 취업 역량 강화 서비스
 
-Raon 챗봇 API는 사용자와 상호작용하는 AI 챗봇 세션을 생성하고 관리하며, 음성-텍스트 변환(STT), 텍스트-음성 변환(TTS) 기능을 제공합니다.
-
-## 2. 인증
-
-현재 챗봇 관련 API (`/api/chat/**`)는 별도의 인증 없이 호출할 수 있도록 설정되어 있습니다.
-
-## 3. API Endpoints
-
-**Base URL**: `http://localhost:8080`
+[![Java](https://img.shields.io/badge/Java-21-orange)](https://www.oracle.com/java/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.10-brightgreen)](https://spring.io/projects/spring-boot)
+[![React](https://img.shields.io/badge/React-19.2.0-blue)](https://react.dev/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.x-blue)](https://www.mysql.com/)
 
 ---
 
-### 3.1. 챗봇 세션 관리
+## 목차
 
-#### 3.1.1. 세션 생성
+1. [프로젝트 개요](#1-프로젝트-개요)
+2. [핵심 기능](#2-핵심-기능)
+3. [기술 스택](#3-기술-스택)
+4. [시스템 아키텍처](#4-시스템-아키텍처)
+5. [데이터베이스 설계](#5-데이터베이스-설계)
+6. [주요 API](#6-주요-api)
+7. [프로젝트 구조](#7-프로젝트-구조)
+8. [설치 및 실행](#8-설치-및-실행)
+9. [화면 구성](#9-화면-구성)
+10. [배포](#10-배포)
+11. [개발 팀](#11-개발-팀)
 
-새로운 챗봇 세션을 시작합니다.
+---
 
-- **URL**: `/api/chat/sessions`
-- **Method**: `POST`
-- **Request Body**: `application/json`
+## 1. 프로젝트 개요
 
-```json
-{
-  "llmType": "gpt-4",
-  "ttsType": "openai-tts",
-  "sttType": "whisper",
-  "modelStyle": "friendly",
-  "prompt": "You are a helpful assistant.",
-  "document": "base64-encoded-document-data",
-  "capability": ["TTS", "STT"],
-  "agent": "web-client"
-}
+### 1.1 프로젝트 소개
+
+**Raon(라온)**은 AI 기술을 활용하여 취업 준비생들이 효과적으로 면접을 준비하고 역량을 강화할 수 있도록 돕는 웹 플랫폼입니다.
+
+**"라온"**은 순우리말로 **"즐거운, 기쁜"**이라는 의미로, 취업 준비 과정을 즐겁고 효과적으로 만들고자 하는 프로젝트의 비전을 담고 있습니다.
+
+### 1.2 프로젝트 목표
+
+- AI 챗봇을 활용한 실시간 면접 연습
+- 음성 및 텍스트 기반의 자연스러운 대화 지원
+- 면접 피드백 제공 및 학습 기록 관리
+- 이력서 및 자기소개서 작성 지원
+- 소셜 로그인을 통한 간편한 사용자 관리
+
+### 1.3 주요 특징
+
+- **실시간 음성 대화**: PersoAI SDK를 활용한 AI 캐릭터와의 자연스러운 음성 대화
+- **맞춤형 AI**: LLM(대규모 언어 모델), TTS(음성 합성) 옵션 선택 가능
+- **소셜 로그인**: Google, Kakao OAuth2 인증 지원
+- **학습 관리**: 면접 연습 기록 및 피드백 저장
+- **문서 관리**: 이력서, 자기소개서 작성 및 관리
+
+---
+
+## 2. 핵심 기능
+
+### 2.1 AI 챗봇 면접 연습
+
+- **실시간 음성 대화**: AI 면접관과 실제 면접처럼 음성으로 대화
+- **텍스트 채팅**: 음성이 어려운 환경에서 텍스트로 대화
+- **커스터마이징**: LLM 모델, TTS 엔진, AI 캐릭터 스타일 선택
+- **채팅 이력 저장**: 대화 내용 자동 저장 및 복원
+
+### 2.2 소셜 로그인 및 인증
+
+- **OAuth2 소셜 로그인**: Google, Kakao 계정으로 간편 가입/로그인
+- **JWT 기반 인증**: Access Token 및 Refresh Token을 통한 보안 강화
+- **자동 로그인 유지**: Refresh Token을 활용한 세션 유지
+
+### 2.3 이력서 및 자기소개서 관리
+
+- **이력서 작성**: 학력, 경력 정보 입력 및 관리
+- **자기소개서 작성**: 항목별 자기소개서 작성 및 저장
+- **AI 피드백**: Gemini API를 활용한 자기소개서 피드백
+
+### 2.4 면접 피드백 및 학습 기록
+
+- **면접 피드백**: AI가 면접 내용을 분석하여 피드백 제공
+- **학습 기록 관리**: 면접 연습 횟수, 시간, 점수 등 기록
+- **대시보드**: 학습 진행 상황을 시각적으로 확인
+
+### 2.5 관리자 기능 (Backoffice)
+
+- **챗봇 관리**: 챗봇 설정 및 MCP 서버 연동
+- **사용자 통계**: 사용자 활동 및 통계 조회
+
+---
+
+## 3. 기술 스택
+
+### 3.1 백엔드
+
+| 기술 | 버전 | 용도 |
+|------|------|------|
+| **Java** | 21 | 주 프로그래밍 언어 |
+| **Spring Boot** | 3.4.10 | 애플리케이션 프레임워크 |
+| **Spring Security** | 3.4.10 | 보안 및 인증 관리 |
+| **Spring Data JPA** | 3.4.10 | ORM 및 데이터베이스 연동 |
+| **Spring OAuth2 Client** | 3.4.10 | OAuth2 소셜 로그인 |
+| **Spring WebFlux** | 3.4.10 | 비동기 HTTP 클라이언트 |
+| **JWT (jjwt)** | 0.12.3 | JWT 토큰 생성 및 검증 |
+| **MySQL Connector** | - | MySQL 데이터베이스 드라이버 |
+| **Lombok** | - | 코드 간소화 |
+| **Caffeine** | - | 캐싱 |
+| **Gradle** | - | 빌드 도구 |
+
+### 3.2 프론트엔드
+
+| 기술 | 버전 | 용도 |
+|------|------|------|
+| **React** | 19.2.0 | UI 라이브러리 |
+| **React Router DOM** | 6.30.1 | 라우팅 |
+| **Framer Motion** | 12.23.24 | 애니메이션 |
+| **Recharts** | 3.5.1 | 데이터 시각화 |
+| **Lucide React** | 0.554.0 | 아이콘 |
+| **React DatePicker** | 8.9.0 | 날짜 선택 |
+| **File Saver** | 2.0.5 | 파일 다운로드 |
+| **Google GenAI** | 1.30.0 | Gemini API 클라이언트 |
+
+### 3.3 외부 API 및 SDK
+
+| 서비스 | 용도 |
+|--------|------|
+| **PersoAI Live SDK** | AI 음성 채팅 및 캐릭터 렌더링 |
+| **Google OAuth2** | Google 소셜 로그인 |
+| **Kakao OAuth2** | Kakao 소셜 로그인 |
+| **Google Gemini API** | AI 피드백 생성 |
+
+### 3.4 데이터베이스
+
+- **MySQL 8.x**
+- Host: `project-db-campus.smhrd.com:3312`
+- Database: `Insa6_aiservice_p3_3`
+
+### 3.5 배포 환경
+
+- **클라우드**: Naver Cloud Platform (NCloud)
+- **OS**: Ubuntu 24.04.3 LTS
+- **컨테이너**: Docker & Docker Compose
+- **네트워크**: Cloudflare Tunnel (보안 터널링)
+- **서버**: 211.188.52.153
+
+### 3.6 개발 도구
+
+- **IDE**: IntelliJ IDEA, Visual Studio Code
+- **버전 관리**: Git
+- **API 테스트**: Postman, curl
+
+---
+
+## 4. 시스템 아키텍처
+
+### 4.1 전체 시스템 구조
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Client (사용자 브라우저)                   │
+│                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  React App   │  │ PersoAI SDK  │  │  OAuth2      │      │
+│  │              │  │  (WebRTC)    │  │  Login       │      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                  │                  │               │
+└─────────┼──────────────────┼──────────────────┼──────────────┘
+          │                  │                  │
+          │ HTTPS            │ WebSocket        │ OAuth2
+          │                  │                  │
+┌─────────▼──────────────────▼──────────────────▼──────────────┐
+│                    Cloudflare Tunnel                          │
+│       🔒 보안 터널링 | DDoS 방어 | SSL/TLS 암호화            │
+└─────────┬─────────────────────────────────────────────────────┘
+          │
+          │ 암호화된 터널
+          │
+┌─────────▼─────────────────────────────────────────────────────┐
+│    Naver Cloud Platform (211.188.52.153)                      │
+│    Ubuntu 24.04.3 LTS                                          │
+│                                                                │
+│    ┌────────────────────────────────────────────────────┐    │
+│    │         Docker Compose Network                     │    │
+│    │                                                     │    │
+│    │  ┌─────────────────┐      ┌────────────────────┐  │    │
+│    │  │   Frontend      │      │     Backend        │  │    │
+│    │  │   Container     │◄────►│    Container       │  │    │
+│    │  │                 │ API  │                    │  │    │
+│    │  │  React (Build)  │      │  Spring Boot       │  │    │
+│    │  │  Nginx          │      │  Port: 8086        │  │    │
+│    │  │  Port: 80       │      │                    │  │    │
+│    │  │                 │      │  ┌──────────────┐  │  │    │
+│    │  └─────────────────┘      │  │ Controllers  │  │  │    │
+│    │                            │  │ - User       │  │  │    │
+│    │                            │  │ - Auth       │  │  │    │
+│    │                            │  │ - Chatbot    │  │  │    │
+│    │                            │  │ - Resume     │  │  │    │
+│    │                            │  │ - Interview  │  │  │    │
+│    │                            │  └──────┬───────┘  │  │    │
+│    │                            │         │          │  │    │
+│    │                            │  ┌──────▼───────┐  │  │    │
+│    │                            │  │  Services    │  │  │    │
+│    │                            │  │ - User       │  │  │    │
+│    │                            │  │ - OAuth2     │  │  │    │
+│    │                            │  │ - PersoAI    │  │  │    │
+│    │                            │  │ - Chatbot    │  │  │    │
+│    │                            │  └──────┬───────┘  │  │    │
+│    │                            │         │          │  │    │
+│    │                            │  ┌──────▼───────┐  │  │    │
+│    │                            │  │  Security    │  │  │    │
+│    │                            │  │  + JWT       │  │  │    │
+│    │                            │  └──────┬───────┘  │  │    │
+│    │                            │         │          │  │    │
+│    │                            └─────────┼──────────┘  │    │
+│    │                                      │             │    │
+│    │                                      │ JDBC        │    │
+│    │                                      │             │    │
+│    │                            ┌─────────▼──────────┐  │    │
+│    │                            │   MySQL Container  │  │    │
+│    │                            │   Port: 3306       │  │    │
+│    │                            │                    │  │    │
+│    │                            │  📊 Database:      │  │    │
+│    │                            │  - users           │  │    │
+│    │                            │  - oauth_tokens    │  │    │
+│    │                            │  - refresh_tokens  │  │    │
+│    │                            │  - chatbots        │  │    │
+│    │                            │  - chat_rooms      │  │    │
+│    │                            │  - messages        │  │    │
+│    │                            │  - resumes         │  │    │
+│    │                            │  - careers         │  │    │
+│    │                            │  - educations      │  │    │
+│    │                            │  - cover_letters   │  │    │
+│    │                            │  - interview_feed  │  │    │
+│    │                            │  - learning_hist   │  │    │
+│    │                            └────────────────────┘  │    │
+│    └────────────────────────────────────────────────────┘    │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+
+External APIs:
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│  PersoAI API   │  │  Google OAuth  │  │  Kakao OAuth   │
+│  live-api.     │  │  accounts.     │  │  kauth.kakao.  │
+│  perso.ai      │  │  google.com    │  │  com           │
+└────────────────┘  └────────────────┘  └────────────────┘
 ```
 
-- **Success Response (200 OK)**:
+### 4.2 인증 및 권한 흐름
 
-```json
-{
-  "sessionId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-  "createdAt": "2025-11-07T10:00:00Z",
-  "status": "CREATED",
-  "llmType": "gpt-4",
-  "ttsType": "openai-tts",
-  "modelStyle": "friendly"
-}
+```
+1. 사용자 로그인
+   ├── Google/Kakao OAuth2 인증
+   ├── Spring Security OAuth2 Client가 인증 처리
+   ├── CustomOAuth2UserService가 사용자 정보 처리
+   └── JWT Token 생성 및 반환
+       ├── Access Token (1시간 유효)
+       └── Refresh Token (7일 유효, DB 저장)
+
+2. API 요청
+   ├── JwtAuthenticationFilter가 토큰 검증
+   ├── 유효한 토큰: 요청 처리
+   └── 만료된 Access Token: Refresh Token으로 재발급
+
+3. 토큰 갱신
+   ├── /api/auth/refresh 엔드포인트 호출
+   ├── Refresh Token 검증
+   └── 새로운 Access Token 발급
 ```
 
-#### 3.1.2. 세션 상태 조회
+### 4.3 AI 챗봇 동작 흐름
 
-특정 세션의 현재 상태를 조회합니다.
+```
+1. 설정 로드
+   Frontend → GET /api/persoai/credentials → Backend
+   Backend → API 자격증명 반환 → Frontend
 
-- **URL**: `/api/chat/sessions/{sessionId}`
-- **Method**: `GET`
-- **Path Variable**:
-  - `sessionId` (String): 조회할 세션의 ID
+2. SDK 초기화
+   Frontend → PersoLiveSDK.getAllSettings(apiServer, apiKey)
+   → PersoAI API → 설정 정보 반환
 
-- **Success Response (200 OK)**:
+3. 세션 생성
+   Frontend → PersoLiveSDK.createSessionId(...)
+   → PersoAI API → Session ID 생성
 
-```json
-{
-  "sessionId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-  "status": "ACTIVE",
-  "llmType": "gpt-4",
-  "ttsType": "openai-tts",
-  "modelStyle": "friendly",
-  "createdAt": "2025-11-07T10:00:00Z",
-  "durationSec": 300
-}
+4. 음성/텍스트 대화
+   User 음성 → STT → 텍스트 → LLM → 응답 생성 → TTS → AI 음성
+
+5. 채팅 기록 저장
+   Frontend → POST /api/chatrooms/{id}/messages
+   → Backend → MySQL 저장
 ```
 
 ---
 
-### 3.2. 메시지 전송
+## 5. 데이터베이스 설계
 
-#### 3.2.1. 텍스트 메시지 전송
+### 5.1 ERD (Entity Relationship Diagram)
 
-활성화된 세션에 사용자 메시지를 보내고 챗봇의 응답을 받습니다.
+```
+┌─────────────────┐
+│     users       │
+├─────────────────┤
+│ id (PK)         │
+│ social_id       │
+│ social_type     │──┐
+│ email           │  │
+│ nickname        │  │
+│ profile_image   │  │
+│ created_at      │  │
+└─────────────────┘  │
+                     │ 1:N
+        ┌────────────┴─────────────────┬─────────────────┬─────────────────┐
+        │                              │                 │                 │
+┌───────▼──────────┐    ┌──────────────▼──┐    ┌────────▼────────┐  ┌────▼─────────┐
+│user_oauth_tokens │    │ refresh_tokens  │    │   chat_rooms    │  │   resumes    │
+├──────────────────┤    ├─────────────────┤    ├─────────────────┤  ├──────────────┤
+│ id (PK)          │    │ id (PK)         │    │ id (PK)         │  │ id (PK)      │
+│ user_id (FK)     │    │ user_id (FK)    │    │ user_id (FK)    │  │ user_id (FK) │
+│ access_token     │    │ token           │    │ title           │  │ name         │
+│ refresh_token    │    │ expires_at      │    │ session_id      │  │ email        │
+│ expires_at       │    │ created_at      │    │ created_at      │  │ phone        │
+└──────────────────┘    └─────────────────┘    └────────┬────────┘  │ ...          │
+                                                         │           └──┬───────────┘
+                                                         │ 1:N          │
+                                                         │              │ 1:N
+                                                ┌────────▼────────┐     │
+                                                │    messages     │     │
+                                                ├─────────────────┤     │
+                                                │ id (PK)         │     │
+                                                │ chatroom_id(FK) │     │
+                                                │ role            │     │
+                                                │ content         │     │
+                                                │ created_at      │     │
+                                                └─────────────────┘     │
+                                                                        │
+                        ┌───────────────────────────────────────────────┴──────────┬──────────────┐
+                        │                                                          │              │
+               ┌────────▼─────────┐     ┌────────────────────┐     ┌──────────────▼───┐  ┌──────▼───────┐
+               │     careers      │     │   educations       │     │  cover_letters   │  │learning_     │
+               ├──────────────────┤     ├────────────────────┤     ├──────────────────┤  │histories     │
+               │ id (PK)          │     │ id (PK)            │     │ id (PK)          │  ├──────────────┤
+               │ resume_id (FK)   │     │ resume_id (FK)     │     │ user_id (FK)     │  │ id (PK)      │
+               │ company          │     │ school             │     │ company          │  │ user_id (FK) │
+               │ position         │     │ major              │     │ question         │  │ session_date │
+               │ start_date       │     │ degree             │     │ answer           │  │ duration     │
+               │ end_date         │     │ start_date         │     │ created_at       │  │ score        │
+               │ ...              │     │ end_date           │     └──────────────────┘  │ feedback     │
+               └──────────────────┘     │ ...                │                           │ ...          │
+                                        └────────────────────┘                           └──────────────┘
 
-- **URL**: `/api/chat/sessions/{sessionId}/messages`
-- **Method**: `POST`
-- **Path Variable**:
-  - `sessionId` (String): 메시지를 보낼 세션의 ID
-- **Request Body**: `application/json`
-
-```json
-{
-  "message": "오늘 날씨 어때?",
-  "sessionId": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
+┌─────────────────┐
+│    chatbots     │
+├─────────────────┤
+│ id (PK)         │
+│ name            │
+│ description     │
+│ ...             │
+└─────────┬───────┘
+          │ 1:N
+          │
+┌─────────▼──────────────┐     ┌────────────────────────┐
+│chatbot_mcp_servers     │     │ interview_feedbacks    │
+├────────────────────────┤     ├────────────────────────┤
+│ id (PK)                │     │ id (PK)                │
+│ chatbot_id (FK)        │     │ user_id (FK)           │
+│ server_name            │     │ question               │
+│ server_url             │     │ answer                 │
+│ ...                    │     │ feedback               │
+└────────────────────────┘     │ score                  │
+                               │ created_at             │
+                               └────────────────────────┘
 ```
 
-- **Success Response (200 OK)**:
+### 5.2 주요 엔티티 설명
 
-```json
-{
-  "message": "오늘 서울의 날씨는 맑고 기온은 15도입니다.",
-  "role": "assistant",
-  "timestamp": "2025-11-07T10:05:00Z",
-  "success": true,
-  "error": null
-}
+#### 사용자 관리
+- **users**: 사용자 기본 정보
+- **user_oauth_tokens**: OAuth2 소셜 로그인 토큰 정보
+- **refresh_tokens**: JWT Refresh Token 저장
+
+#### 챗봇 및 채팅
+- **chatbots**: 챗봇 설정 정보
+- **chatbot_mcp_servers**: 챗봇에 연결된 MCP 서버 정보
+- **chat_rooms**: 사용자별 채팅방
+- **messages**: 채팅 메시지 이력
+
+#### 이력서 및 자기소개서
+- **resumes**: 이력서 기본 정보
+- **careers**: 경력 정보
+- **educations**: 학력 정보
+- **cover_letters**: 자기소개서
+
+#### 면접 및 학습
+- **interview_feedbacks**: 면접 피드백 및 점수
+- **learning_histories**: 학습 기록 및 통계
+
+---
+
+## 6. 주요 API
+
+### 6.1 인증 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/auth/refresh` | Access Token 갱신 |
+| POST | `/api/auth/logout` | 로그아웃 |
+| GET | `/oauth2/authorization/google` | Google 로그인 |
+| GET | `/oauth2/authorization/kakao` | Kakao 로그인 |
+
+### 6.2 사용자 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/users/me` | 현재 로그인 사용자 정보 조회 |
+| PUT | `/api/users/me` | 사용자 정보 수정 |
+| POST | `/api/users/me/access-token` | OAuth 액세스 토큰 저장 |
+
+### 6.3 챗봇 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/persoai/credentials` | PersoAI API 자격증명 조회 |
+| GET | `/api/chatbots` | 챗봇 목록 조회 |
+| POST | `/api/chatbots` | 챗봇 생성 |
+| PUT | `/api/chatbots/{id}` | 챗봇 수정 |
+| DELETE | `/api/chatbots/{id}` | 챗봇 삭제 |
+
+### 6.4 채팅방 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/chatrooms` | 채팅방 목록 조회 |
+| POST | `/api/chatrooms` | 채팅방 생성 |
+| GET | `/api/chatrooms/{id}` | 채팅방 상세 조회 |
+| POST | `/api/chatrooms/{id}/messages` | 메시지 저장 |
+| GET | `/api/chatrooms/{id}/messages` | 메시지 목록 조회 |
+
+### 6.5 이력서 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/resumes/my` | 내 이력서 조회 |
+| POST | `/api/resumes` | 이력서 생성 |
+| PUT | `/api/resumes/{id}` | 이력서 수정 |
+
+### 6.6 자기소개서 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/coverletters` | 자기소개서 목록 조회 |
+| POST | `/api/coverletters` | 자기소개서 생성 |
+| PUT | `/api/coverletters/{id}` | 자기소개서 수정 |
+| DELETE | `/api/coverletters/{id}` | 자기소개서 삭제 |
+| POST | `/api/coverletters/feedback` | AI 피드백 요청 |
+
+### 6.7 면접 피드백 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/interview-feedback/latest` | 최근 면접 피드백 조회 |
+| POST | `/api/interview-feedback` | 면접 피드백 저장 |
+
+### 6.8 학습 기록 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/api/learning-history` | 학습 기록 목록 조회 |
+| POST | `/api/learning-history` | 학습 기록 저장 |
+
+---
+
+## 7. 프로젝트 구조
+
+### 7.1 백엔드 디렉토리 구조
+
+```
+src/main/java/com/example/raon/
+├── RaonApplication.java              # Spring Boot 메인 클래스
+├── config/                            # 설정
+│   ├── SecurityConfig.java           # Spring Security 설정
+│   ├── WebConfig.java                # CORS 등 웹 설정
+│   ├── WebClientConfig.java          # WebClient 설정
+│   ├── EncryptionConfig.java         # 암호화 설정
+│   ├── CustomAuthorizationRequestResolver.java  # OAuth2 커스터마이징
+│   ├── CookieOAuth2AuthorizationRequestRepository.java
+│   └── StartupTokenCleanup.java      # 시작 시 토큰 정리
+├── controller/                        # REST API 컨트롤러
+│   ├── AuthController.java           # 인증 관련
+│   ├── UserController.java           # 사용자 관리
+│   ├── ChatbotController.java        # 챗봇 관리
+│   ├── ChatRoomController.java       # 채팅방 관리
+│   ├── PersoAIController.java        # PersoAI API 프록시
+│   ├── PersoProxyController.java     # PersoAI 프록시
+│   ├── ResumeController.java         # 이력서 관리
+│   ├── CoverLetterController.java    # 자기소개서 관리
+│   ├── InterviewFeedbackController.java  # 면접 피드백
+│   ├── LearningHistoryController.java    # 학습 기록
+│   ├── SessionController.java        # 세션 관리
+│   ├── BackofficeController.java     # 관리자 기능
+│   ├── DebugController.java          # 디버그 API
+│   ├── GeminiController.java         # Gemini API
+│   └── OAuth2EmailExtractor.java     # OAuth2 이메일 추출
+├── domain/                            # 엔티티
+│   ├── User.java                     # 사용자
+│   ├── UserOauthToken.java           # OAuth 토큰
+│   ├── RefreshToken.java             # Refresh Token
+│   ├── Chatbot.java                  # 챗봇
+│   ├── ChatbotMcpServer.java         # 챗봇 MCP 서버
+│   ├── ChatRoom.java                 # 채팅방
+│   ├── Message.java                  # 메시지
+│   ├── Resume.java                   # 이력서
+│   ├── Career.java                   # 경력
+│   ├── Education.java                # 학력
+│   ├── CoverLetter.java              # 자기소개서
+│   ├── InterviewFeedback.java        # 면접 피드백
+│   ├── LearningHistory.java          # 학습 기록
+│   └── SocialType.java               # 소셜 로그인 타입 (Enum)
+├── dto/                               # 데이터 전송 객체
+│   ├── user/                         # 사용자 DTO
+│   ├── chat/                         # 채팅 DTO
+│   ├── AIModelDto.java
+│   ├── BackgroundImageDto.java
+│   ├── ConfigurationBundle.java
+│   ├── DocumentDto.java
+│   ├── ModelStyleDto.java
+│   ├── PromptDto.java
+│   ├── SessionDto.java
+│   ├── MessageDto.java
+│   ├── ResumeRequest.java
+│   ├── ResumeResponse.java
+│   ├── CoverLetterRequest.java
+│   ├── CoverLetterResponse.java
+│   ├── InterviewFeedbackRequest.java
+│   ├── InterviewFeedbackResponse.java
+│   └── LearningHistoryResponse.java
+├── repository/                        # JPA Repository
+│   ├── UserRepository.java
+│   ├── UserOauthTokenRepository.java
+│   ├── RefreshTokenRepository.java
+│   ├── ChatbotRepository.java
+│   ├── ChatbotMcpServerRepository.java
+│   ├── ChatRoomRepository.java
+│   ├── MessageRepository.java
+│   ├── ResumeRepository.java
+│   ├── CareerRepository.java
+│   ├── EducationRepository.java
+│   ├── CoverLetterRepository.java
+│   ├── InterviewFeedbackRepository.java
+│   └── LearningHistoryRepository.java
+├── service/                           # 비즈니스 로직
+│   ├── UserService.java
+│   ├── CustomOAuth2UserService.java  # OAuth2 사용자 처리
+│   ├── UserOauthTokenService.java
+│   ├── ChatbotService.java
+│   ├── ChatRoomService.java
+│   ├── PersoAIService.java
+│   ├── PersoAIServiceImpl.java
+│   ├── PersoAIChatService.java
+│   ├── PersoAISessionService.java
+│   ├── CoverLetterService.java
+│   ├── LearningHistoryService.java
+│   └── InterviewFeedbackService.java
+├── security/                          # 보안
+│   └── JwtAuthenticationFilter.java  # JWT 필터
+├── util/                              # 유틸리티
+│   └── JwtTokenProvider.java         # JWT 토큰 생성/검증
+├── exception/                         # 예외 처리
+│   ├── GlobalExceptionHandler.java
+│   ├── UserNotFoundException.java
+│   ├── ChatRoomNotFoundException.java
+│   ├── ChatbotNotFoundException.java
+│   ├── SessionCreationException.java
+│   ├── PersoAIApiException.java
+│   ├── InvalidTokenException.java
+│   └── TokenExpiredException.java
+└── handler/                           # 핸들러
+    └── OAuth2SuccessHandler.java      # OAuth2 로그인 성공 핸들러
+
+src/main/resources/
+└── application.properties             # 애플리케이션 설정
+```
+
+### 7.2 프론트엔드 디렉토리 구조
+
+```
+frontend/
+├── public/
+│   ├── index.html                    # HTML 템플릿
+│   └── assets/                       # 정적 파일
+├── src/
+│   ├── App.js                        # 메인 앱 컴포넌트
+│   ├── index.js                      # 엔트리 포인트
+│   ├── components/                   # React 컴포넌트
+│   │   ├── RaonHome.jsx             # 홈 화면
+│   │   ├── RaonSocialLogin.jsx      # 소셜 로그인
+│   │   ├── RaonChatPerso.jsx        # AI 채팅 (PersoAI)
+│   │   ├── RaonAvatar.jsx           # 아바타 설정
+│   │   ├── RaonResume.jsx           # 이력서 작성
+│   │   ├── RaonDashboard.jsx        # 학습 대시보드
+│   │   ├── InterviewScorePage.jsx   # 면접 점수 화면
+│   │   ├── InterviewFeedbackModal.jsx # 면접 피드백 모달
+│   │   ├── StudyTracker.jsx         # 학습 기록
+│   │   ├── RaonBackoffice.jsx       # 관리자 페이지
+│   │   ├── AccountEdit.jsx          # 계정 편집
+│   │   ├── TopBar.jsx               # 상단 바
+│   │   ├── Footer.jsx               # 하단 푸터
+│   │   ├── CustomSelect.jsx         # 커스텀 셀렉트
+│   │   ├── CustomDate.jsx           # 커스텀 날짜 선택
+│   │   ├── ScrollToTop.jsx          # 페이지 이동 시 스크롤 최상단
+│   │   └── chat/                    # 채팅 관련 컴포넌트
+│   │       ├── ChatMessages.jsx     # 채팅 메시지 목록
+│   │       ├── ChatInput.jsx        # 채팅 입력
+│   │       ├── SideMenu.jsx         # 사이드 메뉴
+│   │       ├── AvatarDisplay.jsx    # 아바타 표시
+│   │       ├── ErrorNotification.jsx # 에러 알림
+│   │       └── RestoreButton.jsx    # 복원 버튼
+│   ├── utils/                        # 유틸리티
+│   │   ├── api.js                   # API 호출 유틸
+│   │   └── logger.js                # 로거
+│   └── styles/                       # CSS 파일
+└── package.json                       # 의존성 관리
 ```
 
 ---
 
-### 3.3. 음성 서비스 (STT/TTS)
+## 8. 설치 및 실행
 
-#### 3.3.1. 음성을 텍스트로 변환 (STT)
+### 8.1 사전 요구사항
 
-Base64로 인코딩된 오디오 데이터를 텍스트로 변환합니다.
+- **Java 21** 이상
+- **Node.js 16** 이상
+- **MySQL 8.x**
+- **Gradle** (프로젝트에 Wrapper 포함)
 
-- **URL**: `/api/chat/stt`
-- **Method**: `POST`
-- **Request Body**: `application/json`
+### 8.2 환경 설정
 
-```json
-{
-  "sessionId": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-  "audioData": "Base64-encoded-audio-string..."
-}
+#### 8.2.1 데이터베이스 설정
+
+MySQL 데이터베이스를 생성하고 연결 정보를 설정합니다.
+
+```properties
+# src/main/resources/application.properties
+
+# 데이터베이스 연결
+spring.datasource.url=jdbc:mysql://project-db-campus.smhrd.com:3312/Insa6_aiservice_p3_3?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+spring.datasource.username=Insa6_aiservice_p3_3
+spring.datasource.password=aischool3
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# JPA 설정
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
 ```
 
-- **Success Response (200 OK)**:
+#### 8.2.2 OAuth2 설정
 
-```json
-{
-  "recognizedText": "오늘 날씨 어때?",
-  "success": true,
-  "error": null
-}
+Google 및 Kakao OAuth2 클라이언트 ID와 Secret을 설정합니다.
+
+```properties
+# Google OAuth2
+spring.security.oauth2.client.registration.google.client-id=YOUR_GOOGLE_CLIENT_ID
+spring.security.oauth2.client.registration.google.client-secret=YOUR_GOOGLE_CLIENT_SECRET
+spring.security.oauth2.client.registration.google.scope=profile,email
+spring.security.oauth2.client.registration.google.redirect-uri={baseUrl}/raon/login/oauth2/code/{registrationId}
+
+# Kakao OAuth2
+spring.security.oauth2.client.registration.kakao.client-id=YOUR_KAKAO_CLIENT_ID
+spring.security.oauth2.client.registration.kakao.client-secret=YOUR_KAKAO_CLIENT_SECRET
+spring.security.oauth2.client.registration.kakao.scope=profile_nickname,profile_image,account_email
+spring.security.oauth2.client.registration.kakao.redirect-uri={baseUrl}/raon/login/oauth2/code/{registrationId}
+spring.security.oauth2.client.registration.kakao.authorization-grant-type=authorization_code
+spring.security.oauth2.client.registration.kakao.client-authentication-method=client_secret_post
 ```
 
-#### 3.3.2. 텍스트를 음성으로 변환 (TTS)
+#### 8.2.3 PersoAI API 설정
 
-주어진 텍스트를 오디오 데이터로 변환하여 반환합니다. (반환 형식은 Base64 인코딩된 문자열 또는 오디오 파일 스트림일 수 있습니다.)
-
-- **URL**: `/api/chat/tts`
-- **Method**: `POST`
-- **Request Body**: `application/json`
-
-```json
-{
-  "text": "오늘 서울의 날씨는 맑습니다.",
-  "sessionId": "a1b2c3d4-e5f6-7890-1234-567890abcdef"
-}
+```properties
+# PersoAI API
+persoai.api.server=https://live-api.perso.ai
+persoai.api.key=YOUR_PERSOAI_API_KEY
 ```
 
-- **Success Response (200 OK)**:
-  - `Content-Type`: `audio/mpeg` (또는 다른 오디오 형식)
-  - **Body**: 오디오 바이너리 데이터
+#### 8.2.4 JWT 설정
+
+```properties
+# JWT
+jwt.secret=YOUR_JWT_SECRET_KEY_AT_LEAST_32_CHARACTERS_LONG
+jwt.access-token-validity=3600000
+jwt.refresh-token-validity=604800000
+```
+
+### 8.3 백엔드 실행
+
+#### 방법 1: Gradle로 실행
+
+```bash
+# Windows
+.\gradlew bootRun
+
+# Linux/Mac
+./gradlew bootRun
+```
+
+#### 방법 2: IDE에서 실행
+
+IntelliJ IDEA 또는 Eclipse에서 `RaonApplication.java`의 `main` 메서드를 실행합니다.
+
+#### 방법 3: JAR 빌드 후 실행
+
+```bash
+# 빌드
+.\gradlew build
+
+# 실행
+java -jar build/libs/Raon-0.0.1-SNAPSHOT.jar
+```
+
+**실행 확인**
+
+```bash
+# 서버 실행 확인
+curl http://localhost:8086/raon/api/persoai/credentials
+
+# 포트 확인
+netstat -ano | findstr :8086
+```
+
+### 8.4 프론트엔드 실행
+
+```bash
+# 디렉토리 이동
+cd frontend
+
+# 의존성 설치
+npm install
+
+# 개발 서버 시작
+npm start
+```
+
+브라우저에서 `http://localhost:3000`으로 접속합니다.
+
+### 8.5 전체 시스템 실행 순서
+
+1. **MySQL 데이터베이스 실행 확인**
+2. **백엔드 실행** (Port 8086)
+3. **프론트엔드 실행** (Port 3000)
+4. **브라우저 접속** (`http://localhost:3000`)
 
 ---
 
-## 4. 에러 응답
+## 9. 화면 구성
 
-API 호출 실패 시 공통된 에러 응답 형식을 반환합니다.
+### 9.1 주요 화면
 
-- **Error Response Body**:
+| 화면 | 경로 | 설명 |
+|------|------|------|
+| 홈 화면 | `/` | 메인 화면 및 서비스 소개 |
+| 로그인 | `/login` | Google/Kakao 소셜 로그인 |
+| 계정 관리 | `/account` | 사용자 프로필 편집 |
+| AI 채팅 | `/chat/:id` | PersoAI 기반 면접 연습 |
+| 이력서 작성 | `/resume` | 이력서 및 경력 관리 |
+| 학습 기록 | `/Dashboard` | 면접 연습 기록 및 통계 |
+| 관리자 | `/backoffice` | 챗봇 설정 및 관리 |
 
-```json
-{
-  "error": "Invalid Request",
-  "message": "Session ID is required",
-  "timestamp": "2025-11-07T10:10:00Z",
-  "status": 400
-}
+### 9.2 화면 플로우
+
 ```
+[로그인 화면]
+     │
+     ├──(로그인 성공)──▶ [홈 화면]
+     │                       │
+     │                       ├──▶ [AI 채팅]
+     │                       │       └──▶ [면접 연습]
+     │                       │               └──▶ [피드백 저장]
+     │                       │
+     │                       ├──▶ [이력서 작성]
+     │                       │       └──▶ [경력/학력 입력]
+     │                       │
+     │                       ├──▶ [학습 기록]
+     │                       │       └──▶ [통계 및 그래프]
+     │                       │
+     │                       └──▶ [계정 관리]
+     │
+     └──(로그인 실패)──▶ [로그인 화면]
+```
+
+---
+
+## 10. 배포
+
+### 10.1 Docker 기반 배포
+
+프로젝트는 Docker와 Docker Compose를 사용하여 쉽게 배포할 수 있습니다.
+
+#### 10.1.1 배포 아키텍처
+
+```
+┌─────────────────────────────────────────────┐
+│         Docker Compose Network              │
+│                                             │
+│  ┌──────────────┐  ┌──────────────┐       │
+│  │  Frontend    │  │  Backend     │       │
+│  │  Container   │  │  Container   │       │
+│  │  (Nginx)     │  │  (Spring)    │       │
+│  │  Port: 80    │  │  Port: 8086  │       │
+│  └──────┬───────┘  └──────┬───────┘       │
+│         │                  │                │
+│         │                  │                │
+│         │          ┌───────▼────────┐      │
+│         │          │  MySQL         │      │
+│         │          │  Container     │      │
+│         │          │  Port: 3306    │      │
+│         │          └────────────────┘      │
+│                                             │
+└─────────────────────────────────────────────┘
+```
+
+#### 10.1.2 구성 요소
+
+| 컨테이너 | 이미지 | 포트 | 용도 |
+|---------|--------|------|------|
+| raon-frontend | nginx:alpine | 80 → 3000 | React 프론트엔드 |
+| raon-backend | openjdk:21-jre | 8081 → 8086 | Spring Boot API |
+| raon-mysql | mysql:8.0 | 3307 → 3306 | MySQL 데이터베이스 |
+
+### 10.2 배포 방법
+
+#### 방법 1: 자동 배포 스크립트 (권장)
+
+**로컬에서 실행:**
+
+```bash
+# 1. 환경 변수 설정
+cp .env.example .env
+# .env 파일 편집
+
+# 2. 배포 스크립트 실행 (서버로 자동 배포)
+chmod +x docker-deploy-server.sh
+./docker-deploy-server.sh
+```
+
+**서버에서 실행:**
+
+```bash
+# 1. 배포 디렉토리 이동
+cd /root/raon
+
+# 2. 배포 스크립트 실행
+chmod +x deploy.sh
+./deploy.sh
+
+# 최신 코드 pull 후 배포
+./deploy.sh --pull
+```
+
+#### 방법 2: 수동 배포
+
+```bash
+# 1. 환경 변수 설정
+cp .env.example .env
+vi .env  # 필요한 환경 변수 입력
+
+# 2. Docker Compose로 빌드 및 실행
+docker compose build --no-cache
+docker compose up -d
+
+# 3. 상태 확인
+docker compose ps
+docker compose logs -f
+```
+
+### 10.3 환경 변수 설정
+
+`.env` 파일에 다음 변수들을 설정합니다:
+
+```env
+# MySQL
+MYSQL_ROOT_PASSWORD=강력한-루트-비밀번호
+MYSQL_DATABASE=raon
+MYSQL_USER=raon_user
+MYSQL_PASSWORD=강력한-DB-비밀번호
+
+# OAuth2
+OAUTH_REDIRECT_BASE_URL=http://your-domain.com
+GOOGLE_CLIENT_ID=구글-클라이언트-ID
+GOOGLE_CLIENT_SECRET=구글-시크릿
+KAKAO_CLIENT_ID=카카오-클라이언트-ID
+KAKAO_CLIENT_SECRET=카카오-시크릿
+
+# CORS
+ALLOWED_ORIGINS=http://your-domain.com,http://localhost:3000
+
+# Frontend URL
+FRONTEND_URL=http://your-domain.com
+
+# JWT
+JWT_SECRET=최소-32자-이상의-안전한-시크릿-키
+
+# Encryption
+ENCRYPTION_PASSWORD=암호화-비밀번호
+ENCRYPTION_SALT=암호화-솔트
+
+# API Keys
+PERSOAI_API_KEY=PersoAI-API-키
+GEMINI_API_KEY=Gemini-API-키
+```
+
+### 10.4 배포 후 확인
+
+#### 컨테이너 상태 확인
+
+```bash
+# 컨테이너 목록 및 상태
+docker compose ps
+
+# 실시간 로그
+docker compose logs -f
+
+# 특정 서비스 로그
+docker compose logs -f backend
+```
+
+#### 헬스 체크
+
+```bash
+# Backend 헬스 체크
+curl http://localhost:8086/raon/actuator/health
+
+# Frontend 접속 확인
+curl http://localhost/
+```
+
+#### 브라우저 접속
+
+- **프론트엔드**: `http://서버IP` 또는 `http://도메인`
+- **백엔드 API**: `http://서버IP:8081` 또는 `http://도메인:8081`
+
+### 10.5 주요 Docker 명령어
+
+```bash
+# 컨테이너 시작
+docker compose up -d
+
+# 컨테이너 중지
+docker compose down
+
+# 컨테이너 재시작
+docker compose restart
+
+# 특정 서비스 재시작
+docker compose restart backend
+
+# 이미지 재빌드
+docker compose build --no-cache
+
+# 로그 확인
+docker compose logs -f
+
+# 컨테이너 접속
+docker exec -it raon-backend /bin/sh
+
+# 리소스 사용량 확인
+docker stats
+
+# 전체 삭제 (볼륨 포함)
+docker compose down -v
+```
+
+### 10.6 네트워크 및 보안
+
+#### Cloudflare Tunnel
+
+프로젝트는 **Cloudflare Tunnel**을 사용하여 보안성과 안정성을 강화했습니다.
+
+**주요 기능:**
+- **보안 터널링**: 서버 포트를 직접 노출하지 않고 안전한 터널을 통해 통신
+- **DDoS 방어**: Cloudflare의 글로벌 네트워크를 통한 자동 DDoS 공격 차단
+- **SSL/TLS 암호화**: 자동 HTTPS 적용 및 인증서 관리
+- **속도 최적화**: Cloudflare CDN을 통한 컨텐츠 전송 가속화
+
+**아키텍처:**
+```
+사용자 → Cloudflare Tunnel → NCloud 서버
+       (HTTPS 암호화)      (내부 네트워크)
+```
+
+### 10.7 서버 정보
+
+- **클라우드 플랫폼**: Naver Cloud Platform (NCloud)
+- **OS**: Ubuntu 24.04.3 LTS
+- **서버 IP**: `211.188.52.153`
+- **네트워크**: Cloudflare Tunnel
+- **배포 디렉토리**: `/root/raon`
+- **SSH 접속**: `ssh -i C:/Users/aischool/key/raon-key.pem root@211.188.52.153`
+
+### 10.8 문제 해결
+
+#### 컨테이너가 시작되지 않을 때
+
+```bash
+# 로그 확인
+docker compose logs backend
+
+# 컨테이너 재시작
+docker compose restart backend
+```
+
+#### 데이터베이스 연결 오류
+
+```bash
+# MySQL 컨테이너 상태 확인
+docker compose ps mysql
+
+# MySQL 로그 확인
+docker compose logs mysql
+
+# 네트워크 확인
+docker network inspect raon_raon-network
+```
+
+#### 포트 충돌
+
+```bash
+# 포트 사용 중인 프로세스 확인
+netstat -tulpn | grep :8086
+
+# 기존 컨테이너 중지
+docker compose down
+docker compose up -d
+```
+
+### 10.9 상세 배포 가이드
+
+더 자세한 배포 가이드는 [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md) 문서를 참고하세요.
+
+---
+
+## 11. 개발 팀
+
+### 11.1 프로젝트 정보
+
+- **프로젝트명**: Raon (라온)
+- **개발 기간**: 2025년 11월 ~ 2025년 12월
+- **개발 환경**: Spring Boot 3.4.10 + React 19.2.0
+- **배포 환경**: Naver Cloud Platform (NCloud) + Docker
+
+### 11.2 기술 문의
+
+프로젝트에 대한 문의사항이나 기술적인 질문은 다음을 참고하세요:
+
+- **프로젝트 문서**: [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md)
+- **API 명세**: Postman Collection 참조
+- **이슈 트래킹**: GitHub Issues
+
+---
+
+## 11. 라이선스
+
+이 프로젝트는 교육 목적으로 개발되었습니다.
+
+---
+
+## 12. 참고 자료
+
+### 12.1 기술 문서
+
+- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
+- [Spring Security OAuth2](https://spring.io/guides/tutorials/spring-boot-oauth2)
+- [React Documentation](https://react.dev/)
+- [PersoAI Documentation](https://perso.ai/)
+
+### 12.2 외부 API
+
+- [Google OAuth2 Guide](https://developers.google.com/identity/protocols/oauth2)
+- [Kakao OAuth2 Guide](https://developers.kakao.com/docs/latest/ko/kakaologin/common)
+- [Google Gemini API](https://ai.google.dev/)
+
+---
+
+**프로젝트 문의**: 개발팀
+
+**최종 수정일**: 2025-12-02
