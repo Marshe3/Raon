@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.example.raon.handler.OAuth2LoginSuccessHandler;
+import com.example.raon.handler.OAuth2LoginFailureHandler;
 import com.example.raon.security.JwtAuthenticationFilter;
 import com.example.raon.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ClientRegistrationRepository clientRegistrationRepository;
 
@@ -113,7 +115,7 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService)
                 )
                 .successHandler(oAuth2LoginSuccessHandler)
-                .failureUrl("/login?error=true")  // 상대 경로로 변경
+                .failureHandler(oAuth2LoginFailureHandler)  // 커스텀 실패 핸들러 사용
             )
             // 로그아웃 설정 (JWT 토큰 쿠키 삭제)
             .logout(logout -> logout
