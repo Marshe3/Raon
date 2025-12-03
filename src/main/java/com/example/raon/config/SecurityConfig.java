@@ -48,9 +48,9 @@ public class SecurityConfig {
             // ✅ CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            // OAuth2 로그인 시에만 세션 사용, 일반 API는 JWT 기반 (세션 불필요)
+            // JWT 토큰 기반 인증 - 세션 사용 안함 (Stateless)
             .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
             .authorizeHttpRequests(auth -> auth
                 // 정적 리소스 및 로그인 엔드포인트
@@ -115,12 +115,11 @@ public class SecurityConfig {
                 .successHandler(oAuth2LoginSuccessHandler)
                 .failureUrl("/login?error=true")  // 상대 경로로 변경
             )
-            // 로그아웃 설정 (JWT 방식에서는 프론트엔드에서 토큰 삭제)
+            // 로그아웃 설정 (JWT 토큰 쿠키 삭제)
             .logout(logout -> logout
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/")  // 상대 경로로 변경
-                .deleteCookies("JSESSIONID")
-                .invalidateHttpSession(true)
+                .logoutSuccessUrl("/")
+                .deleteCookies("refreshToken", "RAON_SESSION")  // JWT 토큰 및 세션 쿠키 삭제
                 .clearAuthentication(true)
             );
 
