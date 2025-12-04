@@ -316,7 +316,7 @@ public class GeminiController {
                             "temperature", 0.4,        // 일관성 향상 (0.0-1.0, 낮을수록 일관적)
                             "topP", 0.8,              // 상위 80% 확률 토큰 사용
                             "topK", 40,               // 상위 40개 토큰 중 선택
-                            "maxOutputTokens", 2048,  // 최대 응답 길이
+                            "maxOutputTokens", 8192,  // 최대 응답 길이 (thinking 토큰 고려)
                             "candidateCount", 1       // 생성할 응답 후보 수
                     )
             );
