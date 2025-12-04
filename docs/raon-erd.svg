@@ -204,9 +204,5 @@
   <text class="card" x="863" y="444">1</text>
   <text class="card" x="863" y="512">1 (opt)</text>
 
-  <line class="relation" x1="310" y1="210" x2="380" y2="210" />
-  <text class="card" x="320" y="200">1</text>
-  <text class="card" x="366" y="200">N</text>
-
     <text class="note" x="60" y="22">Raon ERD - solid lines: mandatory; dashed: optional ChatRoom &#8596; InterviewFeedback (SET NULL)</text>
 </svg>

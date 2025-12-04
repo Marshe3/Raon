@@ -61,7 +61,15 @@
       "Bash(gradlew.bat bootRun)",
       "Bash(.gradlew.bat bootRun)",
       "Bash(chcp 65001)",
-      "Bash(del \"c:\\Users\\USER\\git\\Raon\\docs\\Raon.vuerd.json\")"
+      "Bash(del \"c:\\Users\\USER\\git\\Raon\\docs\\Raon.vuerd.json\")",
+      "Bash(tree:*)",
+      "Bash(pip show:*)",
+      "Bash(pip3 show:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python -m pip:*)",
+      "Bash(echo $GEMINI_API_KEY)",
+      "Bash(ls:*)",
+      "Bash(python evaluate_feedback.py:*)"
     ],
     "deny": [],
     "ask": []

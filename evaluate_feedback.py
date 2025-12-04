@@ -1,15 +1,33 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 피드백 품질 자동 평가 스크립트 (Python)
 실행: python evaluate_feedback.py
 """
 
+import sys
+import io
 import requests
 import json
 import os
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_API_KEY_HERE")
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent"
+# Windows 인코딩 문제 해결
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
+# .env 파일에서 API 키 읽기
+def load_api_key():
+    try:
+        with open('.env', 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('GEMINI_API_KEY='):
+                    return line.split('=', 1)[1].strip()
+    except FileNotFoundError:
+        pass
+    return os.getenv("GEMINI_API_KEY", "")
+
+GEMINI_API_KEY = load_api_key()
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 # 테스트 샘플
 TEST_SAMPLES = [
@@ -46,25 +64,60 @@ def call_gemini(prompt):
             "temperature": 0.4,
             "topP": 0.8,
             "topK": 40,
-            "maxOutputTokens": 2048
+            "maxOutputTokens": 8192
         }
     }
 
-    response = requests.post(
-        f"{GEMINI_URL}?key={GEMINI_API_KEY}",
-        headers=headers,
-        json=body
-    )
+    try:
+        response = requests.post(
+            f"{GEMINI_URL}?key={GEMINI_API_KEY}",
+            headers=headers,
+            json=body,
+            timeout=60
+        )
 
-    if response.status_code == 200:
-        result = response.json()
-        text = result["candidates"][0]["content"]["parts"][0]["text"]
-        # JSON 추출
-        text = text.replace("```json", "").replace("```", "").strip()
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start != -1 and end > start:
-            return text[start:end]
+        if response.status_code == 200:
+            result = response.json()
+
+            # 안전하게 응답 파싱
+            try:
+                candidates = result.get("candidates", [])
+                if not candidates:
+                    print(f"[오류] candidates가 비어있음")
+                    return "{}"
+
+                content = candidates[0].get("content", {})
+                parts = content.get("parts", [])
+
+                if not parts:
+                    print(f"[오류] parts가 비어있음")
+                    print(f"[디버그] 전체 응답: {json.dumps(result, indent=2, ensure_ascii=False)[:1000]}")
+                    return "{}"
+
+                text = parts[0].get("text", "")
+
+                # JSON 추출
+                text = text.replace("```json", "").replace("```", "").strip()
+                start = text.find("{")
+                end = text.rfind("}") + 1
+                if start != -1 and end > start:
+                    return text[start:end]
+                else:
+                    print(f"[오류] JSON 형식을 찾을 수 없음")
+                    print(f"[디버그] 텍스트: {text[:500]}")
+                    return "{}"
+            except (KeyError, IndexError) as e:
+                print(f"[오류] 응답 파싱 실패: {e}")
+                print(f"[디버그] 응답 구조: {json.dumps(result, indent=2, ensure_ascii=False)[:1000]}")
+                return "{}"
+        else:
+            print(f"[오류] API 응답 코드: {response.status_code}")
+            print(f"[오류] 응답: {response.text[:500]}")
+    except Exception as e:
+        print(f"[오류] API 호출 실패: {e}")
+        import traceback
+        traceback.print_exc()
+
     return "{}"
 
 def generate_feedback_old(conversation):
