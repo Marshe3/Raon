@@ -47,9 +47,31 @@ public class GeminiController {
             log.info("AI 첨삭 요청 - 자기소개서 길이: {}", request.getCoverLetter().length());
 
             String prompt = String.format("""
-                    당신은 전문 취업 컨설턴트입니다. 다음 자기소개서를 첨삭해주세요.
+                    당신은 삼성, 네이버, 카카오 등 대기업 인사팀에서 10년 이상 근무한 전문 채용 담당자입니다.
+                    수천 개의 자기소개서를 검토한 경험을 바탕으로 엄격하고 객관적인 첨삭을 제공해주세요.
 
-                    [자기소개서 내용]
+                    [우수 자소서 예시 - 90점대]
+                    "대학교 2학년 때 진행한 '스마트 농장 관리 시스템' 프로젝트는 제 개발 인생의 전환점이었습니다.
+                    농촌 지역의 인력 부족 문제를 해결하기 위해 IoT 센서와 AI 기반 작물 상태 분석 시스템을 개발했고,
+                    실제 농장에 3개월간 시범 적용한 결과 인건비를 30%%, 작물 수확량을 15%% 향상시켰습니다.
+
+                    개발 과정에서 가장 큰 어려움은 농장 환경의 불안정한 네트워크 연결이었습니다. 이를 해결하기 위해
+                    오프라인 모드에서도 작동하는 로컬 캐싱 시스템을 구축했고, 데이터 동기화 충돌을 방지하는
+                    CRDT(Conflict-free Replicated Data Type) 알고리즘을 적용했습니다. 이 경험을 통해
+                    사용자 환경을 깊이 이해하고 실질적인 문제 해결에 집중하는 개발자로 성장할 수 있었습니다."
+
+                    평가: 구체성 95점, 논리성 92점, 차별성 90점, 문법 95점
+                    이유: 정량적 성과, 구체적 문제와 해결 과정, 기술적 깊이, STAR 기법 완벽 적용
+
+                    [보통 자소서 예시 - 50-60점대]
+                    "저는 컴퓨터공학을 전공하며 개발에 관심을 가지게 되었습니다. 팀 프로젝트를 통해 협업의 중요성을
+                    배웠고, 항상 최선을 다하는 자세로 임했습니다. 앞으로도 열심히 노력하겠습니다."
+
+                    평가: 구체성 30점, 논리성 50점, 차별성 35점, 문법 70점
+                    이유: 추상적, 진부한 표현, 구체적 경험 부족, 차별성 없음
+
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    [평가 대상 자기소개서]
                     %s
 
                     [지원자 정보]
@@ -59,42 +81,52 @@ public class GeminiController {
                     - 학력: %s %s
                     - 경력: %s
 
-                    다음 항목들을 평가하고 구체적인 피드백을 제공해주세요:
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    [평가 기준 - 각 5점 만점]
 
-                    1. **전반적인 인상** (5점 만점)
-                    2. **구조와 논리성** (5점 만점)
-                    3. **구체성과 사례** (5점 만점)
-                    4. **문법과 표현** (5점 만점)
+                    **1. 전반적인 인상 (첫인상, 몰입도)**
+                    - 5점: 첫 문장부터 강렬한 인상. 끝까지 읽고 싶게 만드는 흡입력
+                    - 3-4점: 무난하지만 특별히 기억에 남지 않음
+                    - 1-2점: 지루하고 천편일률적. 다른 자소서와 구별 안됨
 
-                    각 항목에 대해:
-                    - 점수와 함께 좋은 점 2-3개
-                    - 개선이 필요한 점 2-3개
-                    - 구체적인 수정 제안 (피드백 설명만, 실제 수정된 문장 X)
+                    **2. 구조와 논리성 (STAR, 인과관계)**
+                    - 5점: STAR 기법 완벽 적용. 상황→행동→결과의 명확한 인과관계
+                    - 3-4점: 구조는 있으나 일부 논리적 비약 존재
+                    - 1-2점: 생각나는 대로 나열. 앞뒤가 안 맞음
 
-                    그리고 **위 피드백을 모두 반영한 완전히 새로운 자기소개서 전문**을 작성해주세요.
-                    - 원본 자소서의 핵심 경험과 내용은 유지하되, 피드백의 개선점을 모두 반영
-                    - 각 문단의 첫 문장을 임팩트 있게 변경
-                    - 상투적인 표현을 구체적이고 능동적인 표현으로 교체
-                    - STAR 기법을 활용한 구조적 서술
-                    - 지원자만의 강점과 차별성이 드러나도록 작성
+                    **3. 구체성과 사례 (수치, 고유명사, 디테일)**
+                    - 5점: 수치, 기술명, 구체적 상황 5개 이상. 실제 경험에서만 나올 디테일
+                    - 3-4점: 일부 구체적 요소 있으나 여전히 추상적
+                    - 1-2점: "열심히", "최선을" 등 완전히 추상적
 
-                    마지막으로 전체 요약과 추천 점수를 제공해주세요.
+                    **4. 문법과 표현 (가독성, 참신성)**
+                    - 5점: 문법 완벽 + 참신한 표현 + 능동적 문장
+                    - 3-4점: 문법 무난하나 진부한 표현 多
+                    - 1-2점: 문법 오류 多 또는 읽기 어려움
+
+                    위 기준으로 **엄격하게** 평가하고, **개선된 자기소개서 전문**을 작성해주세요.
+                    - 원본의 핵심 경험은 유지하되 모든 피드백 반영
+                    - 첫 문장을 강렬하게 (우수 예시 참고)
+                    - 정량적 성과 추가 (가능한 범위 내에서)
+                    - STAR 기법으로 재구성
+                    - 상투적 표현 완전 제거
 
                     답변은 다음 JSON 형식으로 작성해주세요:
                     {
-                      "overallScore": 숫자,
+                      "overallScore": 숫자(1-5, 소수점 1자리),
                       "sections": [
                         {
                           "title": "섹션 제목",
-                          "score": 숫자,
-                          "strengths": ["강점1", "강점2"],
-                          "improvements": ["개선점1", "개선점2"],
-                          "suggestions": "구체적인 수정 제안 (텍스트 설명)"
+                          "score": 숫자(1-5, 소수점 1자리),
+                          "strengths": ["강점1 (구체적으로)", "강점2"],
+                          "improvements": ["개선점1 (실행 가능하게)", "개선점2"],
+                          "suggestions": "수정 제안 (피드백 설명, 예시 포함)"
                         }
                       ],
-                      "summary": "전체 요약",
-                      "recommendedScore": 숫자,
-                      "revisedCoverLetter": "위 피드백을 모두 반영하여 완전히 새로 작성한 자기소개서 전문 (800-1200자)"
+                      "summary": "전체 평가 요약 (5-7문장, 엄격하게)",
+                      "recommendedScore": 숫자(1-5, 소수점 1자리),
+                      "revisedCoverLetter": "피드백을 모두 반영한 새 자기소개서 (800-1200자, 우수 예시 수준으로)",
+                      "improvementPoints": ["원본 대비 개선된 점 1", "개선된 점 2", "개선된 점 3"]
                     }
                     """,
                     request.getCoverLetter(),
@@ -111,6 +143,13 @@ public class GeminiController {
                             Map.of("parts", List.of(
                                     Map.of("text", prompt)
                             ))
+                    ),
+                    "generationConfig", Map.of(
+                            "temperature", 0.3,        // 일관성과 정확성 향상 (0.0-1.0)
+                            "topP", 0.85,             // 상위 85% 확률 토큰 사용
+                            "topK", 40,               // 상위 40개 토큰 중 선택
+                            "maxOutputTokens", 8192,  // 최대 응답 길이
+                            "candidateCount", 1       // 생성할 응답 후보 수
                     )
             );
 
@@ -403,6 +442,166 @@ public class GeminiController {
             }
         } catch (Exception e) {
             log.error("❌ 면접 피드백 API 호출 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * LLM-as-a-Judge: 원본과 수정본 비교 평가
+     * POST /api/gemini/judge
+     */
+    @PostMapping("/judge")
+    public ResponseEntity<?> judgeRevision(@RequestBody com.example.raon.dto.CoverLetterJudgeRequest request) {
+        try {
+            log.info("LLM-as-a-Judge 요청 - 원본: {}자, 수정본: {}자",
+                    request.getOriginalCoverLetter().length(),
+                    request.getRevisedCoverLetter().length());
+
+            String prompt = String.format("""
+                    당신은 객관적이고 공정한 자기소개서 평가 전문가입니다.
+                    원본 자기소개서와 AI가 수정한 자기소개서를 비교 평가해주세요.
+
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    [원본 자기소개서]
+                    %s
+
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    [수정된 자기소개서]
+                    %s
+
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    [평가 기준]
+
+                    다음 항목들에 대해 **원본 대비 수정본이 실제로 개선되었는지** 엄격하게 평가하세요:
+
+                    1. **구체성 향상** (1-10점)
+                       - 추상적 표현이 구체적으로 변경되었는가?
+                       - 수치, 고유명사, 기술명 등이 추가되었는가?
+
+                    2. **논리성 강화** (1-10점)
+                       - STAR 기법이 적용되어 인과관계가 명확해졌는가?
+                       - 문단 간 연결이 매끄러워졌는가?
+
+                    3. **차별성 증대** (1-10점)
+                       - 상투적 표현이 제거되고 참신한 표현으로 변경되었는가?
+                       - 지원자만의 강점이 더 부각되었는가?
+
+                    4. **가독성 개선** (1-10점)
+                       - 문장이 더 간결하고 명확해졌는가?
+                       - 전문 용어의 사용이 적절한가?
+
+                    5. **첫인상 강화** (1-10점)
+                       - 도입부가 더 강렬하고 인상적인가?
+                       - 읽고 싶게 만드는 흡입력이 생겼는가?
+
+                    **중요: 과대평가 금지**
+                    - 단순히 분량만 늘렸거나 문장만 바꾼 경우 → 낮은 점수
+                    - 실질적으로 내용의 질이 향상된 경우만 → 높은 점수
+                    - 원본의 핵심 경험을 잃어버린 경우 → 감점
+
+                    **전체 개선도**
+                    - 1-3점: 거의 개선 없음 또는 오히려 악화
+                    - 4-6점: 일부 개선되었으나 여전히 부족
+                    - 7-8점: 명확한 개선, 실무에서 사용 가능
+                    - 9-10점: 뛰어난 개선, 합격 가능성 대폭 상승
+
+                    답변은 다음 JSON 형식으로 작성해주세요:
+                    {
+                      "overallImprovement": 숫자(1-10, 전체 개선도),
+                      "criteriaScores": {
+                        "specificity": 숫자(1-10),
+                        "logic": 숫자(1-10),
+                        "uniqueness": 숫자(1-10),
+                        "readability": 숫자(1-10),
+                        "firstImpression": 숫자(1-10)
+                      },
+                      "improvements": [
+                        "구체적으로 개선된 점 1 (예시 포함)",
+                        "구체적으로 개선된 점 2",
+                        "구체적으로 개선된 점 3"
+                      ],
+                      "regressions": [
+                        "오히려 나빠진 점 또는 주의할 점 (없으면 빈 배열)"
+                      ],
+                      "recommendation": "수정본 사용을 추천하는가? (강력 추천 / 추천 / 조건부 추천 / 비추천)",
+                      "reasoning": "추천 이유 또는 비추천 이유 (3-5문장, 구체적으로)",
+                      "verdict": "최종 판정 (3-5문장으로 요약)"
+                    }
+                    """,
+                    request.getOriginalCoverLetter(),
+                    request.getRevisedCoverLetter()
+            );
+
+            Map<String, Object> requestBody = Map.of(
+                    "contents", List.of(
+                            Map.of("parts", List.of(
+                                    Map.of("text", prompt)
+                            ))
+                    ),
+                    "generationConfig", Map.of(
+                            "temperature", 0.2,        // Judge는 더 엄격하게 (일관성 중시)
+                            "topP", 0.9,
+                            "topK", 40,
+                            "maxOutputTokens", 4096,
+                            "candidateCount", 1
+                    )
+            );
+
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+            log.info("LLM-as-a-Judge API 호출 시작...");
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+            log.info("LLM-as-a-Judge API 응답 수신 성공");
+
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody != null) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
+                if (candidates != null && !candidates.isEmpty()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+                    String text = (String) parts.get(0).get("text");
+
+                    log.info("Judge 응답 텍스트 길이: {}", text.length());
+
+                    // JSON 파싱
+                    String jsonText = text.replaceAll("```json\\n?", "").replaceAll("```", "").trim();
+
+                    int startIdx = jsonText.indexOf("{");
+                    int endIdx = jsonText.lastIndexOf("}");
+                    if (startIdx != -1 && endIdx != -1) {
+                        jsonText = jsonText.substring(startIdx, endIdx + 1);
+                    }
+
+                    Map<String, Object> result = Map.of("text", jsonText);
+                    log.info("✅ Judge JSON 응답 생성 완료 - 길이: {}", jsonText.length());
+                    return ResponseEntity.ok(result);
+                } else {
+                    log.warn("Judge 응답에 candidates가 없습니다");
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("error", "Judge 응답에 candidates가 없습니다"));
+                }
+            } else {
+                log.warn("Judge 응답 body가 null입니다");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "응답 body가 null입니다"));
+            }
+        } catch (Exception e) {
+            log.error("❌ LLM-as-a-Judge API 호출 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
         }
