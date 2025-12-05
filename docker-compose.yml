@@ -1,4 +1,26 @@
 services:
+  # RAG Server (Python FastAPI)
+  rag-server:
+    build:
+      context: ./rag-server
+      dockerfile: Dockerfile
+    container_name: raon-rag-server
+    restart: unless-stopped
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    volumes:
+      - rag_data:/app/chroma_data
+    ports:
+      - "8000:8000"
+    networks:
+      - raon-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   # MySQL Database
   mysql:
     image: mysql:8.0
@@ -34,6 +56,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      rag-server:
+        condition: service_healthy
     environment:
       # Database
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
@@ -63,6 +87,9 @@ services:
       # API Keys
       PERSOAI_API_KEY: ${PERSOAI_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+      # RAG Server
+      RAG_SERVER_URL: http://rag-server:8000
 
       # Spring Profile
       SPRING_PROFILES_ACTIVE: prod
@@ -103,4 +130,6 @@ networks:
 
 volumes:
   mysql_data:
+    driver: local
+  rag_data:
     driver: local
