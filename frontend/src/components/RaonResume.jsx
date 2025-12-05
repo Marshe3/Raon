@@ -532,19 +532,12 @@ const RaonResume = () => {
     };
 
     const confirmApplyFeedback = () => {
-        // AI 피드백의 추천 수정안을 자소서에 반영
-        if (aiFeedback && aiFeedback.sections) {
-            // 모든 섹션의 추천 수정안을 합침
-            const allSuggestions = aiFeedback.sections
-                .filter(section => section.suggestions)
-                .map(section => section.suggestions)
-                .join('\n\n');
-
-            // 추천 수정안이 있으면 자소서 내용 교체
-            if (allSuggestions.trim()) {
-                setCoverLetter(allSuggestions);
-                logger.log('✅ AI 추천 수정안을 자소서에 반영했습니다');
-            }
+        // AI가 피드백을 반영하여 새로 작성한 자소서를 적용
+        if (aiFeedback && aiFeedback.revisedCoverLetter) {
+            setCoverLetter(aiFeedback.revisedCoverLetter);
+            logger.log('✅ AI가 작성한 수정된 자소서를 반영했습니다');
+        } else {
+            logger.warn('⚠️ 수정된 자소서를 찾을 수 없습니다');
         }
 
         setShowApplyModal(false);

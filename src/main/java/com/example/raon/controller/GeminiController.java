@@ -69,7 +69,14 @@ public class GeminiController {
                     각 항목에 대해:
                     - 점수와 함께 좋은 점 2-3개
                     - 개선이 필요한 점 2-3개
-                    - 구체적인 수정 제안
+                    - 구체적인 수정 제안 (피드백 설명만, 실제 수정된 문장 X)
+
+                    그리고 **위 피드백을 모두 반영한 완전히 새로운 자기소개서 전문**을 작성해주세요.
+                    - 원본 자소서의 핵심 경험과 내용은 유지하되, 피드백의 개선점을 모두 반영
+                    - 각 문단의 첫 문장을 임팩트 있게 변경
+                    - 상투적인 표현을 구체적이고 능동적인 표현으로 교체
+                    - STAR 기법을 활용한 구조적 서술
+                    - 지원자만의 강점과 차별성이 드러나도록 작성
 
                     마지막으로 전체 요약과 추천 점수를 제공해주세요.
 
@@ -82,11 +89,12 @@ public class GeminiController {
                           "score": 숫자,
                           "strengths": ["강점1", "강점2"],
                           "improvements": ["개선점1", "개선점2"],
-                          "suggestions": "구체적인 수정 제안"
+                          "suggestions": "구체적인 수정 제안 (텍스트 설명)"
                         }
                       ],
                       "summary": "전체 요약",
-                      "recommendedScore": 숫자
+                      "recommendedScore": 숫자,
+                      "revisedCoverLetter": "위 피드백을 모두 반영하여 완전히 새로 작성한 자기소개서 전문 (800-1200자)"
                     }
                     """,
                     request.getCoverLetter(),
