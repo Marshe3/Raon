@@ -532,6 +532,21 @@ const RaonResume = () => {
     };
 
     const confirmApplyFeedback = () => {
+        // AI 피드백의 추천 수정안을 자소서에 반영
+        if (aiFeedback && aiFeedback.sections) {
+            // 모든 섹션의 추천 수정안을 합침
+            const allSuggestions = aiFeedback.sections
+                .filter(section => section.suggestions)
+                .map(section => section.suggestions)
+                .join('\n\n');
+
+            // 추천 수정안이 있으면 자소서 내용 교체
+            if (allSuggestions.trim()) {
+                setCoverLetter(allSuggestions);
+                logger.log('✅ AI 추천 수정안을 자소서에 반영했습니다');
+            }
+        }
+
         setShowApplyModal(false);
         setShowFeedback(false);
     };
@@ -1143,7 +1158,10 @@ const RaonResume = () => {
                 <div className="raon-modal-overlay" onClick={() => setShowApplyModal(false)}>
                     <div className="raon-modal-content" onClick={(e) => e.stopPropagation()}>
                         <h3 className="raon-modal-title">AI 첨삭 반영 완료</h3>
-                        <p className="raon-modal-message">자기소개서에 AI 첨삭 내용이 적용되었어요.</p>
+                        <p className="raon-modal-message">
+                            AI가 제안한 수정안으로 자기소개서가 교체되었습니다.<br />
+                            필요한 경우 추가로 수정하신 후 저장해주세요.
+                        </p>
                         <button className="raon-modal-btn" onClick={confirmApplyFeedback}>확인</button>
                     </div>
                 </div>
