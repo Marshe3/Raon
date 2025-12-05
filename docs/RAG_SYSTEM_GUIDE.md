@@ -40,15 +40,39 @@ RAG (Retrieval-Augmented Generation) 시스템은 면접 질문에 대한 유사
 
 ### 2. RAG 서버 설치 및 실행
 
+**중요:** ChromaDB는 Python 3.11이 필요합니다. Python 3.14+는 지원하지 않습니다.
+
 **터미널 1 (RAG Server):**
+
+**Windows:**
 ```bash
 cd rag-server
 
+# Python 3.11 설치 (없는 경우)
+py install 3.11
+
+# 가상환경 생성 (최초 1회)
+python3.11-64 -m venv venv
+
 # 의존성 설치 (최초 1회)
-pip install -r requirements.txt
+venv\Scripts\pip install -r requirements.txt
 
 # 서버 실행
-python rag_server.py
+venv\Scripts\python rag_server.py
+```
+
+**macOS/Linux:**
+```bash
+cd rag-server
+
+# 가상환경 생성 (최초 1회)
+python3.11 -m venv venv
+
+# 의존성 설치 (최초 1회)
+venv/bin/pip install -r requirements.txt
+
+# 서버 실행
+venv/bin/python rag_server.py
 ```
 
 **출력 예시:**
@@ -65,11 +89,21 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 ### 3. 초기 데이터 추가
 
 **터미널 2 (Seed Data):**
+
+**Windows:**
 ```bash
 cd rag-server
 
-# 50개 우수 답변 예시 추가
-python seed_data.py
+# 30개 우수 답변 예시 추가
+venv\Scripts\python seed_data.py
+```
+
+**macOS/Linux:**
+```bash
+cd rag-server
+
+# 30개 우수 답변 예시 추가
+venv/bin/python seed_data.py
 ```
 
 **출력 예시:**

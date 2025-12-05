@@ -4,10 +4,31 @@
 
 ## 🚀 빠른 시작
 
-### 1. 의존성 설치
+### 1. Python 3.11 가상환경 생성 (필수)
 
+**중요:** ChromaDB는 Python 3.11이 필요합니다. Python 3.14+는 지원하지 않습니다.
+
+**Windows:**
+```bash
+# Python 3.11 설치 (없는 경우)
+py install 3.11
+
+# 가상환경 생성
+cd rag-server
+python3.11-64 -m venv venv
+
+# 가상환경 활성화
+venv\Scripts\activate
+
+# 의존성 설치
+pip install -r requirements.txt
+```
+
+**macOS/Linux:**
 ```bash
 cd rag-server
+python3.11 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -21,8 +42,14 @@ GEMINI_API_KEY=your_api_key_here
 
 ### 3. 서버 실행
 
+**Windows:**
 ```bash
-python rag_server.py
+venv\Scripts\python rag_server.py
+```
+
+**macOS/Linux:**
+```bash
+venv/bin/python rag_server.py
 ```
 
 서버가 http://localhost:8000 에서 실행됩니다.
@@ -31,11 +58,19 @@ python rag_server.py
 
 **새 터미널에서:**
 
+**Windows:**
 ```bash
-python seed_data.py
+cd rag-server
+venv\Scripts\python seed_data.py
 ```
 
-50개의 우수 답변 예시가 자동으로 추가됩니다.
+**macOS/Linux:**
+```bash
+cd rag-server
+venv/bin/python seed_data.py
+```
+
+30개의 우수 답변 예시가 자동으로 추가됩니다.
 
 ## 📡 API 엔드포인트
 

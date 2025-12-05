@@ -16,13 +16,19 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import uvicorn
 
+# Windows 콘솔 UTF-8 인코딩 설정
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 # .env 파일 로드
 load_dotenv()
 
 # Gemini API 설정
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
-    print("❌ GEMINI_API_KEY가 .env 파일에 없습니다!")
+    print("ERROR: GEMINI_API_KEY가 .env 파일에 없습니다!")
     sys.exit(1)
 
 genai.configure(api_key=GEMINI_API_KEY)
