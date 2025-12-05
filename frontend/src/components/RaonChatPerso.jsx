@@ -67,6 +67,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const [persoSession, setPersoSession] = useState(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const videoRef = useRef(null);
+  const textareaRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isSearchMode, setIsSearchMode] = useState(false);
@@ -77,6 +78,16 @@ function RaonChatPerso({ user, isLoggedIn }) {
   const [isBarOpen, setIsBarOpen] = useState(false);
   const [activeMode, setActiveMode] = useState('chat');
   const [isLoading, setIsLoading] = useState(false);
+
+  // 텍스트 입력 시 textarea 높이 자동 조정
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const maxHeight = 120; // 최대 높이 (약 5줄)
+      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+    }
+  }, [inputText]);
   const [error, setError] = useState(null);
   const [_isAiResponding, setIsAiResponding] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -686,6 +697,11 @@ function RaonChatPerso({ user, isLoggedIn }) {
     const sessionId = sessionStorage.getItem('raon_session_id');
     setInputText('');
 
+    // textarea 높이 초기화
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
     setIsAiResponding(true);
 
     if (sessionId) {
@@ -1231,6 +1247,7 @@ function RaonChatPerso({ user, isLoggedIn }) {
                 />
               ) : (
                 <textarea
+                  ref={textareaRef}
                   className="unified-input"
                   placeholder="메시지를 입력하세요..."
                   value={inputText}
@@ -1243,7 +1260,12 @@ function RaonChatPerso({ user, isLoggedIn }) {
                   }}
                   disabled={!isSessionActive}
                   autoFocus
-                  rows={1}
+                  style={{
+                    minHeight: '24px',
+                    maxHeight: '120px',
+                    resize: 'none',
+                    overflow: 'auto'
+                  }}
                 />
               )}
 
