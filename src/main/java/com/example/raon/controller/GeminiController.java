@@ -3,6 +3,7 @@ package com.example.raon.controller;
 import com.example.raon.domain.User;
 import com.example.raon.dto.CoverLetterFeedbackRequest;
 import com.example.raon.dto.InterviewFeedbackRequest;
+import com.example.raon.service.CoverLetterExampleService;
 import com.example.raon.service.InterviewFeedbackService;
 import com.example.raon.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +35,7 @@ public class GeminiController {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CoverLetterExampleService exampleService;
     private final InterviewFeedbackService interviewFeedbackService;
     private final UserService userService;
 
@@ -46,22 +48,40 @@ public class GeminiController {
         try {
             log.info("AI 첨삭 요청 - 자기소개서 길이: {}", request.getCoverLetter().length());
 
+            // RAG: 사용자 정보 기반 관련 예시 검색
+            List<CoverLetterExampleService.CoverLetterExample> relevantExamples =
+                    exampleService.searchRelevant(
+                            request.getDesiredPosition(),
+                            request.getSkills(),
+                            2  // 상위 2개 예시 사용
+                    );
+
+            // 동적 예시 생성
+            StringBuilder examplesText = new StringBuilder();
+            for (int i = 0; i < relevantExamples.size(); i++) {
+                CoverLetterExampleService.CoverLetterExample ex = relevantExamples.get(i);
+                examplesText.append(String.format("[우수 자소서 예시 %d - %d점대]\n\"%s\"\n\n",
+                        i + 1, ex.getScore(), ex.getContent()));
+            }
+
+            // 예시가 없으면 기본 예시 사용
+            if (examplesText.length() == 0) {
+                examplesText.append("""
+                [우수 자소서 예시 - 90점대]
+                "대학교 2학년 때 진행한 '스마트 농장 관리 시스템' 프로젝트는 제 개발 인생의 전환점이었습니다.
+                농촌 지역의 인력 부족 문제를 해결하기 위해 IoT 센서와 AI 기반 작물 상태 분석 시스템을 개발했고,
+                실제 농장에 3개월간 시범 적용한 결과 인건비를 30%%, 작물 수확량을 15%% 향상시켰습니다."
+
+                """);
+            }
+
+            log.info("✅ RAG: {}개의 관련 예시 선택됨", relevantExamples.size());
+
             String prompt = String.format("""
                     당신은 삼성, 네이버, 카카오 등 대기업 인사팀에서 10년 이상 근무한 전문 채용 담당자입니다.
                     수천 개의 자기소개서를 검토한 경험을 바탕으로 엄격하고 객관적인 첨삭을 제공해주세요.
 
-                    [우수 자소서 예시 - 90점대]
-                    "대학교 2학년 때 진행한 '스마트 농장 관리 시스템' 프로젝트는 제 개발 인생의 전환점이었습니다.
-                    농촌 지역의 인력 부족 문제를 해결하기 위해 IoT 센서와 AI 기반 작물 상태 분석 시스템을 개발했고,
-                    실제 농장에 3개월간 시범 적용한 결과 인건비를 30%%, 작물 수확량을 15%% 향상시켰습니다.
-
-                    개발 과정에서 가장 큰 어려움은 농장 환경의 불안정한 네트워크 연결이었습니다. 이를 해결하기 위해
-                    오프라인 모드에서도 작동하는 로컬 캐싱 시스템을 구축했고, 데이터 동기화 충돌을 방지하는
-                    CRDT(Conflict-free Replicated Data Type) 알고리즘을 적용했습니다. 이 경험을 통해
-                    사용자 환경을 깊이 이해하고 실질적인 문제 해결에 집중하는 개발자로 성장할 수 있었습니다."
-
-                    평가: 구체성 95점, 논리성 92점, 차별성 90점, 문법 95점
-                    이유: 정량적 성과, 구체적 문제와 해결 과정, 기술적 깊이, STAR 기법 완벽 적용
+                    %s
 
                     [보통 자소서 예시 - 50-60점대]
                     "저는 컴퓨터공학을 전공하며 개발에 관심을 가지게 되었습니다. 팀 프로젝트를 통해 협업의 중요성을
@@ -129,6 +149,7 @@ public class GeminiController {
                       "improvementPoints": ["원본 대비 개선된 점 1", "개선된 점 2", "개선된 점 3"]
                     }
                     """,
+                    examplesText.toString(),  // RAG로 선택된 동적 예시
                     request.getCoverLetter(),
                     request.getName() != null ? request.getName() : "미입력",
                     request.getDesiredPosition() != null ? request.getDesiredPosition() : "미입력",
@@ -160,15 +181,41 @@ public class GeminiController {
 
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-            log.info("Gemini API 호출 시작...");
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    Map.class
-            );
+            // Retry with exponential backoff (503 에러 대응)
+            ResponseEntity<Map> response = null;
+            int maxRetries = 3;
+            int retryDelay = 1000; // 1초
 
-            log.info("Gemini API 응답 수신 성공");
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    log.info("Gemini API 호출 시도 {}/{}...", attempt, maxRetries);
+                    response = restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            entity,
+                            Map.class
+                    );
+                    log.info("✅ Gemini API 응답 수신 성공");
+                    break; // 성공하면 루프 탈출
+                } catch (Exception e) {
+                    String errorMsg = e.getMessage();
+                    boolean is503 = errorMsg != null && errorMsg.contains("503");
+
+                    if (is503 && attempt < maxRetries) {
+                        log.warn("⚠️ 503 Service Unavailable - {}초 후 재시도... ({}/{})",
+                                retryDelay / 1000, attempt, maxRetries);
+                        try {
+                            Thread.sleep(retryDelay);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                        }
+                        retryDelay *= 2; // Exponential backoff
+                    } else {
+                        // 503이 아니거나 마지막 시도면 예외 던지기
+                        throw e;
+                    }
+                }
+            }
 
             Map<String, Object> responseBody = response.getBody();
             if (responseBody != null) {
