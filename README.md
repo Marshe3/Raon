@@ -73,6 +73,8 @@
 - **이력서 작성**: 학력, 경력 정보 입력 및 관리
 - **자기소개서 작성**: 항목별 자기소개서 작성 및 저장
 - **AI 피드백**: Gemini API를 활용한 자기소개서 피드백
+- **RAG 기반 예시 제공**: 벡터 DB를 활용한 맞춤형 자기소개서 예시 추천
+- **품질 평가 시스템**: AI가 자기소개서의 품질을 다각도로 평가
 
 ### 2.4 면접 피드백 및 학습 기록
 
@@ -118,22 +120,33 @@
 | **File Saver** | 2.0.5 | 파일 다운로드 |
 | **Google GenAI** | 1.30.0 | Gemini API 클라이언트 |
 
-### 3.3 외부 API 및 SDK
+### 3.3 RAG 서버 (Python)
+
+| 기술 | 버전 | 용도 |
+|------|------|------|
+| **Python** | 3.11 | 주 프로그래밍 언어 |
+| **FastAPI** | 0.115.0+ | API 프레임워크 |
+| **Uvicorn** | 0.32.0+ | ASGI 서버 |
+| **ChromaDB** | 0.5.0+ | 벡터 데이터베이스 |
+| **Google GenAI** | 0.8.0+ | Gemini API 클라이언트 |
+| **Python Dotenv** | 1.0.0+ | 환경 변수 관리 |
+
+### 3.4 외부 API 및 SDK
 
 | 서비스 | 용도 |
 |--------|------|
 | **PersoAI Live SDK** | AI 음성 채팅 및 캐릭터 렌더링 |
 | **Google OAuth2** | Google 소셜 로그인 |
 | **Kakao OAuth2** | Kakao 소셜 로그인 |
-| **Google Gemini API** | AI 피드백 생성 |
+| **Google Gemini API** | AI 피드백 생성 및 RAG 시스템 |
 
-### 3.4 데이터베이스
+### 3.5 데이터베이스
 
 - **MySQL 8.x**
 - Host: `project-db-campus.smhrd.com:3312`
 - Database: `Insa6_aiservice_p3_3`
 
-### 3.5 배포 환경
+### 3.6 배포 환경
 
 - **클라우드**: Naver Cloud Platform (NCloud)
 - **OS**: Ubuntu 24.04.3 LTS
@@ -141,7 +154,7 @@
 - **네트워크**: Cloudflare Tunnel (보안 터널링)
 - **서버**: 211.188.52.153
 
-### 3.6 개발 도구
+### 3.7 개발 도구
 
 - **IDE**: IntelliJ IDEA, Visual Studio Code
 - **버전 관리**: Git
@@ -180,13 +193,13 @@
 │    ┌────────────────────────────────────────────────────┐    │
 │    │         Docker Compose Network                     │    │
 │    │                                                     │    │
-│    │  ┌─────────────────┐      ┌────────────────────┐  │    │
-│    │  │   Frontend      │      │     Backend        │  │    │
-│    │  │   Container     │◄────►│    Container       │  │    │
-│    │  │                 │ API  │                    │  │    │
-│    │  │  React (Build)  │      │  Spring Boot       │  │    │
-│    │  │  Nginx          │      │  Port: 8086        │  │    │
-│    │  │  Port: 80       │      │                    │  │    │
+│    │  ┌─────────────────┐  ┌────────────────────┐  ┌────────────────┐  │    │
+│    │  │   Frontend      │  │     Backend        │  │   RAG Server   │  │    │
+│    │  │   Container     │◄─┤    Container       ├─►│   Container    │  │    │
+│    │  │                 │  │                    │  │                │  │    │
+│    │  │  React (Build)  │  │  Spring Boot       │  │  FastAPI       │  │    │
+│    │  │  Nginx          │  │  Port: 8086        │  │  Port: 8000    │  │    │
+│    │  │  Port: 80       │  │                    │  │  ChromaDB      │  │    │
 │    │  │                 │      │  ┌──────────────┐  │  │    │
 │    │  └─────────────────┘      │  │ Controllers  │  │  │    │
 │    │                            │  │ - User       │  │  │    │
@@ -202,6 +215,8 @@
 │    │                            │  │ - OAuth2     │  │  │    │
 │    │                            │  │ - PersoAI    │  │  │    │
 │    │                            │  │ - Chatbot    │  │  │    │
+│    │                            │  │ - RAG        │  │  │    │
+│    │                            │  │ - CoverLetter│  │  │    │
 │    │                            │  └──────┬───────┘  │  │    │
 │    │                            │         │          │  │    │
 │    │                            │  ┌──────▼───────┐  │  │    │
@@ -451,14 +466,23 @@ External APIs:
 | DELETE | `/api/coverletters/{id}` | 자기소개서 삭제 |
 | POST | `/api/coverletters/feedback` | AI 피드백 요청 |
 
-### 6.7 면접 피드백 API
+### 6.7 RAG 시스템 API
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/gemini/judge` | 자기소개서 품질 평가 (RAG 기반) |
+| POST | `/api/gemini/retry-judge` | 자기소개서 재평가 (개선된 피드백) |
+| GET | `/rag/search` | RAG 서버: 유사 예시 검색 |
+| POST | `/rag/add` | RAG 서버: 새로운 예시 추가 |
+
+### 6.8 면접 피드백 API
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
 | GET | `/api/interview-feedback/latest` | 최근 면접 피드백 조회 |
 | POST | `/api/interview-feedback` | 면접 피드백 저장 |
 
-### 6.8 학습 기록 API
+### 6.9 학습 기록 API
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
@@ -556,6 +580,8 @@ src/main/java/com/example/raon/
 │   ├── PersoAIChatService.java
 │   ├── PersoAISessionService.java
 │   ├── CoverLetterService.java
+│   ├── CoverLetterExampleService.java # 자기소개서 예시 서비스
+│   ├── RagService.java                # RAG 시스템 서비스
 │   ├── LearningHistoryService.java
 │   └── InterviewFeedbackService.java
 ├── security/                          # 보안
@@ -617,6 +643,17 @@ frontend/
 │   │   └── logger.js                # 로거
 │   └── styles/                       # CSS 파일
 └── package.json                       # 의존성 관리
+```
+
+### 7.3 RAG 서버 디렉토리 구조
+
+```
+rag-server/
+├── rag_server.py                     # FastAPI 메인 서버
+├── seed_data.py                      # ChromaDB 초기 데이터 시딩
+├── requirements.txt                  # Python 의존성
+├── Dockerfile                        # Docker 이미지 빌드
+└── README.md                         # RAG 서버 사용 가이드
 ```
 
 ---
@@ -821,6 +858,7 @@ npm start
 |---------|--------|------|------|
 | raon-frontend | nginx:alpine | 80 → 3000 | React 프론트엔드 |
 | raon-backend | openjdk:21-jre | 8081 → 8086 | Spring Boot API |
+| raon-rag-server | python:3.11-slim | 8000 | RAG 시스템 (FastAPI + ChromaDB) |
 | raon-mysql | mysql:8.0 | 3307 → 3306 | MySQL 데이터베이스 |
 
 ### 10.2 배포 방법
@@ -1079,4 +1117,4 @@ docker compose up -d
 
 **프로젝트 문의**: 개발팀
 
-**최종 수정일**: 2025-12-02
+**최종 수정일**: 2025-12-08
