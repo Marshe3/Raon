@@ -4,6 +4,7 @@ import com.example.raon.domain.User;
 import com.example.raon.dto.CoverLetterFeedbackRequest;
 import com.example.raon.dto.InterviewFeedbackRequest;
 import com.example.raon.service.CoverLetterExampleService;
+import com.example.raon.service.InterviewExampleService;
 import com.example.raon.service.InterviewFeedbackService;
 import com.example.raon.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +37,7 @@ public class GeminiController {
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final CoverLetterExampleService exampleService;
+    private final InterviewExampleService interviewExampleService;
     private final InterviewFeedbackService interviewFeedbackService;
     private final UserService userService;
 
@@ -278,31 +280,35 @@ public class GeminiController {
                     })
                     .collect(Collectors.joining("\n\n"));
 
+            // RAG: 면접관 질문에서 키워드 추출하여 관련 우수 답변 예시 검색
+            String interviewQuestions = request.getMessages().stream()
+                    .filter(msg -> !"user".equals(msg.getRole())) // 면접관 질문만
+                    .map(msg -> msg.getContent())
+                    .collect(Collectors.joining(" "));
+
+            List<InterviewExampleService.InterviewExample> relevantExamples =
+                    interviewExampleService.searchRelevant(interviewQuestions, 3);
+
+            // 동적 예시 생성
+            StringBuilder examplesText = new StringBuilder();
+            for (int i = 0; i < relevantExamples.size(); i++) {
+                InterviewExampleService.InterviewExample ex = relevantExamples.get(i);
+                examplesText.append(String.format("""
+                        [우수 답변 예시 %d - %d점대]
+                        질문: "%s"
+                        답변: "%s"
+
+                        평가: %s
+
+                        """, i + 1, ex.getScore(), ex.getQuestion(), ex.getAnswer(), ex.getEvaluation()));
+            }
+
+            log.info("✅ RAG: {}개의 관련 면접 예시 선택됨", relevantExamples.size());
+
             String prompt = String.format("""
                     당신은 삼성, LG, 네이버, 카카오 등 대기업 면접을 10년 이상 진행한 전문 면접관입니다.
 
-                    [우수 답변 예시 1 - 90점대]
-                    질문: "팀 프로젝트에서 갈등을 해결한 경험이 있나요?"
-                    답변: "백엔드 개발 중 API 설계 방식으로 팀원과 의견 충돌이 있었습니다. 저는 RESTful 방식을 주장했고 동료는 GraphQL을 선호했습니다. 양측 장단점을 문서화하고, 프로토타입을 각각 2일간 개발해 성능 테스트를 진행했습니다. 결과적으로 우리 서비스의 단순한 CRUD 특성상 RESTful이 더 적합하다는 데이터를 제시하여 합의했고, 이후 GraphQL의 장점은 차기 프로젝트에 반영하기로 했습니다."
-
-                    평가: 적합성 95점, 구체성 98점, 논리성 92점, 진정성 90점, 차별성 88점
-                    이유: 구체적 상황, 정량적 근거(2일간), 해결 과정, 후속 조치까지 완벽. 실제 경험에서 나온 디테일이 풍부함.
-
-                    [우수 답변 예시 2 - 85점대]
-                    질문: "본인의 가장 큰 실패 경험과 그로부터 배운 점을 말해주세요."
-                    답변: "대학교 3학년 때 팀 프로젝트에서 리더를 맡았는데, 제가 코드 리뷰를 소홀히 하면서 마감 2일 전 치명적인 버그가 발견됐습니다. 결국 밤을 새워 수정했지만 발표 퀄리티가 떨어졌고 B학점을 받았습니다. 이후로는 매일 코드 리뷰 시간을 30분씩 확보하고, CI/CD 파이프라인에 자동 테스트를 도입했습니다. 현재 인턴십에서는 이 경험 덕분에 버그를 사전에 3건이나 방지했습니다."
-
-                    평가: 적합성 90점, 구체성 85점, 논리성 88점, 진정성 92점, 차별성 80점
-                    이유: 솔직한 실패 고백, 구체적 개선 행동, 실제 성과까지 연결. 진정성이 돋보임.
-
-                    [보통 답변 예시 - 50-60점대]
-                    질문: "팀 프로젝트에서 갈등을 해결한 경험이 있나요?"
-                    답변: "네, 팀 프로젝트에서 의견이 달라서 서로 토론을 통해 해결했습니다. 각자 의견을 들어보고 합의점을 찾아 프로젝트를 성공적으로 마쳤습니다."
-
-                    평가: 적합성 60점, 구체성 30점, 논리성 50점, 진정성 45점, 차별성 35점
-                    이유: 질문에는 맞지만 추상적이고 구체성 부족. 누구나 할 수 있는 답변으로 차별성 없음.
-
-                    [면접 대화 내역]
+                    %s[면접 대화 내역]
                     %s
 
                     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -398,7 +404,7 @@ public class GeminiController {
                       "strengths": ["강점1", "강점2", "강점3"],
                       "weaknesses": ["개선점1", "개선점2", "개선점3"]
                     }
-                    """, conversation);
+                    """, examplesText.toString(), conversation);
 
             Map<String, Object> requestBody = Map.of(
                     "contents", List.of(
