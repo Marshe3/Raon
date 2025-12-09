@@ -82,20 +82,27 @@ export const getResumeFeedback = async (coverLetter, resumeData) => {
 
     const data = await response.json();
     console.log('백엔드 응답 데이터:', data);
-    const text = data.text || '';
-    console.log('추출한 text:', text);
 
-    // JSON 파싱 시도
+    // 백엔드가 이미 JSON 객체로 파싱해서 반환함
+    if (data.overallScore !== undefined) {
+      console.log('✅ 파싱된 피드백 수신:', data);
+      return data;
+    }
+
+    // 만약 text 필드로 왔다면 (fallback)
+    const text = data.text || '';
+    console.log('⚠️ text 필드로 수신, 파싱 시도:', text);
+
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
     } catch (e) {
-      console.warn('JSON 파싱 실패, 텍스트 형식으로 반환:', e);
+      console.warn('JSON 파싱 실패:', e);
     }
 
-    // JSON 파싱 실패시 텍스트 그대로 반환
+    // 파싱 실패시 기본 구조 반환
     return {
       overallScore: 0,
       sections: [{
@@ -103,9 +110,9 @@ export const getResumeFeedback = async (coverLetter, resumeData) => {
         score: 0,
         strengths: [],
         improvements: [],
-        suggestions: text
+        suggestions: "피드백 파싱에 실패했습니다."
       }],
-      summary: text,
+      summary: "피드백을 처리하는 중 오류가 발생했습니다.",
       recommendedScore: 0
     };
 

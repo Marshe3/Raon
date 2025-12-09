@@ -227,8 +227,22 @@ public class GeminiController {
                 if (candidates != null && !candidates.isEmpty()) {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> content = (Map<String, Object>) candidates.get(0).get("content");
+
+                    if (content == null) {
+                        log.error("❌ content가 null입니다");
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Map.of("error", "Gemini 응답 형식 오류: content가 null"));
+                    }
+
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+
+                    if (parts == null || parts.isEmpty()) {
+                        log.error("❌ parts가 null 또는 비어있습니다");
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Map.of("error", "Gemini 응답 형식 오류: parts가 null"));
+                    }
+
                     String text = (String) parts.get(0).get("text");
 
                     log.info("Gemini 응답 텍스트 길이: {}", text.length());
@@ -243,9 +257,16 @@ public class GeminiController {
                         jsonText = jsonText.substring(startIdx, endIdx + 1);
                     }
 
-                    Map<String, Object> result = Map.of("text", jsonText);
-                    log.info("✅ JSON 응답 생성 완료 - 길이: {}", jsonText.length());
-                    return ResponseEntity.ok(result);
+                    // JSON 문자열을 실제 객체로 파싱
+                    try {
+                        Map<String, Object> parsedJson = objectMapper.readValue(jsonText, Map.class);
+                        log.info("✅ JSON 파싱 성공 - 키: {}", parsedJson.keySet());
+                        return ResponseEntity.ok(parsedJson);
+                    } catch (Exception e) {
+                        log.warn("⚠️ JSON 파싱 실패, 원본 텍스트 반환: {}", e.getMessage());
+                        Map<String, Object> result = Map.of("text", jsonText);
+                        return ResponseEntity.ok(result);
+                    }
                 } else {
                     log.warn("Gemini 응답에 candidates가 없습니다");
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
